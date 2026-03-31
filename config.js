@@ -1,7 +1,8 @@
 const HA_CONFIG = {
     proxyUrl: 'proxy.php',
     entities: [
-        { entityId: 'sensor.agnov_fg_wifi_clients_ssid1', name: 'Wifi Datos' }
+        { entityId: 'sensor.agnov_fg_wifi_clients_ssid1', name: 'Agnov Solutions' },
+        { entityId: 'sensor.agnov_fg_wifi_clients_ssid2', name: 'AMELI Devices' }
     ]
 };
 
