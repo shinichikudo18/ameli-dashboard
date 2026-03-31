@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $fortiUrl = 'https://1.2.3.4/api/v2/monitor/wifi/client';
 $vdom = $_GET['vdom'] ?? 'root';
-$apiToken = 'TU_API_TOKEN_AQUI';
+$apiToken = 'q7N88NNwff4n0d0hs0769Gd03j9gcq';
 
 $url = $fortiUrl . '?vdom=' . $vdom;
 
