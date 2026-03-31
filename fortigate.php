@@ -2,6 +2,7 @@
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Authorization, Content-Type');
+header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -10,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $fortiUrl = 'https://1.2.3.4/api/v2/monitor/wifi/client';
 $vdom = $_GET['vdom'] ?? 'root';
-$apiToken = 'f8453rGmwhbHdH0h7Q0Hspx61gd59y';
+$apiToken = 'TU_API_TOKEN_AQUI';
 
 $url = $fortiUrl . '?vdom=' . $vdom;
 
