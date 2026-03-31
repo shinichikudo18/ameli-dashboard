@@ -1,8 +1,9 @@
 const HA_CONFIG = {
-    proxyUrl: 'proxy.php',
+    proxyUrl: '/dashboard/proxy.php',
     entities: [
-        { entityId: 'sensor.agnov_fg_wifi_clients_ssid1', name: 'Agnov Solutions' },
-        { entityId: 'sensor.agnov_fg_wifi_clients_ssid2', name: 'AMELI Devices' }
+        { entityId: 'sensor.agnov_fg_wifi_clients_ssid1', name: 'Agnov Solutions', showInChart: true },
+        { entityId: 'sensor.agnov_fg_wifi_clients_ssid2', name: 'AMELI Devices', showInChart: true },
+        { entityId: 'sensor.agnov_fg_wifi_clients', name: 'Total Clientes', showInChart: false }
     ]
 };
 
@@ -24,11 +25,12 @@ async function fetchAllEntities() {
                 name: entity.name,
                 value: parseFloat(data.state) || 0,
                 unit: data.attributes?.unit_of_measurement || '',
-                lastChanged: data.last_changed
+                lastChanged: data.last_changed,
+                showInChart: entity.showInChart !== false
             });
         } catch (error) {
             console.error(`Error fetching ${entity.name}:`, error);
-            results.push({ name: entity.name, value: 0, error: true });
+            results.push({ name: entity.name, value: 0, error: true, showInChart: entity.showInChart !== false });
         }
     }
     return results;
@@ -36,26 +38,41 @@ async function fetchAllEntities() {
 
 function updateChart(data) {
     const ctx = document.getElementById('sensorChart').getContext('2d');
-    if (window.myChart) window.myChart.destroy();
     
-    const labels = data.map(d => d.name);
-    const values = data.map(d => d.error ? 0 : d.value);
-    const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+    if (window.myChart) {
+        window.myChart.destroy();
+    }
+    
+    const chartData = data.filter(d => d.showInChart !== false);
+    const labels = chartData.map(d => d.name);
+    const values = chartData.map(d => d.error ? 0 : d.value);
+    const colors = [
+        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+        '#9966FF', '#FF9F40', '#8B0000', '#00CED1'
+    ];
     
     window.myChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: labels,
-            datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+            datasets: [{
+                data: values,
+                backgroundColor: colors,
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
         },
         options: {
             responsive: true,
             plugins: {
-                legend: { position: 'bottom', labels: { color: '#fff', padding: 20 } },
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#fff', padding: 20 }
+                },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            const d = data[context.dataIndex];
+                            const d = chartData[context.dataIndex];
                             return `${d.name}: ${d.value}${d.unit}`;
                         }
                     }
@@ -64,7 +81,8 @@ function updateChart(data) {
         }
     });
     
-    document.getElementById('sensorInfo').innerHTML = data.map(d => `
+    const infoDiv = document.getElementById('sensorInfo');
+    infoDiv.innerHTML = data.map(d => `
         <div class="sensor-card">
             <div class="sensor-name">${d.name}</div>
             <div class="sensor-value">${d.error ? 'Error' : d.value}${d.unit || ''}</div>
