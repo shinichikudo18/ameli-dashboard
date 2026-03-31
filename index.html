@@ -5,15 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Red Wifi - Fortigate + Home Assistant</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="config.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; color: #fff; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
+        .container { max-width: 1400px; margin: 0 auto; }
         header { text-align: center; margin-bottom: 30px; padding: 25px; background: rgba(255,255,255,0.1); border-radius: 15px; }
         h1 { font-size: 2rem; margin-bottom: 10px; background: linear-gradient(90deg, #00d4ff, #7b2cbf); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .subtitle { color: #aaa; font-size: 1rem; }
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .tab-btn { padding: 15px 30px; background: rgba(255,255,255,0.1); border: none; border-radius: 10px; color: #fff; font-size: 1rem; cursor: pointer; }
         .tab-btn.active { background: #00d4ff; color: #000; font-weight: bold; }
         .tab-content { display: none; }
@@ -29,29 +28,33 @@
         .stat-card { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; text-align: center; }
         .stat-value { font-size: 1.8rem; font-weight: bold; color: #00d4ff; }
         .stat-label { color: #aaa; font-size: 0.85rem; margin-top: 5px; }
-        .filter-bar { margin-bottom: 15px; display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
-        select, input { padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: #fff; }
-        .sort-bar { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; }
+        .filter-bar { margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        select, input { padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: #fff; min-width: 150px; }
+        .sort-bar { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .sort-bar label { color: #aaa; font-size: 0.9rem; }
         .sort-btn { padding: 8px 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.85rem; }
         .sort-btn.active { background: #00d4ff; color: #000; border-color: #00d4ff; }
-        .client-card { background: rgba(0,0,0,0.2); border-radius: 12px; margin-bottom: 12px; }
-        .client-header { padding: 12px 15px; background: rgba(255,255,255,0.05); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .client-name { font-weight: bold; }
-        .client-ip { color: #aaa; font-size: 0.85rem; }
-        .signal-badge { padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; }
+        .clients-table { width: 100%; border-collapse: collapse; }
+        .clients-table th { background: rgba(0,0,0,0.3); padding: 12px 10px; text-align: left; color: #00d4ff; font-size: 0.85rem; text-transform: uppercase; cursor: pointer; }
+        .clients-table th:hover { background: rgba(0,212,255,0.1); }
+        .clients-table td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .clients-table tr:hover { background: rgba(255,255,255,0.05); }
+        .signal-badge { padding: 4px 10px; border-radius: 15px; font-size: 0.75rem; font-weight: bold; }
         .signal-good { background: rgba(75,192,192,0.3); color: #4BC0C0; }
         .signal-fair { background: rgba(255,206,86,0.3); color: #FFCE56; }
         .signal-poor { background: rgba(255,99,132,0.3); color: #FF6384; }
-        .client-details { padding: 15px; display: none; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; border-top: 1px solid rgba(255,255,255,0.1); }
-        .client-details.open { display: grid; }
+        .os-badge { background: rgba(255,255,255,0.1); padding: 3px 8px; border-radius: 5px; font-size: 0.8rem; }
+        .speed-badge { color: #4BC0C0; font-weight: bold; }
+        .expand-btn { background: none; border: none; color: #00d4ff; cursor: pointer; font-size: 1.2rem; }
+        .client-details-row td { background: rgba(0,0,0,0.3); padding: 0; }
+        .client-details-inner { padding: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         .detail-item { display: flex; flex-direction: column; gap: 3px; }
         .detail-label { color: #888; font-size: 0.75rem; text-transform: uppercase; }
-        .detail-value { color: #fff; font-size: 0.9rem; }
+        .detail-value { color: #fff; font-size: 0.95rem; }
         .status-bar { margin-top: 25px; text-align: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 10px; }
         #lastUpdate { color: #888; font-size: 0.85rem; }
         .error-msg { color: #FF6384; text-align: center; padding: 20px; }
-        @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } h1 { font-size: 1.5rem; } body { padding: 10px; } }
+        @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } h1 { font-size: 1.5rem; } body { padding: 10px; } .clients-table { font-size: 0.85rem; } .clients-table th, .clients-table td { padding: 8px 5px; } .filter-bar, .sort-bar { flex-direction: column; align-items: stretch; } select, input { width: 100%; } }
     </style>
 </head>
 <body>
@@ -82,15 +85,23 @@
                 <div class="filter-bar">
                     <select id="ssidFilter"><option value="">Todos los SSID</option></select>
                     <select id="apFilter"><option value="">Todos los APs</option></select>
-                    <input type="text" id="searchFilter" placeholder="Buscar por IP...">
+                    <input type="text" id="searchFilter" placeholder="Buscar por IP, usuario...">
                 </div>
                 <div class="sort-bar">
                     <label>Ordenar por:</label>
                     <button class="sort-btn active" onclick="setSort('signal')" id="sort-signal">📶 Señal</button>
                     <button class="sort-btn" onclick="setSort('ip')" id="sort-ip">🌐 IP</button>
-                    <button class="sort-btn" onclick="setSort('os')" id="sort-os">💻 Sistema</button>
+                    <button class="sort-btn" onclick="setSort('os')" id="sort-os">💻 Dispositivo</button>
+                    <button class="sort-btn" onclick="setSort('speed')" id="sort-speed">⚡ Velocidad</button>
                 </div>
-                <div id="clientsList"></div>
+                <div style="overflow-x:auto;">
+                    <table class="clients-table">
+                        <thead>
+                            <tr><th style="width:40px"></th><th>Usuario</th><th>IP</th><th>MAC</th><th>SSID</th><th>AP</th><th>Señal</th><th>Dispositivo</th><th>Vel. Desc</th><th>Vel. Sub</th></tr>
+                        </thead>
+                        <tbody id="clientsBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
         <div class="status-bar"><span id="lastUpdate">Cargando...</span></div>
@@ -99,6 +110,7 @@
         let allClients = [];
         let haData = [];
         let currentSort = 'signal';
+        let expandedRows = {};
         
         function switchTab(tab) { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); document.getElementById('tab-' + tab).classList.add('active'); event.target.classList.add('active'); }
         
@@ -106,7 +118,7 @@
         
         async function fetchHAEntities() {
             const results = [];
-            const entities = [ { entityId: 'sensor.agnov_fg_wifi_clients_ssid1', name: 'Agnov Solutions' }, { entityId: 'sensor.agnov_fg_wifi_clients_ssid2', name: 'AMELI Devices' }, { entityId: 'sensor.agnov_fg_wifi_clients', name: 'Total Clientes' } ];
+            const entities = [{ entityId: 'sensor.agnov_fg_wifi_clients_ssid1', name: 'Agnov Solutions' }, { entityId: 'sensor.agnov_fg_wifi_clients_ssid2', name: 'AMELI Devices' }, { entityId: 'sensor.agnov_fg_wifi_clients', name: 'Total Clientes' }];
             for (const entity of entities) { try { const data = await fetchSensorData(entity.entityId); results.push({ name: entity.name, value: parseFloat(data.state) || 0, unit: data.attributes?.unit_of_measurement || '' }); } catch (e) { results.push({ name: entity.name, value: 0 }); } }
             haData = results;
             updateHAChart();
@@ -119,18 +131,7 @@
             document.getElementById('sensorInfo').innerHTML = haData.map(d => `<div class="sensor-card"><span class="sensor-name">${d.name}</span><span class="sensor-value">${d.value}${d.unit}</span></div>`).join('');
         }
         
-        async function fetchClients() { 
-            try { 
-                const response = await fetch('/dashboard/fortigate.php'); 
-                const data = await response.json(); 
-                if (data.results) return data.results;
-                if (data.error) { document.getElementById('clientsList').innerHTML = '<p class="error-msg">Error: ' + data.error + '</p>'; }
-                return []; 
-            } catch (error) { 
-                document.getElementById('clientsList').innerHTML = '<p class="error-msg">Error de conexión</p>';
-                return []; 
-            } 
-        }
+        async function fetchClients() { try { const response = await fetch('/dashboard/fortigate.php'); const data = await response.json(); if (data.results) return data.results; if (data.error) { document.getElementById('clientsBody').innerHTML = '<tr><td colspan="10" class="error-msg">Error: ' + data.error + '</td></tr>'; } return []; } catch (error) { document.getElementById('clientsBody').innerHTML = '<tr><td colspan="10" class="error-msg">Error de conexión</td></tr>'; return []; } }
         
         function getSignalClass(signal) { if (signal >= -50) return 'signal-good'; if (signal >= -70) return 'signal-fair'; return 'signal-poor'; }
         function getSignalText(signal) { if (signal >= -50) return 'Bueno'; if (signal >= -70) return 'Regular'; return 'Malo'; }
@@ -153,31 +154,74 @@
             if (currentSort === 'signal') sorted.sort((a, b) => b.signal - a.signal);
             else if (currentSort === 'ip') sorted.sort((a, b) => a.ip.localeCompare(b.ip));
             else if (currentSort === 'os') sorted.sort((a, b) => (a.os || 'Unknown').localeCompare(b.os || 'Unknown'));
+            else if (currentSort === 'speed') sorted.sort((a, b) => (b.data_rxrate_bps || 0) - (a.data_rxrate_bps || 0));
             return sorted;
         }
         
-        function setSort(sort) {
-            currentSort = sort;
-            document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('sort-' + sort).classList.add('active');
-            filterClients();
-        }
+        function setSort(sort) { currentSort = sort; document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active')); document.getElementById('sort-' + sort).classList.add('active'); filterClients(); }
         
         function renderClients(clients) {
-            const container = document.getElementById('clientsList');
-            container.innerHTML = '';
-            if (clients.length === 0) { container.innerHTML = '<p style="text-align:center;color:#888;padding:20px;">No hay clientes</p>'; return; }
+            const tbody = document.getElementById('clientsBody');
+            tbody.innerHTML = '';
+            if (clients.length === 0) { tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#888;padding:20px;">No hay clientes</td></tr>'; return; }
             clients = sortClients(clients);
             clients.forEach((client, index) => {
-                const hostname = client.hostname || client.host || 'Desconocido';
-                const os = client.os || client.manufacturer || 'Unknown';
-                container.innerHTML += `<div class="client-card"><div class="client-header" onclick="toggleDetails(${index})"><div><span class="client-name">${hostname}</span><span class="client-ip">${client.ip}</span></div><span class="signal-badge ${getSignalClass(client.signal)}">${getSignalText(client.signal)} (${client.signal} dBm)</span></div><div class="client-details" id="details-${index}"><div class="detail-item"><span class="detail-label">IP</span><span class="detail-value">${client.ip}</span></div><div class="detail-item"><span class="detail-label">MAC</span><span class="detail-value">${client.mac}</span></div><div class="detail-item"><span class="detail-label">Sistema</span><span class="detail-value">${os}</span></div><div class="detail-item"><span class="detail-label">Fabricante</span><span class="detail-value">${client.manufacturer || 'N/A'}</span></div><div class="detail-item"><span class="detail-label">SSID</span><span class="detail-value">${client.ssid}</span></div><div class="detail-item"><span class="detail-label">AP</span><span class="detail-value">${client.wtp_name}</span></div><div class="detail-item"><span class="detail-label">Canal</span><span class="detail-value">${client.channel}</span></div><div class="detail-item"><span class="detail-label">Señal</span><span class="detail-value">${client.signal} dBm</span></div><div class="detail-item"><span class="detail-label">SNR</span><span class="detail-value">${client.snr}</span></div><div class="detail-item"><span class="detail-label">Tipo Red</span><span class="detail-value">${client.radio_type}</span></div><div class="detail-item"><span class="detail-label">Vel. Descarga</span><span class="detail-value">${(client.data_rxrate_bps / 1000000).toFixed(1)} Mbps</span></div><div class="detail-item"><span class="detail-label">Vel. Subida</span><span class="detail-value">${(client.data_txrate_bps / 1000000).toFixed(1)} Mbps</span></div></div></div>`;
+                const user = client.user || client.hostname || client.host || 'Desconocido';
+                const device = client.os || client.manufacturer || 'Unknown';
+                const rxSpeed = (client.data_rxrate_bps / 1000000).toFixed(1);
+                const txSpeed = (client.data_txrate_bps / 1000000).toFixed(1);
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td><button class="expand-btn" onclick="toggleRow(${index})">${expandedRows[index] ? '▼' : '▶'}</button></td>
+                        <td><strong>${user}</strong></td>
+                        <td>${client.ip}</td>
+                        <td style="font-family:monospace;font-size:0.85rem">${client.mac}</td>
+                        <td>${client.ssid}</td>
+                        <td>${client.wtp_name}</td>
+                        <td><span class="signal-badge ${getSignalClass(client.signal)}">${client.signal} dBm</span></td>
+                        <td><span class="os-badge">${device}</span></td>
+                        <td class="speed-badge">${rxSpeed} Mbps</td>
+                        <td class="speed-badge">${txSpeed} Mbps</td>
+                    </tr>
+                    <tr class="client-details-row" id="details-${index}" style="display:${expandedRows[index] ? 'table-row' : 'none'}">
+                        <td colspan="10">
+                            <div class="client-details-inner">
+                                <div class="detail-item"><span class="detail-label">Usuario</span><span class="detail-value">${user}</span></div>
+                                <div class="detail-item"><span class="detail-label">IP</span><span class="detail-value">${client.ip}</span></div>
+                                <div class="detail-item"><span class="detail-label">MAC</span><span class="detail-value">${client.mac}</span></div>
+                                <div class="detail-item"><span class="detail-label">SSID</span><span class="detail-value">${client.ssid}</span></div>
+                                <div class="detail-item"><span class="detail-label">AP</span><span class="detail-value">${client.wtp_name}</span></div>
+                                <div class="detail-item"><span class="detail-label">Dispositivo</span><span class="detail-value">${device}</span></div>
+                                <div class="detail-item"><span class="detail-label">Fabricante</span><span class="detail-value">${client.manufacturer || 'N/A'}</span></div>
+                                <div class="detail-item"><span class="detail-label">Canal</span><span class="detail-value">${client.channel}</span></div>
+                                <div class="detail-item"><span class="detail-label">Señal</span><span class="detail-value">${client.signal} dBm (${getSignalText(client.signal)})</span></div>
+                                <div class="detail-item"><span class="detail-label">SNR</span><span class="detail-value">${client.snr}</span></div>
+                                <div class="detail-item"><span class="detail-label">Ruido</span><span class="detail-value">${client.noise} dBm</span></div>
+                                <div class="detail-item"><span class="detail-label">Tipo Red</span><span class="detail-value">${client.radio_type}</span></div>
+                                <div class="detail-item"><span class="detail-label">Vel. RX</span><span class="detail-value">${rxSpeed} Mbps</span></div>
+                                <div class="detail-item"><span class="detail-label">Vel. TX</span><span class="detail-value">${txSpeed} Mbps</span></div>
+                                <div class="detail-item"><span class="detail-label">Seguridad</span><span class="detail-value">${client.security_str || 'N/A'}</span></div>
+                                <div class="detail-item"><span class="detail-label">Última conexión</span><span class="detail-value">${new Date(client.association_time * 1000).toLocaleString()}</span></div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
             });
         }
         
-        function toggleDetails(index) { document.getElementById('details-' + index).classList.toggle('open'); }
+        function toggleRow(index) { expandedRows[index] = !expandedRows[index]; filterClients(); }
         
-        function filterClients() { let filtered = allClients; const ssid = document.getElementById('ssidFilter').value; const ap = document.getElementById('apFilter').value; const search = document.getElementById('searchFilter').value.toLowerCase(); if (ssid) filtered = filtered.filter(c => c.ssid === ssid); if (ap) filtered = filtered.filter(c => c.wtp_name === ap); if (search) filtered = filtered.filter(c => c.ip.toLowerCase().includes(search) || (c.hostname && c.hostname.toLowerCase().includes(search))); renderClients(filtered); }
+        function filterClients() { 
+            let filtered = allClients; 
+            const ssid = document.getElementById('ssidFilter').value; 
+            const ap = document.getElementById('apFilter').value; 
+            const search = document.getElementById('searchFilter').value.toLowerCase(); 
+            if (ssid) filtered = filtered.filter(c => c.ssid === ssid); 
+            if (ap) filtered = filtered.filter(c => c.wtp_name === ap); 
+            if (search) filtered = filtered.filter(c => c.ip.toLowerCase().includes(search) || (c.user && c.user.toLowerCase().includes(search)) || (c.hostname && c.hostname.toLowerCase().includes(search)) || (c.host && c.host.toLowerCase().includes(search)) || (c.os && c.os.toLowerCase().includes(search))); 
+            renderClients(filtered); 
+        }
         
         async function refreshData() { document.getElementById('lastUpdate').textContent = 'Actualizando...'; await fetchHAEntities(); allClients = await fetchClients(); populateFilters(allClients); updateStats(allClients); renderClients(allClients); document.getElementById('lastUpdate').textContent = 'Última actualización: ' + new Date().toLocaleTimeString(); }
         
