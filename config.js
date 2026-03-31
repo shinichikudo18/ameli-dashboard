@@ -1,18 +1,14 @@
-// Configuración de Home Assistant
 const HA_CONFIG = {
-    url: 'http://192.168.22.254:8123',
-    token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI5MTgxZDc2MzI5ZGM0NTBiOTA0ZTJlZjAwMjJhOTEzYiIsImlhdCI6MTc3NDk2NzY4MywiZXhwIjoyMDkwMzI3NjgzfQ.H1FZpiBd7bpqRe75Bg1XxBFKp-8-7qTETmaHtIE6g2g',
+    proxyUrl: 'proxy.php',
     entities: [
-        { entityId: 'sensor.familia_navarrete_tranamil', name: 'Wifi Datos' }
+        { entityId: 'sensor.agnov_fg_wifi_clients_ssid1', name: 'Wifi Datos' }
     ]
 };
 
 async function fetchSensorData(entityId) {
-    const response = await fetch(`${HA_CONFIG.url}/api/states/${entityId}`, {
-        headers: {
-            'Authorization': `Bearer ${HA_CONFIG.token}`,
-            'Content-Type': 'application/json'
-        }
+    const response = await fetch(`${HA_CONFIG.proxyUrl}?entity=${entityId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
     });
     if (!response.ok) throw new Error(`Error fetching ${entityId}`);
     return await response.json();
@@ -39,36 +35,22 @@ async function fetchAllEntities() {
 
 function updateChart(data) {
     const ctx = document.getElementById('sensorChart').getContext('2d');
-    
-    if (window.myChart) {
-        window.myChart.destroy();
-    }
+    if (window.myChart) window.myChart.destroy();
     
     const labels = data.map(d => d.name);
     const values = data.map(d => d.error ? 0 : d.value);
-    const colors = [
-        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
-        '#9966FF', '#FF9F40', '#8B0000', '#00CED1'
-    ];
+    const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
     
     window.myChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: labels,
-            datasets: [{
-                data: values,
-                backgroundColor: colors,
-                borderWidth: 2,
-                borderColor: '#fff'
-            }]
+            datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
         },
         options: {
             responsive: true,
             plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { color: '#fff', padding: 20 }
-                },
+                legend: { position: 'bottom', labels: { color: '#fff', padding: 20 } },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -81,9 +63,7 @@ function updateChart(data) {
         }
     });
     
-    // Actualizar información detallada
-    const infoDiv = document.getElementById('sensorInfo');
-    infoDiv.innerHTML = data.map(d => `
+    document.getElementById('sensorInfo').innerHTML = data.map(d => `
         <div class="sensor-card">
             <div class="sensor-name">${d.name}</div>
             <div class="sensor-value">${d.error ? 'Error' : d.value}${d.unit || ''}</div>
@@ -92,14 +72,10 @@ function updateChart(data) {
 }
 
 async function refreshData() {
-    const lastUpdate = document.getElementById('lastUpdate');
-    lastUpdate.textContent = 'Actualizando...';
-    
+    document.getElementById('lastUpdate').textContent = 'Actualizando...';
     const data = await fetchAllEntities();
     updateChart(data);
-    
-    const now = new Date();
-    lastUpdate.textContent = `Última actualización: ${now.toLocaleTimeString()}`;
+    document.getElementById('lastUpdate').textContent = `Última actualización: ${new Date().toLocaleTimeString()}`;
 }
 
 async function init() {
