@@ -407,7 +407,7 @@
                     // DHCP Content
                     var dhcpHtml = '';
                     if (leases.length > 0) {
-                        dhcpHtml = '<table class="clients-table"><thead><tr><th>IP</th><th>MAC</th><th>Hostname</th><th>Estado</th><th>Expira</th></tr></thead><tbody>';
+                        dhcpHtml = '<table class="clients-table"><thead><tr><th>IP</th><th>MAC</th><th>Hostname</th><th>Estado</th><th>Expira</th><th>Firewall</th></tr></thead><tbody>';
                         var now = Math.floor(Date.now() / 1000);
                         leases.slice(0, 30).forEach(function(lease) {
                             var expira = '-';
@@ -423,7 +423,8 @@
                             } else if (lease.status === 'static') {
                                 expira = 'Permanente';
                             }
-                            dhcpHtml += '<tr><td>' + lease.ip + '</td><td>' + lease.mac + '</td><td>' + (lease.hostname || '-') + '</td><td>' + lease.status + '</td><td>' + expira + '</td></tr>';
+                            var dhcpFw = lease.firewall || (lease.device_ip === '1.2.3.4' ? 'Oficina' : 'Data');
+                            dhcpHtml += '<tr><td>' + lease.ip + '</td><td>' + lease.mac + '</td><td>' + (lease.hostname || '-') + '</td><td>' + lease.status + '</td><td>' + expira + '</td><td>' + dhcpFw + '</td></tr>';
                         });
                         dhcpHtml += '</tbody></table>';
                         if (leases.length > 30) dhcpHtml += '<div style="color:#888;margin-top:10px;">Mostrando 30 de ' + leases.length + '</div>';
@@ -545,7 +546,7 @@
                     
                     var sessHtml = '';
                     if (sessions.length > 0) {
-                        sessHtml = '<table class="clients-table"><thead><tr><th>Origen</th><th>Destino</th><th>Proto/App</th><th>Pais</th><th>Firewall</th><th>Usuario</th></tr></thead><tbody>';
+                        sessHtml = '<table class="clients-table"><thead><tr><th>Origen</th><th>Destino</th><th>Proto/App</th><th>Pais</th><th>Usuario</th><th>Firewall</th></tr></thead><tbody>';
                         var appNames = {
                             'youtube': 'YouTube', 'netflix': 'Netflix', 'dns': 'DNS', 'http': 'HTTP', 
                             'https': 'HTTPS', 'icmp': 'ICMP', 'facebook': 'Facebook', 'instagram': 'Instagram',
@@ -601,8 +602,8 @@
                             sessHtml += '<td>' + (sess.daddr || '-') + '</td>';
                             sessHtml += '<td>' + pd + '</td>';
                             sessHtml += '<td>' + flag + '</td>';
-                            sessHtml += '<td>' + fw + '</td>';
                             sessHtml += '<td>' + (sess.username || '-') + '</td>';
+                            sessHtml += '<td>' + fw + '</td>';
                             sessHtml += '</tr>';
                         });
                         sessHtml += '</tbody></table>';
