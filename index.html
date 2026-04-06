@@ -212,23 +212,15 @@
             </div>
             <div class="dashboard-grid" style="margin-bottom:20px;">
                 <div class="card"><div class="card-title">Tunnels IPsec</div><div class="chart-container"><canvas id="vpnIpsecChart"></canvas></div></div>
-                <div class="card"><div class="card-title">SSL VPN Portals</div><div class="chart-container"><canvas id="vpnSslChart"></canvas></div></div>
-            </div>
-            <div class="dashboard-grid" style="margin-bottom:20px;">
                 <div class="card"><div class="card-title">Health Checks (Real Time)</div><div class="chart-container"><canvas id="vpnHealthChart"></canvas></div></div>
-                <div class="card"><div class="card-title">SSL VPN Config</div><div id="vpnSslSummary"><div class="loading">Cargando...</div></div></div>
             </div>
             <div class="card" style="margin-bottom:20px;">
-                <div class="card-title">IPsec Tunnels</div>
-                <div id="vpnIpsecContent"><div class="loading">Cargando...</div></div>
-            </div>
-            <div class="card" style="margin-bottom:20px;">
-                <div class="card-title">SSL VPN Portals</div>
-                <div id="vpnPortalContent"><div class="loading">Cargando...</div></div>
+                <div class="card-title">VPN Config</div>
+                <div id="vpnSslSummary"><div class="loading">Cargando...</div></div>
             </div>
             <div class="card">
-                <div class="card-title">IPsec Phase2</div>
-                <div id="vpnPhase2Content"><div class="loading">Cargando...</div></div>
+                <div class="card-title">IPsec Tunnels</div>
+                <div id="vpnIpsecContent"><div class="loading">Cargando...</div></div>
             </div>
         </div>
 
@@ -932,10 +924,8 @@
         function refreshVPN() {
             document.getElementById('vpnSslSummary').innerHTML = '<div class="loading">Cargando VPN...</div>';
             if (window.vpnIpsecChart && typeof window.vpnIpsecChart.destroy === 'function') window.vpnIpsecChart.destroy();
-            if (window.vpnSslChart && typeof window.vpnSslChart.destroy === 'function') window.vpnSslChart.destroy();
             if (window.vpnHealthChart && typeof window.vpnHealthChart.destroy === 'function') window.vpnHealthChart.destroy();
             window.vpnIpsecChart = null;
-            window.vpnSslChart = null;
             window.vpnHealthChart = null;
 
             fetch(apiBase + 'vpn')
@@ -962,8 +952,6 @@
 
                     var sslSettings = fw.ssl_settings || {};
                     var phase1 = fw.phase1 || [];
-                    var phase2 = fw.phase2 || [];
-                    var portals = fw.ssl_portal || [];
 
                     var summaryHtml = '<table class="clients-table"><tbody>';
                     summaryHtml += '<tr><td>Firewall</td><td>' + (fw.firewall || '-') + '</td></tr>';
@@ -975,36 +963,15 @@
                     summaryHtml += '</tbody></table>';
                     document.getElementById('vpnSslSummary').innerHTML = summaryHtml;
 
-                    var ipsecLabels = ['Enable', 'Disable'];
+                    var ipsecHtml = '<table class="clients-table"><thead><tr><th>Name</th><th>Remote GW</th><th>Interface</th><th>State</th></tr></thead><tbody>';
                     var ipsecStateCounts = [0, 0];
-                    var ipsecHtml = '<table class="clients-table"><thead><tr><th>Name</th><th>Remote GW</th><th>Interface</th><th>IKE</th><th>Auth</th><th>Proposal</th></tr></thead><tbody>';
                     phase1.forEach(function(t) {
                         var up = (t.status === 'enable' || t.status === 'up');
                         ipsecStateCounts[up ? 0 : 1]++;
-                        ipsecHtml += '<tr><td>' + (t.name || '-') + '</td><td>' + (t["remote-gw"] || '-') + '</td><td>' + (t.interface || '-') + '</td><td>' + (t["ike-version"] || '-') + '</td><td>' + (t.authmethod || '-') + '</td><td>' + (t.proposal || '-') + '</td></tr>';
+                        ipsecHtml += '<tr><td>' + (t.name || '-') + '</td><td>' + (t["remote-gw"] || '-') + '</td><td>' + (t.interface || '-') + '</td><td>' + (up ? 'Enable' : 'Disable') + '</td></tr>';
                     });
                     ipsecHtml += '</tbody></table>';
                     document.getElementById('vpnIpsecContent').innerHTML = ipsecHtml;
-
-                    var portalLabels = ['Tunnel', 'Web'];
-                    var portalValues = [0, 0];
-                    var portalHtml = '<table class="clients-table"><thead><tr><th>Name</th><th>Tunnel</th><th>Split</th><th>IP Pools</th><th>Web</th><th>SD-WAN</th></tr></thead><tbody>';
-                    portals.forEach(function(p) {
-                        if (p["tunnel-mode"] === 'enable') portalValues[0]++;
-                        if (p["web-mode"] === 'enable') portalValues[1]++;
-                        portalHtml += '<tr><td>' + (p.name || '-') + '</td><td>' + (p["tunnel-mode"] || '-') + '</td><td>' + (p["split-tunneling"] || '-') + '</td><td>' + ((p["ip-pools"] || []).length || 0) + '</td><td>' + (p["web-mode"] || '-') + '</td><td>' + (p["use-sdwan"] || '-') + '</td></tr>';
-                    });
-                    portalHtml += '</tbody></table>';
-                    document.getElementById('vpnPortalContent').innerHTML = portalHtml;
-
-                    var phase2Html = '<table class="clients-table"><thead><tr><th>Name</th><th>Phase1</th><th>Proposal</th><th>PFS</th><th>Src</th><th>Dst</th></tr></thead><tbody>';
-                    phase2.forEach(function(ph) {
-                        phase2Html += '<tr><td>' + (ph.name || '-') + '</td><td>' + (ph.phase1name || '-') + '</td><td>' + (ph.proposal || '-') + '</td><td>' + (ph.pfs || '-') + '</td><td>' + (ph["src-name"] || ph["src-subnet"] || '-') + '</td><td>' + (ph["dst-name"] || ph["dst-subnet"] || '-') + '</td></tr>';
-                    });
-                    phase2Html += '</tbody></table>';
-                    document.getElementById('vpnPhase2Content').innerHTML = phase2Html;
-
-                    document.getElementById('sdwanRealtime').innerHTML = '<div style="font-size:0.9rem;color:#aaa;">Health checks del VPN cargados. Ver detalle en los check lists del firewall.</div>';
 
                     var ipsecCanvas = document.getElementById('vpnIpsecChart');
                     if (ipsecCanvas && ipsecCanvas.getContext) {
@@ -1017,24 +984,13 @@
                         });
                     }
 
-                    var sslCanvas = document.getElementById('vpnSslChart');
-                    if (sslCanvas && sslCanvas.getContext) {
-                        var existingSsl = Chart.getChart ? Chart.getChart(sslCanvas) : null;
-                        if (existingSsl) existingSsl.destroy();
-                        window.vpnSslChart = new Chart(sslCanvas.getContext('2d'), {
-                            type: 'bar',
-                            data: { labels: portalLabels, datasets: [{ label: 'SSL Portals', data: portalValues, backgroundColor: '#7b2cbf' }] },
-                            options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } }, y: { ticks: { color: '#fff', precision: 0 }, grid: { color: 'rgba(255,255,255,0.08)' } } } }
-                        });
-                    }
-
                     var healthCanvas = document.getElementById('vpnHealthChart');
                     if (healthCanvas && healthCanvas.getContext) {
                         var existingHealth = Chart.getChart ? Chart.getChart(healthCanvas) : null;
                         if (existingHealth) existingHealth.destroy();
                         window.vpnHealthChart = new Chart(healthCanvas.getContext('2d'), {
                             type: 'bar',
-                            data: { labels: ['Enable', 'Disable'], datasets: [{ label: 'IPsec Estado', data: ipsecStateCounts, backgroundColor: ['#4BC0C0', '#FF6384'] }] },
+                            data: { labels: ['Checks'], datasets: [{ label: 'Health', data: [summary.health_checks || 0], backgroundColor: ['#4BC0C0'] }] },
                             options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } }, y: { ticks: { color: '#fff', precision: 0 }, grid: { color: 'rgba(255,255,255,0.08)' } } } }
                         });
                     }
