@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FortiClient EMS - Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; color: #fff; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; padding: 25px; background: rgba(255,255,255,0.1); border-radius: 15px; }
+        h1 { font-size: 1.5rem; margin-bottom: 10px; background: linear-gradient(90deg, #00d4ff, #7b2cbf); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { color: #aaa; font-size: 0.9rem; }
+        .back-link { display: block; text-align: center; margin-bottom: 20px; }
+        .back-link a { color: #00d4ff; text-decoration: none; font-size: 1.1rem; }
+        .back-link a:hover { text-decoration: underline; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; text-align: center; }
+        .stat-value { font-size: 1.8rem; font-weight: bold; color: #00d4ff; }
+        .stat-label { color: #aaa; font-size: 0.85rem; margin-top: 5px; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
+        .card { background: rgba(255,255,255,0.1); border-radius: 20px; padding: 25px; }
+        .card-title { font-size: 1.2rem; margin-bottom: 15px; color: #00d4ff; }
+        .sensor-card { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; border-left: 4px solid #00d4ff; }
+        .sensor-name { color: #ccc; }
+        .sensor-value { font-size: 1.05rem; font-weight: bold; color: #00d4ff; text-align: right; }
+        .clients-table { width: 100%; border-collapse: collapse; }
+        .clients-table th { background: rgba(0,0,0,0.3); padding: 12px 10px; text-align: left; color: #00d4ff; font-size: 0.85rem; }
+        .clients-table td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .clients-table tr:hover { background: rgba(255,255,255,0.05); }
+        .loading { text-align: center; padding: 40px; color: #aaa; }
+        .error-msg { color: #FF6384; text-align: center; padding: 20px; }
+        .status-bar { margin-top: 25px; text-align: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 10px; }
+        #lastUpdate { color: #888; font-size: 0.85rem; }
+        @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } .dashboard-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="back-link"><a href="../">&larr; Volver al Dashboard</a></div>
+    <div class="container">
+        <header>
+            <h1>FortiClient EMS</h1>
+            <p class="subtitle">Resumen de licencias, grupos y sitios</p>
+        </header>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-value" id="emsDevices">0</div><div class="stat-label">Dispositivos</div></div>
+            <div class="stat-card"><div class="stat-value" id="emsGroups">0</div><div class="stat-label">Grupos</div></div>
+            <div class="stat-card"><div class="stat-value" id="emsSites">0</div><div class="stat-label">Sitios</div></div>
+            <div class="stat-card"><div class="stat-value" id="emsAlerts">0</div><div class="stat-label">Alertas</div></div>
+        </div>
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-title">Licencia EMS</div>
+                <div id="emsLicense"><div class="loading">Cargando...</div></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Sitios</div>
+                <div id="emsSitesList"><div class="loading">Cargando...</div></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">Grupos de Trabajo</div>
+            <div style="overflow-x:auto;">
+                <table class="clients-table">
+                    <thead><tr><th>Grupo</th><th>Ruta</th><th>Dispositivos</th><th>Reglas</th></tr></thead>
+                    <tbody id="emsGroupsBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="status-bar" id="lastUpdate">-</div>
+    </div>
+    <script src="config.js"></script>
+    <script>
+        function renderEMS(data) {
+            var summary = data.summary || {};
+            var license = data.license || {};
+            var workgroups = data.workgroups || [];
+            var sites = data.sites || [];
+
+            document.getElementById('emsDevices').textContent = summary.devices || 0;
+            document.getElementById('emsGroups').textContent = summary.groups || 0;
+            document.getElementById('emsSites').textContent = summary.sites || 0;
+            document.getElementById('emsAlerts').textContent = summary.alerts || 0;
+
+            document.getElementById('emsLicense').innerHTML =
+                '<div class="sensor-card"><span class="sensor-name">Serie</span><span class="sensor-value">' + (license.sn || '-') + '</span></div>' +
+                '<div class="sensor-card"><span class="sensor-name">EPP</span><span class="sensor-value">' + (summary.epp_used || 0) + '/' + (summary.epp_seats || 0) + '</span></div>' +
+                '<div class="sensor-card"><span class="sensor-name">Tipo</span><span class="sensor-value">' + (license.is_trial ? 'Trial' : 'Produccion') + '</span></div>' +
+                '<div class="sensor-card"><span class="sensor-name">Sitio</span><span class="sensor-value">' + (summary.site || '-') + '</span></div>';
+
+            document.getElementById('emsSitesList').innerHTML = sites.length ? sites.map(function(site) {
+                return '<div class="sensor-card"><span class="sensor-name">Sitio</span><span class="sensor-value">' + site + '</span></div>';
+            }).join('') : '<div class="loading">No hay sitios</div>';
+
+            var tbody = document.getElementById('emsGroupsBody');
+            if (!workgroups.length) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#888;padding:20px;">No hay grupos</td></tr>';
+                return;
+            }
+            tbody.innerHTML = workgroups.map(function(group) {
+                return '<tr><td><strong>' + (group.name || '-') + '</strong></td><td>' + (group.full_path || '-') + '</td><td>' + (group.total_devices || 0) + '</td><td>' + (group.total_rules || 0) + '</td></tr>';
+            }).join('');
+        }
+
+        function loadEMSData() {
+            document.getElementById('lastUpdate').textContent = 'Actualizando...';
+            fetch(EMS_CONFIG.proxyUrl + '?endpoint=summary')
+                .then(function(res) { return res.json(); })
+                .then(function(payload) {
+                    if (payload.error) throw new Error(payload.error);
+                    renderEMS(payload.data || {});
+                    document.getElementById('lastUpdate').textContent = 'Ultima actualizacion: ' + new Date().toLocaleTimeString();
+                })
+                .catch(function(err) {
+                    document.getElementById('emsLicense').innerHTML = '<div class="error-msg">Error cargando EMS</div>';
+                    document.getElementById('emsSitesList').innerHTML = '<div class="error-msg">Error cargando EMS</div>';
+                    document.getElementById('emsGroupsBody').innerHTML = '<tr><td colspan="4" class="error-msg">' + err.message + '</td></tr>';
+                    document.getElementById('lastUpdate').textContent = 'Error: ' + err.message;
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadEMSData();
+            setInterval(loadEMSData, EMS_CONFIG.refreshMs || 60000);
+        });
+    </script>
+</body>
+</html>
