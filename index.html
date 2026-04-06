@@ -786,9 +786,9 @@
                             html += '<div>Uplinks: ' + (uplinkPorts.length ? uplinkPorts.join(', ') : '-') + '</div>';
                             html += '</div>';
                             if (sw.ports && sw.ports.length) {
-                                html += '<div style="margin-top:12px; max-height:180px; overflow:auto;">';
+                                html += '<div style="margin-top:12px; max-height:420px; overflow:auto;">';
                                 html += '<table class="clients-table"><thead><tr><th>Puerto</th><th>Estado</th><th>Speed</th><th>VLAN</th><th>PoE</th><th>PoE Power</th></tr></thead><tbody>';
-                                sw.ports.slice(0, 12).forEach(function(p) {
+                                sw.ports.forEach(function(p) {
                                     html += '<tr>';
                                     html += '<td>' + (p['port-name'] || '-') + '</td>';
                                     html += '<td>' + (p.status || '-') + '</td>';
