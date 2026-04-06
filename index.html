@@ -235,25 +235,57 @@
                     }
                     var clients = data.results || [];
                     document.getElementById('totalClients').textContent = clients.length || 0;
-                    
+
                     var good = 0, fair = 0, poor = 0;
-                    var signalSum = 0;
+                    var signalBuckets = { 'Excellent': 0, 'Good': 0, 'Fair': 0, 'Poor': 0 };
                     clients.forEach(function(c) {
                         var sig = c.rssi || c.signal || -50;
-                        signalSum += sig;
-                        if (sig > -50) good++;
-                        else if (sig > -70) fair++;
-                        else poor++;
+                        if (sig >= -45) {
+                            good++;
+                            signalBuckets['Excellent']++;
+                        } else if (sig > -55) {
+                            good++;
+                            signalBuckets['Good']++;
+                        } else if (sig > -70) {
+                            fair++;
+                            signalBuckets['Fair']++;
+                        } else {
+                            poor++;
+                            signalBuckets['Poor']++;
+                        }
                     });
+
                     document.getElementById('signalGood').textContent = good;
                     document.getElementById('signalFair').textContent = fair;
                     document.getElementById('signalPoor').textContent = poor;
-                    
+
+                    if (window.signalQualityChart) window.signalQualityChart.destroy();
+                    var sqCtx = document.getElementById('signalQualityChart').getContext('2d');
+                    window.signalQualityChart = new Chart(sqCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: Object.keys(signalBuckets),
+                            datasets: [{
+                                label: 'Clients',
+                                data: Object.values(signalBuckets),
+                                backgroundColor: ['#00c853', '#7cb342', '#ffb300', '#f44336']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } },
+                                y: { ticks: { color: '#fff', precision: 0 }, grid: { color: 'rgba(255,255,255,0.08)' } }
+                            }
+                        }
+                    });
+
                     if (clients.length === 0) {
                         document.getElementById('clientsContent').innerHTML = '<div class="loading">No hay clientes conectados</div>';
                         return;
                     }
-                    
+
                     var html = '<table class="clients-table"><thead><tr><th>Usuario</th><th>IP</th><th>MAC</th><th>SSID</th><th>AP</th><th>Senal</th></tr></thead><tbody>';
                     clients.forEach(function(c) {
                         var sig = c.rssi || c.signal || -50;
@@ -274,7 +306,7 @@
                     document.getElementById('clientsContent').innerHTML = '<div class="error-msg">Error: ' + err.message + '</div>';
                 });
         }
-        
+
         function refreshHeatmap() {
             document.getElementById('heatmapContent').innerHTML = '<div class="loading">Cargando mapa de calor...</div>';
             Promise.all([
