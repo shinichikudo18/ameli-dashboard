@@ -191,6 +191,9 @@
                 });
                 this.classList.add('active');
                 target.classList.add('active');
+                if (tabId === 'network') {
+                    refreshNetwork();
+                }
             });
         });
         
@@ -426,7 +429,7 @@
         function refreshNetwork() {
             Promise.all([
                 fetch(apiBase + 'dhcp').then(function(r) { return r.json(); }),
-                fetch('http://192.168.140.34/dashboard/fortigate.php?device=all&endpoint=firewall/session&start=0&count=2000').then(function(r) { return r.json(); })
+                fetch(apiBase + 'sessions').then(function(r) { return r.json(); })
             ])
                 .then(function(results) {
                     var dhcpData = results[0];
@@ -781,6 +784,7 @@
             refreshHA();
             refreshForti();
             refreshHeatmap();
+            refreshNetwork();
             refreshSwitches();
         }
 
