@@ -99,6 +99,62 @@ function fetchFromDevice($device, $endpoint, $vdom) {
         return $result;
     }
 
+    if ($endpoint === 'vpn') {
+        $sections = [
+            'phase1' => 'vpn.ipsec/phase1-interface',
+            'phase2' => 'vpn.ipsec/phase2-interface',
+            'ssl_settings' => 'vpn.ssl/settings',
+            'ssl_portal' => 'vpn.ssl.web/portal'
+        ];
+
+        $sectionData = [];
+
+        foreach ($sections as $key => $pathName) {
+            list($resp, $code, $err) = $makeRequest($baseUrl . '/' . $pathName . '?vdom=' . $vdom);
+            if ($err) {
+                return ['error' => $err, 'http_code' => 500];
+            }
+            if ($code !== 200) {
+                return ['error' => 'HTTP ' . $code, 'http_code' => $code, 'raw' => $resp];
+            }
+            $data = json_decode($resp, true);
+            if ($data === null) {
+                return ['error' => 'Invalid JSON', 'http_code' => $code, 'raw' => $resp];
+            }
+            $sectionData[$key] = $data['results'] ?? [];
+        }
+
+        $phase1 = $sectionData['phase1'] ?? [];
+        $phase2 = $sectionData['phase2'] ?? [];
+        $sslSettings = $sectionData['ssl_settings'] ?? [];
+        $sslPortal = $sectionData['ssl_portal'] ?? [];
+
+        $summary = [
+            'ipsec_tunnels' => count($phase1),
+            'ssl_portals' => count($sslPortal),
+            'ssl_pools' => count($sslSettings['tunnel-ip-pools'] ?? []),
+            'health_checks' => count($sslSettings['authentication-rule'] ?? []),
+            'users' => count($sslSettings['authentication-rule'] ?? []),
+        ];
+
+        $item = [
+            'firewall' => $device['short_name'],
+            'device_ip' => $device['ip'],
+            'summary' => $summary,
+            'ssl_settings' => $sslSettings,
+            'phase1' => $phase1,
+            'phase2' => $phase2,
+            'ssl_portal' => $sslPortal,
+            'kind' => 'vpn'
+        ];
+
+        $result = ['results' => [$item], 'http_code' => 200];
+        $result['device_id'] = $device['name'];
+        $result['device_short'] = $device['short_name'];
+        $result['device_ip'] = $device['ip'];
+        return $result;
+    }
+
     if ($endpoint === 'sdwan') {
         $sdwanUrl = $baseUrl . '/system/sdwan?vdom=' . $vdom;
         $interfaceUrl = $baseUrl . '/system/interface?vdom=' . $vdom;
