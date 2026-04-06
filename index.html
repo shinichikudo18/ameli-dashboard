@@ -1010,7 +1010,7 @@
                     if (ipsecCanvas && ipsecCanvas.getContext) {
                         window.vpnIpsecChart = new Chart(ipsecCanvas.getContext('2d'), {
                             type: 'bar',
-                            data: { labels: ipsecLabels, datasets: [{ label: 'IPsec', data: ipsecValues, backgroundColor: '#36A2EB' }] },
+                            data: { labels: ['Enable', 'Disable'], datasets: [{ label: 'IPsec', data: ipsecStateCounts, backgroundColor: ['#4BC0C0', '#FF6384'] }] },
                             options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } }, y: { ticks: { color: '#fff', precision: 0 }, grid: { color: 'rgba(255,255,255,0.08)' } } } }
                         });
                     }
@@ -1028,7 +1028,7 @@
                     if (healthCanvas && healthCanvas.getContext) {
                         window.vpnHealthChart = new Chart(healthCanvas.getContext('2d'), {
                             type: 'bar',
-                            data: { labels: ipsecLabels, datasets: [{ label: 'IPsec Estado', data: ipsecStateCounts, backgroundColor: ['#4BC0C0', '#FF6384'] }] },
+                            data: { labels: ['Enable', 'Disable'], datasets: [{ label: 'IPsec Estado', data: ipsecStateCounts, backgroundColor: ['#4BC0C0', '#FF6384'] }] },
                             options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } }, y: { ticks: { color: '#fff', precision: 0 }, grid: { color: 'rgba(255,255,255,0.08)' } } } }
                         });
                     }
