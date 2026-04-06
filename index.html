@@ -98,12 +98,12 @@
         <div id="tab-forti" class="tab-content">
             <div class="stats-grid">
                 <div class="stat-card"><div class="stat-value" id="totalClients">-</div><div class="stat-label">Total</div></div>
-                <div class="stat-card"><div class="stat-value" id="signalGood">-</div><div class="stat-label">Buena Senal</div></div>
+                <div class="stat-card"><div class="stat-value" id="signalGood">-</div><div class="stat-label">Buena Señal</div></div>
                 <div class="stat-card"><div class="stat-value" id="signalFair">-</div><div class="stat-label">Regular</div></div>
-                <div class="stat-card"><div class="stat-value" id="signalPoor">-</div><div class="stat-label">Mala Senal</div></div>
+                <div class="stat-card"><div class="stat-value" id="signalPoor">-</div><div class="stat-label">Mala Señal</div></div>
             </div>
             <div class="dashboard-grid" style="margin-bottom:20px;">
-                <div class="card"><div class="card-title">Calidad de Senal</div><div class="chart-container"><canvas id="signalQualityChart"></canvas></div></div>
+                <div class="card"><div class="card-title">Calidad de Señal</div><div class="chart-container"><canvas id="signalQualityChart"></canvas></div></div>
             </div>
             <div class="card">
                 <div class="card-title">Clientes Conectados</div>
@@ -114,7 +114,7 @@
         <div id="tab-heatmap" class="tab-content">
             <div class="stats-grid">
                 <div class="stat-card"><div class="stat-value" id="totalAPs">-</div><div class="stat-label">Total APs</div></div>
-                <div class="stat-card"><div class="stat-value" id="avgSignal">-</div><div class="stat-label">Senal Promedio</div></div>
+                <div class="stat-card"><div class="stat-value" id="avgSignal">-</div><div class="stat-label">Señal Promedio</div></div>
                 <div class="stat-card"><div class="stat-value" id="heatmapGood">-</div><div class="stat-label">Buenos</div></div>
                 <div class="stat-card"><div class="stat-value" id="heatmapPoor">-</div><div class="stat-label">Malos</div></div>
             </div>
@@ -258,7 +258,7 @@
                         window.signalQualityChart = new Chart(sqCtx, {
                             type: 'bar',
                             data: {
-                                labels: ['Buena Senal', 'Regular', 'Mala Senal'],
+                                labels: ['Buena Señal', 'Regular', 'Mala Señal'],
                                 datasets: [{
                                     label: 'Clientes',
                                     data: [good, fair, poor],
@@ -281,7 +281,7 @@
                         return;
                     }
 
-                    var html = '<table class="clients-table"><thead><tr><th>Usuario</th><th>IP</th><th>MAC</th><th>SSID</th><th>AP</th><th>Senal</th></tr></thead><tbody>';
+                    var html = '<table class="clients-table"><thead><tr><th>Usuario</th><th>IP</th><th>MAC</th><th>SSID</th><th>AP</th><th>Señal</th></tr></thead><tbody>';
                     clients.forEach(function(c) {
                         var sig = c.rssi || c.signal || -50;
                         var sigClass = sig > -50 ? 'signal-good' : (sig > -70 ? 'signal-fair' : 'signal-poor');
