@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Red Wifi - Fortigate + Home Assistant</title>
+    <link rel=stylesheet href=https://cdn.jsdelivr.net/npm/flag-icons@6.6.6/css/flag-icons.min.css>
     <script src="lib/chart.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -417,21 +418,55 @@
                     });
                     
                     function getFlag(countryId) {
-                        var countryFlags = {
-                            19523: '🇨🇱 CL', 21333: '🇺🇸 US', 23130: '🇷🇸 RS', 16967: '🇬🇧 UK',
-                            19519: '🇦🇷 AR', 19524: '🇧🇷 BR', 19977: '🇯🇵 JP', 20013: '🇨🇳 CN',
-                            20113: '🇩🇪 DE', 20107: '🇪🇸 ES', 20297: '🇲🇽 MX', 20302: '🇨🇴 CO',
-                            21825: '🇦🇺 AU', 16707: '🇨🇦 CA', 16730: '🇮🇳 IN', 17730: '🇰🇷 KR',
-                            17732: '🇳🇿 NZ', 17737: '🇸🇬 SG', 17747: '🇹🇭 TH', 18242: '🇮🇩 ID',
-                            18259: '🇲🇾 MY', 19268: '🇵🇭 PH', 19534: '🇵🇪 PE', 20035: '🇻🇪 VE',
-                            20306: '🇪🇨 EC', 21057: '🇷🇺 RU', 21058: '🇺🇦 UA', 21062: '🇵🇱 PL',
-                            21067: '🇳🇱 NL', 21076: '🇸🇪 SE', 21317: '🇫🇷 FR', 21836: '🇮🇹 IT',
-                            21842: '🇵🇹 PT', 22605: '🇨🇭 CH', 19272: '🇭🇰 HK', 20345: '🇵🇦 PA',
-                            17741: '🇹🇼 TW', 16756: '🇩🇴 DO', 20009: '🇨🇴 CO', 20119: '🇬🇷 GR',
-                            21065: '🇳🇴 NO', 21074: '🇩🇰 DK', 16723: '🇧🇪 BE', 21823: '🇦🇹 AT',
-                            21827: '🇭🇺 HU', 21831: '🇮🇪 IE', 21087: '🇫🇮 FI', 16756: '🇩🇴 DO'
-                        };
-                        return countryFlags[countryId] || '🌍 XX';
+                        var countryMap = {};
+                        countryMap[19523] = String.fromCharCode(99,108);
+                        countryMap[21333] = String.fromCharCode(117,115);
+                        countryMap[23130] = String.fromCharCode(114,115);
+                        countryMap[16967] = String.fromCharCode(103,98);
+                        countryMap[19519] = String.fromCharCode(97,114);
+                        countryMap[19524] = String.fromCharCode(98,114);
+                        countryMap[19977] = String.fromCharCode(106,112);
+                        countryMap[20013] = String.fromCharCode(99,110);
+                        countryMap[20113] = String.fromCharCode(100,101);
+                        countryMap[20107] = String.fromCharCode(101,115);
+                        countryMap[20297] = String.fromCharCode(109,120);
+                        countryMap[20302] = String.fromCharCode(99,111);
+                        countryMap[21825] = String.fromCharCode(97,117);
+                        countryMap[16707] = String.fromCharCode(99,97);
+                        countryMap[16730] = String.fromCharCode(105,110);
+                        countryMap[17730] = String.fromCharCode(107,114);
+                        countryMap[17732] = String.fromCharCode(110,122);
+                        countryMap[17737] = String.fromCharCode(115,103);
+                        countryMap[17747] = String.fromCharCode(116,104);
+                        countryMap[18242] = String.fromCharCode(105,100);
+                        countryMap[18259] = String.fromCharCode(109,121);
+                        countryMap[19268] = String.fromCharCode(112,104);
+                        countryMap[19534] = String.fromCharCode(112,101);
+                        countryMap[20035] = String.fromCharCode(118,101);
+                        countryMap[20306] = String.fromCharCode(101,99);
+                        countryMap[21057] = String.fromCharCode(114,117);
+                        countryMap[21058] = String.fromCharCode(117,97);
+                        countryMap[21062] = String.fromCharCode(112,108);
+                        countryMap[21067] = String.fromCharCode(110,108);
+                        countryMap[21076] = String.fromCharCode(115,101);
+                        countryMap[21317] = String.fromCharCode(102,114);
+                        countryMap[21836] = String.fromCharCode(105,116);
+                        countryMap[21842] = String.fromCharCode(112,116);
+                        countryMap[22605] = String.fromCharCode(99,104);
+                        countryMap[19272] = String.fromCharCode(104,107);
+                        countryMap[20345] = String.fromCharCode(112,97);
+                        countryMap[17741] = String.fromCharCode(116,119);
+                        countryMap[20009] = String.fromCharCode(99,111);
+                        countryMap[20119] = String.fromCharCode(103,114);
+                        countryMap[21065] = String.fromCharCode(110,111);
+                        countryMap[21074] = String.fromCharCode(100,107);
+                        countryMap[16723] = String.fromCharCode(98,101);
+                        countryMap[21823] = String.fromCharCode(97,116);
+                        countryMap[21827] = String.fromCharCode(104,117);
+                        countryMap[21831] = String.fromCharCode(105,101);
+                        countryMap[21087] = String.fromCharCode(102,105);
+                        var code = countryMap[countryId] || String.fromCharCode(120,120);
+                        return String.fromCharCode(60,115,112,97,110,32,99,108,97,115,115,61,34,102,105,32,102,105,45) + code + String.fromCharCode(34,62,60,47,115,112,97,110,62,32) + code.toUpperCase();
                     }
 
                     function getPortIcon(dport, proto) {
