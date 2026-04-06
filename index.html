@@ -1008,6 +1008,8 @@
 
                     var ipsecCanvas = document.getElementById('vpnIpsecChart');
                     if (ipsecCanvas && ipsecCanvas.getContext) {
+                        var existingIpsec = Chart.getChart ? Chart.getChart(ipsecCanvas) : null;
+                        if (existingIpsec) existingIpsec.destroy();
                         window.vpnIpsecChart = new Chart(ipsecCanvas.getContext('2d'), {
                             type: 'bar',
                             data: { labels: ['Enable', 'Disable'], datasets: [{ label: 'IPsec', data: ipsecStateCounts, backgroundColor: ['#4BC0C0', '#FF6384'] }] },
@@ -1017,6 +1019,8 @@
 
                     var sslCanvas = document.getElementById('vpnSslChart');
                     if (sslCanvas && sslCanvas.getContext) {
+                        var existingSsl = Chart.getChart ? Chart.getChart(sslCanvas) : null;
+                        if (existingSsl) existingSsl.destroy();
                         window.vpnSslChart = new Chart(sslCanvas.getContext('2d'), {
                             type: 'bar',
                             data: { labels: portalLabels, datasets: [{ label: 'SSL Portals', data: portalValues, backgroundColor: '#7b2cbf' }] },
@@ -1026,6 +1030,8 @@
 
                     var healthCanvas = document.getElementById('vpnHealthChart');
                     if (healthCanvas && healthCanvas.getContext) {
+                        var existingHealth = Chart.getChart ? Chart.getChart(healthCanvas) : null;
+                        if (existingHealth) existingHealth.destroy();
                         window.vpnHealthChart = new Chart(healthCanvas.getContext('2d'), {
                             type: 'bar',
                             data: { labels: ['Enable', 'Disable'], datasets: [{ label: 'IPsec Estado', data: ipsecStateCounts, backgroundColor: ['#4BC0C0', '#FF6384'] }] },
