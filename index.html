@@ -729,7 +729,9 @@
                     }
                     var switches = data.results || [];
                     var total = switches.length || 0;
-                    var online = switches.filter(function(s) { return s.status === 'up' || s.status === 'connected'; }).length;
+                    var online = switches.filter(function(s) {
+                        return s['dynamically-discovered'] === 1 || s['fsw-wan1-peer'] === 'fortilink' || s['fsw-wan1-admin'] === 'enable';
+                    }).length;
                     var offline = total - online;
 
                     document.getElementById('totalSwitches').textContent = total;
@@ -755,7 +757,7 @@
                         html += '<div class="card-title">' + fw + ' (' + items.length + ')</div>';
                         html += '<div class="switches-grid">';
                         items.forEach(function(sw) {
-                            var status = sw.status === 'up' || sw.status === 'connected';
+                            var status = (sw['dynamically-discovered'] === 1 || sw['fsw-wan1-peer'] === 'fortilink' || sw['fsw-wan1-admin'] === 'enable');
                             var portsUp = 0;
                             var portsTotal = 0;
                             if (sw.ports && sw.ports.length) {
@@ -764,7 +766,7 @@
                             }
                             html += '<div class="switch-card ' + (status ? 'online' : 'offline') + '">';
                             html += '<div class="switch-name">' + (sw.name || sw.serial || sw['switch-id'] || 'Switch') + '</div>';
-                            html += '<div class="switch-status ' + (status ? 'online' : 'offline') + '">' + (status ? 'Online' : 'Offline') + '</div>';
+                            html += '<div class="switch-status ' + (status ? 'online' : 'offline') + '">' + (status ? 'Conectado' : 'Desconectado') + '</div>';
                             html += '<div class="switch-info">';
                             html += '<div>IP: ' + (sw.device_ip || sw.ip || '-') + '</div>';
                             html += '<div>Serie: ' + (sw['switch-id'] || sw.serial || '-') + '</div>';
