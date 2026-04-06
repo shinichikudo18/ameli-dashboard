@@ -41,6 +41,13 @@
         .signal-poor { background: rgba(255,99,132,0.3); color: #FF6384; }
         .ap-card { background: rgba(0,0,0,0.3); border-radius: 15px; padding: 20px; margin-bottom: 15px; }
         .ap-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .ap-clients-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+        .ap-client-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; border: 1px solid rgba(255,255,255,0.12); }
+        .ap-client-chip.signal-good { background: rgba(0, 200, 83, 0.18); color: #8cffb1; }
+        .ap-client-chip.signal-fair { background: rgba(255, 193, 7, 0.18); color: #ffe08a; }
+        .ap-client-chip.signal-poor { background: rgba(244, 67, 54, 0.18); color: #ffb4ae; }
+        .ap-client-chip .client-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: 0.9; }
+        .ap-client-empty { margin-top: 14px; color: #9aa3b2; font-size: 0.85rem; font-style: italic; }
         .ap-name { font-size: 1.1rem; font-weight: bold; }
         .ap-clients { color: #aaa; }
         .signal-bar { height: 8px; border-radius: 4px; background: #333; overflow: hidden; margin-top: 10px; }
@@ -270,37 +277,98 @@
         
         function refreshHeatmap() {
             document.getElementById('heatmapContent').innerHTML = '<div class="loading">Cargando mapa de calor...</div>';
-            fetch(apiBase + 'aps')
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data.error) {
-                        document.getElementById('heatmapContent').innerHTML = '<div class="error-msg">Error: ' + data.error + '</div>';
+            Promise.all([
+                fetch(apiBase + 'aps').then(function(r) { return r.json(); }),
+                fetch(apiBase + 'clients').then(function(r) { return r.json(); })
+            ])
+                .then(function(results) {
+                    var apData = results[0];
+                    var clientData = results[1];
+
+                    if (apData.error) {
+                        document.getElementById('heatmapContent').innerHTML = '<div class="error-msg">Error: ' + apData.error + '</div>';
                         return;
                     }
-                    var aps = data.results || [];
+                    if (clientData.error) {
+                        document.getElementById('heatmapContent').innerHTML = '<div class="error-msg">Error: ' + clientData.error + '</div>';
+                        return;
+                    }
+
+                    var aps = apData.results || [];
+                    var clients = clientData.results || [];
                     document.getElementById('totalAPs').textContent = aps.length || 0;
-                    
-                    var good = 0, poor = 0, totalSignal = 0, totalClients = 0;
+
+                    var clientsByAp = {};
+                    clients.forEach(function(client) {
+                        var key = client.wtp_name || client.wtp_id || 'Sin AP';
+                        if (!clientsByAp[key]) clientsByAp[key] = [];
+                        clientsByAp[key].push(client);
+                    });
+
+                    var apByKey = {};
                     aps.forEach(function(ap) {
-                        var clients = ap.clients || 0;
-                        totalClients += clients;
-                        if (clients > 0) good++;
-                        else if (clients === 0) poor++;
+                        var keys = [ap.name, ap.serial, ap.wtp_id, ap.local_ipv4_addr].filter(Boolean);
+                        keys.forEach(function(k) {
+                            if (!apByKey[k]) apByKey[k] = ap;
+                        });
+                    });
+
+                    var apKeys = Object.keys(clientsByAp);
+                    Object.keys(apByKey).forEach(function(k) {
+                        if (apKeys.indexOf(k) === -1) apKeys.push(k);
+                    });
+
+                    var totalClients = clients.length;
+                    var activeAps = 0;
+                    apKeys.forEach(function(key) {
+                        if ((clientsByAp[key] || []).length > 0) activeAps++;
                     });
                     document.getElementById('heatmapGood').textContent = totalClients;
-                    document.getElementById('heatmapPoor').textContent = poor;
-                    
-                    if (aps.length === 0) {
+                    document.getElementById('heatmapPoor').textContent = Math.max((aps.length || apKeys.length) - activeAps, 0);
+
+                    if (apKeys.length === 0) {
                         document.getElementById('heatmapContent').innerHTML = '<div class="loading">No hay APs</div>';
                         return;
                     }
-                    
+
+                    function getSignalClass(sig) {
+                        if (sig >= -55) return 'signal-good';
+                        if (sig >= -70) return 'signal-fair';
+                        return 'signal-poor';
+                    }
+
+                    function getClientLabel(client) {
+                        return client.hostname || client.user || client.mac || client.ip || 'Cliente';
+                    }
+
+                    apKeys.sort(function(a, b) {
+                        return (clientsByAp[b] || []).length - (clientsByAp[a] || []).length;
+                    });
+
                     var html = '';
-                    aps.forEach(function(ap) {
-                        var status = ap.status === 'connected' ? 'online' : 'offline';
+                    apKeys.forEach(function(key) {
+                        var ap = apByKey[key] || {};
+                        var apClients = clientsByAp[key] || [];
+                        var displayName = ap.name || ap.wtp_name || key;
                         html += '<div class="ap-card">';
-                        html += '<div class="ap-header"><div class="ap-name">' + ap.name + '</div><div class="ap-clients">' + ap.clients + ' clientes</div></div>';
-                        html += '<div style="color:#aaa;font-size:0.85rem;">IP: ' + (ap.local_ipv4_addr || '-') + ' | Estado: ' + ap.status + '</div>';
+                        html += '<div class="ap-header"><div class="ap-name">' + displayName + '</div><div class="ap-clients">' + apClients.length + ' clientes</div></div>';
+                        html += '<div style="color:#aaa;font-size:0.85rem;">IP: ' + (ap.local_ipv4_addr || ap.wtp_ip || '-') + ' | Estado: ' + (ap.status || ap.connection_state || 'connected') + ' | Serie: ' + (ap.serial || ap.wtp_id || '-') + '</div>';
+
+                        if (apClients.length > 0) {
+                            html += '<div class="ap-clients-grid">';
+                            apClients.slice(0, 20).sort(function(a, b) { return (b.signal || -99) - (a.signal || -99); }).forEach(function(client) {
+                                var sig = client.signal || -99;
+                                var sigClass = getSignalClass(sig);
+                                html += '<span class="ap-client-chip ' + sigClass + '"><span class="client-dot"></span>' + getClientLabel(client) + ' (' + sig + ' dBm)</span>';
+                            });
+                            if (apClients.length > 20) {
+                                html += '<span class="ap-client-chip" style="background:rgba(255,255,255,0.06);color:#cfd8e3;">+' + (apClients.length - 20) + ' mas</span>';
+                            }
+                            html += '</div>';
+                        } else {
+                            html += '<div class="ap-client-empty">Sin clientes conectados</div>';
+                        }
+
                         html += '</div>';
                     });
                     document.getElementById('heatmapContent').innerHTML = html;
@@ -309,7 +377,7 @@
                     document.getElementById('heatmapContent').innerHTML = '<div class="error-msg">Error: ' + err.message + '</div>';
                 });
         }
-        
+
         function switchNetworkTab(tabId) {
             var dhcpBtn = document.getElementById('tab-btn-dhcp');
             var sessBtn = document.getElementById('tab-btn-sessions');
