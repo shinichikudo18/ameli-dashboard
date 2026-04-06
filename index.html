@@ -139,6 +139,7 @@
                 <div class="dashboard-grid" style="margin-bottom:20px;">
                     <div class="card"><div class="card-title">Sesiones por Firewall</div><div class="chart-container"><canvas id="firewallChart"></canvas></div></div>
                     <div class="card"><div class="card-title">Protocolos</div><div class="chart-container"><canvas id="protoChart"></canvas></div></div>
+                    <div class="card"><div class="card-title">Aplicaciones</div><div class="chart-container"><canvas id="appChart"></canvas></div></div>
                 </div>
                 <div class="card">
                     <div class="card-title">Lista de Sesiones</div>
@@ -343,6 +344,41 @@
                     
                     var fgOficina = 0, fgData = 0, tcpCount = 0, udpCount = 0;
                     var fwStats = { 'FG Oficina': 0, 'FG Data': 0 };
+                    var appStats = {};
+                    var appIdMap = {
+                        52452: 'Windows.Push.Notification',
+                        41475: 'Microsoft.Authentication',
+                        47013: 'SSL.TLSv1.3',
+                        16195: 'DNS',
+                        16270: 'NTP',
+                        40169: 'HTTP.Proxy',
+                        24466: 'HTTP',
+                        43541: 'Microsoft.Teams',
+                        28057: 'WhatsApp',
+                        31077: 'YouTube',
+                        18155: 'Netflix',
+                        15832: 'Facebook',
+                        34527: 'Instagram',
+                        41468: 'Microsoft.Office365',
+                        41469: 'Microsoft.Portal',
+                        39999: 'SSL'
+                    };
+
+                    function getAppLabel(sess) {
+                        var appId = 0;
+                        var appName = '';
+                        if (sess.apps && sess.apps.length > 0) {
+                            appId = sess.apps[0].id || 0;
+                            appName = sess.apps[0].name || '';
+                        }
+                        if (appId > 0 && appIdMap[appId]) return appIdMap[appId];
+                        if (appName && !appName.match(/^[a-z]+\/[0-9]+$/)) return appName.split('/')[0];
+                        if (sess.dport === 53) return 'DNS';
+                        if (sess.dport === 80) return 'HTTP';
+                        if (sess.dport === 443) return 'HTTPS';
+                        if (sess.proto === 'icmp') return 'ICMP';
+                        return null;
+                    }
                     
                     sessions.forEach(function(sess) {
                         var fw = sess.firewall || sess.device_ip || 'Unknown';
@@ -355,6 +391,11 @@
                         }
                         if (sess.proto === 'tcp') tcpCount++;
                         else if (sess.proto === 'udp') udpCount++;
+
+                        var appLabel = getAppLabel(sess);
+                        if (appLabel) {
+                            appStats[appLabel] = (appStats[appLabel] || 0) + 1;
+                        }
                     });
                     
                     document.getElementById('sessionCount').textContent = totalSessions;
@@ -394,6 +435,7 @@
                     // Charts
                     if (window.networkChart1) window.networkChart1.destroy();
                     if (window.networkChart2) window.networkChart2.destroy();
+                    if (window.networkChart3) window.networkChart3.destroy();
                     
                     var fwCtx = document.getElementById('firewallChart').getContext('2d');
                     window.networkChart1 = new Chart(fwCtx, {
@@ -407,6 +449,24 @@
                         type: 'doughnut',
                         data: { labels: ['TCP', 'UDP'], datasets: [{ data: [tcpCount, udpCount], backgroundColor: ['#4BC0C0', '#FFCE56'] }] },
                         options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#fff' } } } }
+                    });
+
+                    var appEntries = Object.keys(appStats).map(function(k) { return [k, appStats[k]]; }).sort(function(a, b) { return b[1] - a[1]; });
+                    var appLabels = appEntries.map(function(item) { return item[0]; });
+                    var appValues = appEntries.map(function(item) { return item[1]; });
+                    var appCtx = document.getElementById('appChart').getContext('2d');
+                    window.networkChart3 = new Chart(appCtx, {
+                        type: 'bar',
+                        data: { labels: appLabels, datasets: [{ data: appValues, backgroundColor: '#7b2cbf' }] },
+                        options: {
+                            responsive: true,
+                            indexAxis: 'y',
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } },
+                                y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } }
+                            }
+                        }
                     });
                     
                     // Sessions Content - build IP to hostname map from DHCP
