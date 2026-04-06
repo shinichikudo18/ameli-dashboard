@@ -754,8 +754,14 @@
         
         function refreshSDWAN() {
             document.getElementById('sdwanSummary').innerHTML = '<div class="loading">Cargando SD-WAN...</div>';
-            if (window.sdwanMembersChart && typeof window.sdwanMembersChart.destroy === 'function') window.sdwanMembersChart.destroy();
-            if (window.sdwanHealthChart && typeof window.sdwanHealthChart.destroy === 'function') window.sdwanHealthChart.destroy();
+            if (window.sdwanMembersChart && typeof window.sdwanMembersChart.destroy === 'function') {
+                window.sdwanMembersChart.destroy();
+            }
+            if (window.sdwanHealthChart && typeof window.sdwanHealthChart.destroy === 'function') {
+                window.sdwanHealthChart.destroy();
+            }
+            window.sdwanMembersChart = null;
+            window.sdwanHealthChart = null;
             fetch(apiBase + 'sdwan')
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
@@ -811,7 +817,7 @@
                     });
 
                     var membersCanvas = document.getElementById('sdwanMembersChart');
-                    if (membersCanvas) {
+                    if (membersCanvas && membersCanvas.getContext) {
                         window.sdwanMembersChart = new Chart(membersCanvas.getContext('2d'), {
                             type: 'bar',
                             data: { labels: Object.keys(zoneCounts), datasets: [{ label: 'Miembros', data: Object.values(zoneCounts), backgroundColor: '#36A2EB' }] },
@@ -820,7 +826,7 @@
                     }
 
                     var healthCanvas = document.getElementById('sdwanHealthChart');
-                    if (healthCanvas) {
+                    if (healthCanvas && healthCanvas.getContext) {
                         window.sdwanHealthChart = new Chart(healthCanvas.getContext('2d'), {
                             type: 'bar',
                             data: { labels: ['Activo', 'Inactivo', 'Otro'], datasets: [{ label: 'Health Checks', data: [healthStatusCounts.enable, healthStatusCounts.disable, healthStatusCounts.other], backgroundColor: ['#4BC0C0', '#FF6384', '#FFCE56'] }] },
