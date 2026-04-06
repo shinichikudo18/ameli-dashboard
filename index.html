@@ -510,7 +510,11 @@
                                 40169: 'HTTP.Proxy',
                                 24466: 'HTTP',
                                 43541: 'Microsoft.Teams',
-                                28057: 'YouTube',
+                                28057: 'WhatsApp',
+                                31077: 'YouTube',
+                                18155: 'Netflix',
+                                15832: 'Facebook',
+                                34527: 'Instagram',
                                 41468: 'Microsoft.Office365',
                                 41469: 'Microsoft.Portal',
                                 39999: 'SSL',
@@ -519,10 +523,7 @@
                             var appName = '';
                             if (appId > 0 && appIdMap[appId]) {
                                 appName = appIdMap[appId];
-                                if (sess.dport === 53) proto = '&#128270; ' + appName;
-                                else if (sess.dport === 80) proto = '&#127760; ' + appName;
-                                else if (sess.dport === 443) proto = '&#128274; ' + appName;
-                                else proto = appName + ' (' + sess.proto + '/' + sess.dport + ')';
+                                proto = appName;
                             } else if (sess.dport) {
                                 if (sess.dport === 53) proto = '&#128270; DNS';
                                 else if (sess.dport === 80) proto = '&#127760; HTTP';
