@@ -787,11 +787,12 @@
                             html += '</div>';
                             if (sw.ports && sw.ports.length) {
                                 html += '<div style="margin-top:12px; max-height:420px; overflow:auto;">';
-                                html += '<table class="clients-table"><thead><tr><th>Puerto</th><th>Estado</th><th>Speed</th><th>VLAN</th><th>PoE</th><th>PoE Power</th></tr></thead><tbody>';
+                                html += '<table class="clients-table"><thead><tr><th>Puerto</th><th>Descripcion</th><th>Estado</th><th>Speed</th><th>VLAN</th><th>PoE</th><th>PoE Power</th></tr></thead><tbody>';
                                 sw.ports.forEach(function(p) {
                                     html += '<tr>';
                                     html += '<td>' + (p['port-name'] || '-') + '</td>';
-                                    html += '<td>' + (p.status || '-') + '</td>';
+                                    html += '<td>' + (p.description || '-') + '</td>';
+                                    html += '<td>' + (p.status || '-') + '</td>;
                                     html += '<td>' + (p.speed || '-') + '</td>';
                                     html += '<td>' + (p.vlan || '-') + '</td>';
                                     html += '<td>' + (p['poe-status'] || '-') + '</td>';
