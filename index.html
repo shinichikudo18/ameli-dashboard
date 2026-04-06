@@ -777,6 +777,15 @@
                 });
         }
 
+        function initDashboard() {
+            refreshHA();
+            refreshForti();
+            refreshHeatmap();
+            refreshSwitches();
+        }
+
+        document.addEventListener('DOMContentLoaded', initDashboard);
+
     </script>
 </body>
 </html>
