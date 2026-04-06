@@ -103,7 +103,7 @@
                 <div class="stat-card"><div class="stat-value" id="signalPoor">-</div><div class="stat-label">Mala Senal</div></div>
             </div>
             <div class="dashboard-grid" style="margin-bottom:20px;">
-                <div class="card"><div class="card-title">Signal Quality</div><div class="chart-container"><canvas id="signalQualityChart"></canvas></div></div>
+                <div class="card"><div class="card-title">Calidad de Senal</div><div class="chart-container"><canvas id="signalQualityChart"></canvas></div></div>
             </div>
             <div class="card">
                 <div class="card-title">Clientes Conectados</div>
@@ -240,21 +240,21 @@
                     document.getElementById('totalClients').textContent = clients.length || 0;
 
                     var good = 0, fair = 0, poor = 0;
-                    var signalBuckets = { 'Excellent': 0, 'Good': 0, 'Fair': 0, 'Poor': 0 };
+                    var signalBuckets = { 'Excelente': 0, 'Buena': 0, 'Regular': 0, 'Mala': 0 };
                     clients.forEach(function(c) {
                         var sig = c.rssi || c.signal || -50;
                         if (sig >= -45) {
                             good++;
-                            signalBuckets['Excellent']++;
+                            signalBuckets['Excelente']++;
                         } else if (sig > -55) {
                             good++;
-                            signalBuckets['Good']++;
+                            signalBuckets['Buena']++;
                         } else if (sig > -70) {
                             fair++;
-                            signalBuckets['Fair']++;
+                            signalBuckets['Regular']++;
                         } else {
                             poor++;
-                            signalBuckets['Poor']++;
+                            signalBuckets['Mala']++;
                         }
                     });
 
@@ -271,7 +271,7 @@
                         data: {
                             labels: Object.keys(signalBuckets),
                             datasets: [{
-                                label: 'Clients',
+                                label: 'Clientes',
                                 data: Object.values(signalBuckets),
                                 backgroundColor: ['#00c853', '#7cb342', '#ffb300', '#f44336']
                             }]
