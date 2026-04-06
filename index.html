@@ -181,6 +181,11 @@
             </div>
             <div class="dashboard-grid" style="margin-bottom:20px;">
                 <div class="card"><div class="card-title">Resumen SD-WAN</div><div id="sdwanSummary"><div class="loading">Cargando...</div></div></div>
+                <div class="card"><div class="card-title">Miembros por Zona</div><div class="chart-container"><canvas id="sdwanMembersChart"></canvas></div></div>
+            </div>
+            <div class="dashboard-grid" style="margin-bottom:20px;">
+                <div class="card"><div class="card-title">Health Checks por Estado</div><div class="chart-container"><canvas id="sdwanHealthChart"></canvas></div></div>
+                <div class="card"><div class="card-title">Health Check Realtime</div><div id="sdwanRealtime"><div class="loading">Cargando...</div></div></div>
             </div>
             <div class="card" style="margin-bottom:20px;">
                 <div class="card-title">Miembros</div>
@@ -749,6 +754,8 @@
         
         function refreshSDWAN() {
             document.getElementById('sdwanSummary').innerHTML = '<div class="loading">Cargando SD-WAN...</div>';
+            if (window.sdwanMembersChart && typeof window.sdwanMembersChart.destroy === 'function') window.sdwanMembersChart.destroy();
+            if (window.sdwanHealthChart && typeof window.sdwanHealthChart.destroy === 'function') window.sdwanHealthChart.destroy();
             fetch(apiBase + 'sdwan')
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
@@ -787,6 +794,47 @@
                     var membersHtml = '';
                     var healthHtml = '';
                     var servicesHtml = '';
+                    var zoneCounts = {};
+                    var healthStatusCounts = { 'enable': 0, 'disable': 0, 'other': 0 };
+                    var realtimeRows = [];
+
+                    sdwans.forEach(function(sdwan) {
+                        (sdwan.members || []).forEach(function(m) {
+                            var z = m.zone || 'Sin zona';
+                            zoneCounts[z] = (zoneCounts[z] || 0) + 1;
+                        });
+                        (sdwan.health_checks || []).forEach(function(h) {
+                            var k = h.protocol || 'unknown';
+                            healthStatusCounts['enable']++;
+                            realtimeRows.push({ name: h.name, server: h.server, protocol: k, members: h.members, sla: h.sla, interval: h.interval });
+                        });
+                    });
+
+                    var membersCanvas = document.getElementById('sdwanMembersChart');
+                    if (membersCanvas) {
+                        window.sdwanMembersChart = new Chart(membersCanvas.getContext('2d'), {
+                            type: 'bar',
+                            data: { labels: Object.keys(zoneCounts), datasets: [{ label: 'Miembros', data: Object.values(zoneCounts), backgroundColor: '#36A2EB' }] },
+                            options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } }, y: { ticks: { color: '#fff', precision: 0 }, grid: { color: 'rgba(255,255,255,0.08)' } } } }
+                        });
+                    }
+
+                    var healthCanvas = document.getElementById('sdwanHealthChart');
+                    if (healthCanvas) {
+                        window.sdwanHealthChart = new Chart(healthCanvas.getContext('2d'), {
+                            type: 'bar',
+                            data: { labels: ['Activo', 'Inactivo', 'Otro'], datasets: [{ label: 'Health Checks', data: [healthStatusCounts.enable, healthStatusCounts.disable, healthStatusCounts.other], backgroundColor: ['#4BC0C0', '#FF6384', '#FFCE56'] }] },
+                            options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } }, y: { ticks: { color: '#fff', precision: 0 }, grid: { color: 'rgba(255,255,255,0.08)' } } } }
+                        });
+                    }
+
+                    var realtimeHtml = '<table class="clients-table"><thead><tr><th>Health Check</th><th>Servidor</th><th>Protocolo</th><th>Miembros</th><th>SLA</th><th>Intervalo</th></tr></thead><tbody>';
+                    realtimeRows.forEach(function(r) {
+                        realtimeHtml += '<tr><td>' + (r.name || '-') + '</td><td>' + (r.server || '-') + '</td><td>' + (r.protocol || '-') + '</td><td>' + (r.members || 0) + '</td><td>' + (r.sla || 0) + '</td><td>' + (r.interval || 0) + '</td></tr>';
+                    });
+                    realtimeHtml += '</tbody></table>';
+                    document.getElementById('sdwanRealtime').innerHTML = realtimeHtml;
+
 
                     sdwans.forEach(function(sdwan) {
                         var fw = sdwan.firewall || sdwan.device_short || sdwan.device_id || 'Firewall';
