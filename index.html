@@ -307,32 +307,6 @@
                         clientsByAp[key].push(client);
                     });
 
-                    var apByKey = {};
-                    aps.forEach(function(ap) {
-                        var keys = [ap.name, ap.serial, ap.wtp_id, ap.local_ipv4_addr].filter(Boolean);
-                        keys.forEach(function(k) {
-                            if (!apByKey[k]) apByKey[k] = ap;
-                        });
-                    });
-
-                    var apKeys = Object.keys(clientsByAp);
-                    Object.keys(apByKey).forEach(function(k) {
-                        if (apKeys.indexOf(k) === -1) apKeys.push(k);
-                    });
-
-                    var totalClients = clients.length;
-                    var activeAps = 0;
-                    apKeys.forEach(function(key) {
-                        if ((clientsByAp[key] || []).length > 0) activeAps++;
-                    });
-                    document.getElementById('heatmapGood').textContent = totalClients;
-                    document.getElementById('heatmapPoor').textContent = Math.max((aps.length || apKeys.length) - activeAps, 0);
-
-                    if (apKeys.length === 0) {
-                        document.getElementById('heatmapContent').innerHTML = '<div class="loading">No hay APs</div>';
-                        return;
-                    }
-
                     function getSignalClass(sig) {
                         if (sig >= -55) return 'signal-good';
                         if (sig >= -70) return 'signal-fair';
@@ -343,15 +317,42 @@
                         return client.hostname || client.user || client.mac || client.ip || 'Cliente';
                     }
 
-                    apKeys.sort(function(a, b) {
-                        return (clientsByAp[b] || []).length - (clientsByAp[a] || []).length;
+                    function getApClients(ap) {
+                        var keys = [ap.name, ap.serial, ap.wtp_id].filter(Boolean);
+                        var seen = {};
+                        var out = [];
+                        keys.forEach(function(key) {
+                            (clientsByAp[key] || []).forEach(function(client) {
+                                var id = client.mac || client.ip || client.hostname || client.user;
+                                if (!seen[id]) {
+                                    seen[id] = true;
+                                    out.push(client);
+                                }
+                            });
+                        });
+                        return out;
+                    }
+
+                    var connectedAps = aps.filter(function(ap) {
+                        return ap.status === 'connected' || ap.connection_state === 'Connected';
+                    });
+                    var totalClients = clients.length;
+                    document.getElementById('heatmapGood').textContent = totalClients;
+                    document.getElementById('heatmapPoor').textContent = Math.max(connectedAps.length - connectedAps.filter(function(ap) { return getApClients(ap).length > 0; }).length, 0);
+
+                    if (connectedAps.length === 0) {
+                        document.getElementById('heatmapContent').innerHTML = '<div class="loading">No hay APs</div>';
+                        return;
+                    }
+
+                    connectedAps.sort(function(a, b) {
+                        return getApClients(b).length - getApClients(a).length;
                     });
 
                     var html = '';
-                    apKeys.forEach(function(key) {
-                        var ap = apByKey[key] || {};
-                        var apClients = clientsByAp[key] || [];
-                        var displayName = ap.name || ap.wtp_name || key;
+                    connectedAps.forEach(function(ap) {
+                        var apClients = getApClients(ap);
+                        var displayName = ap.name || ap.wtp_name || ap.serial || ap.wtp_id || 'AP';
                         html += '<div class="ap-card">';
                         html += '<div class="ap-header"><div class="ap-name">' + displayName + '</div><div class="ap-clients">' + apClients.length + ' clientes</div></div>';
                         html += '<div style="color:#aaa;font-size:0.85rem;">IP: ' + (ap.local_ipv4_addr || ap.wtp_ip || '-') + ' | Estado: ' + (ap.status || ap.connection_state || 'connected') + ' | Serie: ' + (ap.serial || ap.wtp_id || '-') + '</div>';
