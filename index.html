@@ -262,7 +262,7 @@
                     document.getElementById('signalFair').textContent = fair;
                     document.getElementById('signalPoor').textContent = poor;
 
-                    if (window.signalQualityChart) window.signalQualityChart.destroy();
+                    if (window.signalQualityChart && typeof window.signalQualityChart.destroy === 'function') window.signalQualityChart.destroy();
                     var sqCanvas = document.getElementById('signalQualityChart');
                     if (sqCanvas) {
                         var sqCtx = sqCanvas.getContext('2d');
