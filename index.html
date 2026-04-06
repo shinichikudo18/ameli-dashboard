@@ -728,46 +728,55 @@
                     var total = switches.length || 0;
                     var online = switches.filter(function(s) { return s.status === 'up' || s.status === 'connected'; }).length;
                     var offline = total - online;
-                    
+
                     document.getElementById('totalSwitches').textContent = total;
                     document.getElementById('onlineSwitches').textContent = online;
                     document.getElementById('offlineSwitches').textContent = offline;
-                    
+
                     if (switches.length === 0) {
                         document.getElementById('switchesContent').innerHTML = '<div class="loading">No hay switches</div>';
                         return;
                     }
-                    
-                    var html = '<div class="switches-grid">';
+
+                    var groups = {};
                     switches.forEach(function(sw) {
-                        var status = sw.status === 'up' || sw.status === 'connected';
-                        html += '<div class="switch-card ' + (status ? 'online' : 'offline') + '">';
-                        html += '<div class="switch-name">' + (sw.name || sw.serial || 'Switch') + '</div>';
-                        html += '<div class="switch-status ' + (status ? 'online' : 'offline') + '">' + (status ? 'Online' : 'Offline') + '</div>';
-                        html += '<div class="switch-info"><div>IP: ' + (sw.ip || '-') + '</div></div></div>';
+                        var fw = sw.firewall || sw.device_short || sw.device_id || 'Firewall';
+                        if (!groups[fw]) groups[fw] = [];
+                        groups[fw].push(sw);
                     });
-                    html += '</div>';
+
+                    var html = '';
+                    Object.keys(groups).sort().forEach(function(fw) {
+                        var items = groups[fw];
+                        html += '<div class="card" style="margin-bottom:20px;">';
+                        html += '<div class="card-title">' + fw + ' (' + items.length + ')</div>';
+                        html += '<div class="switches-grid">';
+                        items.forEach(function(sw) {
+                            var status = sw.status === 'up' || sw.status === 'connected';
+                            var portsUp = 0;
+                            var portsTotal = 0;
+                            if (sw.ports && sw.ports.length) {
+                                portsTotal = sw.ports.length;
+                                sw.ports.forEach(function(p) { if (p.status === 'up') portsUp++; });
+                            }
+                            html += '<div class="switch-card ' + (status ? 'online' : 'offline') + '">';
+                            html += '<div class="switch-name">' + (sw.name || sw.serial || sw['switch-id'] || 'Switch') + '</div>';
+                            html += '<div class="switch-status ' + (status ? 'online' : 'offline') + '">' + (status ? 'Online' : 'Offline') + '</div>';
+                            html += '<div class="switch-info">';
+                            html += '<div>IP: ' + (sw.device_ip || sw.ip || '-') + '</div>';
+                            html += '<div>Serie: ' + (sw['switch-id'] || sw.serial || '-') + '</div>';
+                            html += '<div>Puertos: ' + portsUp + '/' + portsTotal + '</div>';
+                            html += '</div></div>';
+                        });
+                        html += '</div></div>';
+                    });
                     document.getElementById('switchesContent').innerHTML = html;
                 })
                 .catch(function(err) {
                     document.getElementById('switchesContent').innerHTML = '<div class="error-msg">Error: ' + err.message + '</div>';
                 });
         }
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            refreshHA();
-            refreshForti();
-            refreshHeatmap();
-            refreshNetwork();
-            refreshSwitches();
-            setInterval(function() {
-                refreshHA();
-                refreshForti();
-                refreshHeatmap();
-                refreshNetwork();
-                refreshSwitches();
-            }, 60000);
-        });
+
     </script>
 </body>
 </html>

@@ -97,7 +97,7 @@ switch ($action) {
         
     case 'switches':
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=switch-controller/managed-switch&start=0&count=50');
+        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=all&endpoint=switch-controller/managed-switch&start=0&count=50');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $resp = curl_exec($ch);
         curl_close($ch);

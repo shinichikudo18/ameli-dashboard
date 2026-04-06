@@ -33,7 +33,6 @@ $monitorEndpoints = [
     'system/dhcp', 
     'firewall/session', 
     'wireless-controller/managed-ap', 
-    'switch-controller/managed-switch', 
     'switch-controller/vlan',
     'system/interface',
     'wifi/managed_ap'
