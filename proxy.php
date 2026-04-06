@@ -121,6 +121,15 @@ switch ($action) {
         curl_close($ch);
         echo $resp;
         break;
+
+    case 'vpn-users':
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=all&endpoint=user/firewall');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $resp = curl_exec($ch);
+        curl_close($ch);
+        echo $resp;
+        break;
         
     default:
         http_response_code(400);
