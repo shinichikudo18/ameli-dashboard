@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Switches - Dashboard</title>
+    <script src="../lib/chart.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; color: #fff; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; padding: 25px; background: rgba(255,255,255,0.1); border-radius: 15px; }
+        h1 { font-size: 1.5rem; margin-bottom: 10px; background: linear-gradient(90deg, #00d4ff, #7b2cbf); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { color: #aaa; font-size: 0.9rem; }
+        .back-link { display: block; text-align: center; margin-bottom: 20px; }
+        .back-link a { color: #00d4ff; text-decoration: none; font-size: 1.1rem; }
+        .back-link a:hover { text-decoration: underline; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; text-align: center; }
+        .stat-value { font-size: 1.8rem; font-weight: bold; color: #00d4ff; }
+        .stat-label { color: #aaa; font-size: 0.85rem; margin-top: 5px; }
+        .card { background: rgba(255,255,255,0.1); border-radius: 20px; padding: 25px; }
+        .card-title { font-size: 1.2rem; margin-bottom: 15px; color: #00d4ff; }
+        .switches-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .switch-card { background: rgba(0,0,0,0.3); border-radius: 15px; padding: 20px; border: 2px solid transparent; }
+        .switch-card.online { border-color: #4BC0C0; }
+        .switch-card.offline { border-color: #FF6384; }
+        .switch-name { font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; }
+        .switch-status { padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+        .switch-status.online { background: rgba(75,192,192,0.3); color: #4BC0C0; }
+        .switch-status.offline { background: rgba(255,99,132,0.3); color: #FF6384; }
+        .switch-info { margin-top: 10px; font-size: 0.9rem; color: #aaa; }
+        .loading { text-align: center; padding: 40px; color: #aaa; }
+        .error-msg { color: #FF6384; text-align: center; padding: 20px; }
+        .status-bar { margin-top: 25px; text-align: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 10px; }
+        #lastUpdate { color: #888; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <div class="back-link"><a href="../">&larr; Volver al Dashboard</a></div>
+    <div class="container">
+        <header>
+            <h1>???? Switches</h1>
+            <p class="subtitle">Estado de switches de red</p>
+        </header>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-value" id="totalSwitches">0</div><div class="stat-label">Total Switches</div></div>
+            <div class="stat-card"><div class="stat-value" id="onlineSwitches">0</div><div class="stat-label">Online</div></div>
+            <div class="stat-card"><div class="stat-value" id="offlineSwitches">0</div><div class="stat-label">Offline</div></div>
+            <div class="stat-card"><div class="stat-value" id="totalPorts">0</div><div class="stat-label">Total Puertos</div></div>
+        </div>
+        <div class="card">
+            <div class="card-title">???? Estado de Switches</div>
+            <div id="switchesGrid"><div class="loading">Cargando datos...</div></div>
+        </div>
+        <div class="status-bar" id="lastUpdate">-</div>
+    </div>
+    <script>
+        var apiBase = '';
+        
+        function renderSwitches(switches) {
+            var grid = document.getElementById('switchesGrid');
+            var total = 0, online = 0, offline = 0, ports = 0;
+            
+            if (!switches || switches.length === 0) {
+                grid.innerHTML = '<div class="error-msg">No hay datos de switches</div>';
+                return;
+            }
+            
+            var html = '<div class="switches-grid">';
+            switches.forEach(function(sw) {
+                total++;
+                var status = sw.status === 'online';
+                if (status) online++; else offline++;
+                ports += sw.ports || 0;
+                
+                html += '<div class="switch-card ' + (status ? 'online' : 'offline') + '">';
+                html += '<div class="switch-name">' + (sw.name || 'Unknown') + '</div>';
+                html += '<div class="switch-status ' + (status ? 'online' : 'offline') + '">' + (status ? 'Online' : 'Offline') + '</div>';
+                html += '<div class="switch-info">';
+                html += '<div>IP: ' + (sw.ip || '-') + '</div>';
+                html += '<div>Puertos: ' + (sw.ports || 0) + '</div>';
+                html += '<div>Modelo: ' + (sw.model || '-') + '</div>';
+                html += '</div></div>';
+            });
+            html += '</div>';
+            
+            grid.innerHTML = html;
+            document.getElementById('totalSwitches').textContent = total;
+            document.getElementById('onlineSwitches').textContent = online;
+            document.getElementById('offlineSwitches').textContent = offline;
+            document.getElementById('totalPorts').textContent = ports;
+        }
+        
+        function loadSwitchesData() {
+            fetch(apiBase + 'proxy.php?action=switches')
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    renderSwitches(data);
+                    document.getElementById('lastUpdate').textContent = '??ltima actualizaci??n: ' + new Date().toLocaleTimeString();
+                })
+                .function(function(err) {
+                    document.getElementById('switchesGrid').innerHTML = '<div class="error-msg">Error cargando datos</div>';
+                    console.error(err);
+                });
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSwitchesData();
+            setInterval(loadSwitchesData, 60000);
+        });
+    </script>
+</body>
+</html>

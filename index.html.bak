@@ -1,0 +1,1925 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Red Wifi - Fortigate + Home Assistant</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; color: #fff; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; padding: 25px; background: rgba(255,255,255,0.1); border-radius: 15px; }
+        h1 { font-size: 2rem; margin-bottom: 10px; background: linear-gradient(90deg, #00d4ff, #7b2cbf); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { color: #aaa; font-size: 1rem; }
+        .device-selector { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 15px; }
+        .device-selector label { color: #aaa; font-size: 0.9rem; }
+        .device-selector select { padding: 8px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: #fff; min-width: 200px; font-size: 0.85rem; }
+        .device-status-indicator { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+        .device-status-indicator.online { background: #4BC0C0; box-shadow: 0 0 8px #4BC0C0; }
+        .device-status-indicator.offline { background: #FF6384; }
+        .device-status-indicator.loading { background: #FFCE56; animation: pulse 1s infinite; }
+        .forti-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-left: 5px; }
+        .forti-badge.primary { background: rgba(0,212,255,0.2); color: #00d4ff; }
+        .forti-badge.secondary { background: rgba(123,44,191,0.2); color: #7b2cbf; }
+        .firewall-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; background: rgba(255,255,255,0.1); color: #fff; }
+        .firewall-badge.forti-oficina { background: rgba(0,212,255,0.2); color: #00d4ff; border: 1px solid #00d4ff; }
+        .firewall-badge.forti-data { background: rgba(123,44,191,0.2); color: #7b2cbf; border: 1px solid #7b2cbf; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab-btn { padding: 15px 30px; background: rgba(255,255,255,0.1); border: none; border-radius: 10px; color: #fff; font-size: 1rem; cursor: pointer; }
+        .tab-btn.active { background: #00d4ff; color: #000; font-weight: bold; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
+        .card { background: rgba(255,255,255,0.1); border-radius: 20px; padding: 25px; }
+        .card-title { font-size: 1.2rem; margin-bottom: 15px; color: #00d4ff; }
+        .chart-container { position: relative; height: 250px; display: flex; justify-content: center; }
+        .sensor-card { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; border-left: 4px solid #00d4ff; }
+        .sensor-name { color: #ccc; }
+        .sensor-value { font-size: 1.3rem; font-weight: bold; color: #00d4ff; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; text-align: center; }
+        .stat-value { font-size: 1.8rem; font-weight: bold; color: #00d4ff; }
+        .stat-label { color: #aaa; font-size: 0.85rem; margin-top: 5px; }
+        .filter-bar { margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        select, input { padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: #fff; min-width: 150px; }
+        .sort-bar { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .sort-bar label { color: #aaa; font-size: 0.9rem; }
+        .sort-btn { padding: 8px 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.85rem; }
+        .sort-btn.active { background: #00d4ff; color: #000; border-color: #00d4ff; }
+        .clients-table { width: 100%; border-collapse: collapse; }
+        .clients-table th { background: rgba(0,0,0,0.3); padding: 12px 10px; text-align: left; color: #00d4ff; font-size: 0.85rem; text-transform: uppercase; }
+        .clients-table td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .clients-table tr:hover { background: rgba(255,255,255,0.05); }
+        .signal-badge { padding: 4px 10px; border-radius: 15px; font-size: 0.75rem; font-weight: bold; }
+        .signal-good { background: rgba(75,192,192,0.3); color: #4BC0C0; }
+        .signal-fair { background: rgba(255,206,86,0.3); color: #FFCE56; }
+        .signal-poor { background: rgba(255,99,132,0.3); color: #FF6384; }
+        .os-badge { background: rgba(255,255,255,0.1); padding: 3px 8px; border-radius: 5px; font-size: 0.8rem; }
+        .speed-badge { color: #4BC0C0; font-weight: bold; }
+        .expand-btn { background: none; border: none; color: #00d4ff; cursor: pointer; font-size: 1.2rem; }
+        .client-details-row td { background: rgba(0,0,0,0.3); padding: 0; }
+        .client-details-inner { padding: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .detail-item { display: flex; flex-direction: column; gap: 3px; }
+        .detail-label { color: #888; font-size: 0.75rem; text-transform: uppercase; }
+        .detail-value { color: #fff; font-size: 0.95rem; }
+        .status-bar { margin-top: 25px; text-align: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 10px; }
+        #lastUpdate { color: #888; font-size: 0.85rem; }
+        .error-msg { color: #FF6384; text-align: center; padding: 20px; }
+        .heatmap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .ap-card { background: rgba(0,0,0,0.3); border-radius: 15px; padding: 20px; border: 2px solid transparent; transition: all 0.3s; }
+        .ap-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .ap-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .ap-name { font-size: 1.1rem; font-weight: bold; color: #fff; }
+        .ap-clients { font-size: 0.9rem; color: #aaa; }
+        .heatmap-bar { height: 30px; border-radius: 15px; overflow: hidden; display: flex; margin: 15px 0; }
+        .heat-segment { height: 100%; transition: width 0.3s; }
+        .heat-good { background: #4BC0C0; }
+        .heat-fair { background: #FFCE56; }
+        .heat-poor { background: #FF6384; }
+        .signal-legend { display: flex; gap: 15px; justify-content: center; margin-top: 10px; font-size: 0.8rem; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .signal-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; margin-top: 10px; }
+        .summary-item { padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; }
+        .summary-value { font-size: 1.2rem; font-weight: bold; }
+        .summary-label { font-size: 0.75rem; color: #aaa; }
+        .network-diagram { background: rgba(0,0,0,0.3); border-radius: 15px; padding: 30px; min-height: 550px; position: relative; overflow-x: auto; }
+        .diagram-layer { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px; position: relative; flex-wrap: wrap; }
+        .diagram-layer:last-child { margin-bottom: 0; }
+        .device-box { background: linear-gradient(145deg, #1e3a5f, #0d1b2a); border: 2px solid #00d4ff; border-radius: 12px; padding: 15px; min-width: 160px; text-align: center; box-shadow: 0 0 20px rgba(0,212,255,0.2); transition: all 0.3s; cursor: pointer; position: relative; }
+        .device-box:hover { transform: translateY(-5px); box-shadow: 0 0 30px rgba(0,212,255,0.4); border-color: #fff; }
+        .device-box.firewall { border-color: #FF6384; box-shadow: 0 0 20px rgba(255,99,132,0.3); min-width: 180px; }
+        .device-box.firewall:hover { box-shadow: 0 0 30px rgba(255,99,132,0.5); }
+        .device-box.switch { border-color: #36A2EB; box-shadow: 0 0 20px rgba(54,162,235,0.3); min-width: 200px; }
+        .device-box.switch:hover { box-shadow: 0 0 30px rgba(54,162,235,0.5); }
+        .device-box.ap { border-color: #4BC0C0; box-shadow: 0 0 20px rgba(75,192,192,0.3); padding: 12px; min-width: 140px; }
+        .device-box.ap:hover { box-shadow: 0 0 30px rgba(75,192,192,0.5); }
+        .device-box.client { border-color: #FFCE56; box-shadow: 0 0 15px rgba(255,206,86,0.2); padding: 8px; min-width: 90px; font-size: 0.8rem; }
+        .device-icon { font-size: 2rem; margin-bottom: 8px; }
+        .device-name { font-size: 0.9rem; font-weight: bold; margin-bottom: 4px; }
+        .device-info { font-size: 0.7rem; color: #aaa; margin-bottom: 2px; }
+        .device-ports-row { display: flex; gap: 4px; justify-content: center; margin-top: 8px; }
+        .port-indicator { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: bold; background: rgba(0,0,0,0.3); color: #666; border: 1px solid #333; }
+        .port-indicator.active { background: rgba(75,192,192,0.3); color: #4BC0C0; border-color: #4BC0C0; }
+        .port-indicator.inactive { background: rgba(255,99,132,0.2); color: #FF6384; border-color: #FF6384; }
+        .device-status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+        .status-online { background: #4BC0C0; animation: pulse 2s infinite; }
+        .status-offline { background: #FF6384; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(75,192,192,0.4); } 70% { box-shadow: 0 0 0 6px rgba(75,192,192,0); } 100% { box-shadow: 0 0 0 0 rgba(75,192,192,0); } }
+        .cable-container { display: flex; flex-direction: column; align-items: center; margin: 5px 0; }
+        .cable-svg { width: 40px; height: 35px; }
+        .cable-label { font-size: 0.65rem; color: #666; background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 3px; margin-top: 2px; }
+        .switch-ports-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(50px, 1fr)); gap: 4px; margin-top: 8px; }
+        .port-mini { background: rgba(0,0,0,0.3); padding: 4px; border-radius: 4px; text-align: center; font-size: 0.6rem; border: 1px solid #333; }
+        .port-mini.active { background: rgba(75,192,192,0.2); color: #4BC0C0; border-color: #4BC0C0; }
+        .port-mini.inactive { background: rgba(255,99,132,0.1); color: #888; border-color: #555; }
+        .diagram-legend { display: flex; gap: 15px; justify-content: center; margin-top: 20px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 10px; flex-wrap: wrap; }
+        .legend-device { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; }
+        .legend-icon { width: 25px; height: 25px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+        .cable-sample { width: 30px; height: 6px; background: linear-gradient(90deg, #ff6b35, #f7c59f, #4BC0C0); border-radius: 3px; }
+        .diagram-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .connection-detail-card { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 15px; margin-bottom: 10px; border-left: 3px solid #00d4ff; }
+        .connection-detail-card .cd-title { font-weight: bold; color: #00d4ff; margin-bottom: 8px; }
+        .connection-detail-card .cd-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .connection-detail-card .cd-label { color: #888; font-size: 0.8rem; }
+        .connection-detail-card .cd-value { color: #fff; font-size: 0.85rem; font-family: monospace; }
+        .switch-detail-ports { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin-top: 10px; }
+        .switch-port-detail { background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; text-align: center; font-size: 0.7rem; }
+        .switch-port-detail.up { border: 1px solid #4BC0C0; }
+        .switch-port-detail.down { border: 1px solid #FF6384; opacity: 0.5; }
+        .switch-port-detail .spd-name { font-weight: bold; color: #fff; }
+        .switch-port-detail .spd-status { color: #4BC0C0; }
+        .switch-port-detail.down .spd-status { color: #FF6384; }
+        .switch-ports-visual { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 8px; }
+        .switch-port-box { width: 26px; height: 26px; background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 0.6rem; }
+        .switch-port-box:hover { transform: scale(1.15); border-color: #00d4ff; }
+        .switch-port-box.active { border-color: #4BC0C0; background: rgba(75,192,192,0.2); }
+        .switch-port-box.inactive { opacity: 0.5; }
+        .switch-port-box.more { background: rgba(0,0,0,0.2); color: #888; font-size: 0.55rem; }
+        .port-led { width: 6px; height: 6px; border-radius: 50%; margin-bottom: 1px; }
+        .led-green { background: #4BC0C0; box-shadow: 0 0 4px #4BC0C0; animation: blink 2s infinite; }
+        .led-red { background: #FF6384; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .port-num { font-weight: bold; color: #fff; line-height: 1; }
+        .cable-connection { position: relative; display: flex; align-items: center; }
+        .cable-rj45 { width: 8px; height: 12px; background: linear-gradient(135deg, #ffd700, #b8860b); border-radius: 1px; }
+        .cable-line-h { height: 3px; background: linear-gradient(90deg, #ff6b35, #4BC0C0); border-radius: 2px; min-width: 30px; }
+        .device-detail-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
+        .device-detail-modal.show { display: flex; }
+        .modal-content { background: linear-gradient(145deg, #1e3a5f, #0d1b2a); border: 2px solid #00d4ff; border-radius: 15px; padding: 25px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-title { font-size: 1.2rem; font-weight: bold; color: #00d4ff; }
+        .modal-close { background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; }
+        .modal-close:hover { color: #FF6384; }
+        .link-visual { display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; margin: 10px 0; }
+        .link-device { padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; }
+        .link-device.firewall-link { background: rgba(255,99,132,0.2); border: 1px solid #FF6384; }
+        .link-device.switch-link { background: rgba(54,162,235,0.2); border: 1px solid #36A2EB; }
+        .link-device.ap-link { background: rgba(75,192,192,0.2); border: 1px solid #4BC0C0; }
+        .link-line { flex: 1; height: 4px; background: linear-gradient(90deg, #ff6b35, #f7c59f, #4BC0C0); border-radius: 2px; position: relative; }
+        .link-line::before, .link-line::after { content: ''; position: absolute; width: 10px; height: 6px; background: #ffd700; border-radius: 1px; top: -1px; }
+        .link-line::before { left: -5px; }
+        .link-line::after { right: -5px; }
+        .port-stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 15px; }
+        @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } h1 { font-size: 1.5rem; } body { padding: 10px; } .clients-table { font-size: 0.85rem; } .clients-table th, .clients-table td { padding: 8px 5px; } .filter-bar, .sort-bar { flex-direction: column; align-items: stretch; } select, input { width: 100%; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Dashboard Red Wifi</h1>
+            <p class="subtitle">Fortigate + Home Assistant</p>
+            <div class="device-selector">
+                <label for="fortiSelect">🌐 FortiGates:</label>
+                <select id="fortiSelect" onchange="changeFortiDevice()">
+                    <option value="all">Todos los equipos</option>
+                    <option value="fg-oficina">FortiGate Oficina (1.2.3.4)</option>
+                    <option value="fg-data">FortiGate Data (1.2.3.5)</option>
+                </select>
+                <span id="fortiStatus" class="device-status-indicator"></span>
+            </div>
+        </header>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('ha')">📊 Home Assistant</button>
+            <button class="tab-btn" onclick="switchTab('forti')">📶 Clientes WiFi</button>
+            <button class="tab-btn" onclick="switchTab('heatmap')">🗺️ Mapa de Calor</button>
+            <button class="tab-btn" onclick="switchTab('network')">🌐 Red</button>
+            <button class="tab-btn" onclick="switchTab('switches')">🔄 Switches</button>
+            <button class="tab-btn" onclick="switchTab('diagram')">🔗 Diagrama Red</button>
+        </div>
+        <div id="tab-ha" class="tab-content active">
+            <div class="dashboard-grid">
+                <div class="card"><div class="card-title">📊 Sensores WiFi</div><div class="chart-container"><canvas id="sensorChart"></canvas></div></div>
+                <div class="card"><div class="card-title">📈 Detalles</div><div id="sensorInfo"></div></div>
+            </div>
+        </div>
+        <div id="tab-forti" class="tab-content">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value" id="totalClients">0</div><div class="stat-label">Total</div></div>
+                <div class="stat-card"><div class="stat-value" id="signalGood">0</div><div class="stat-label">Buena</div></div>
+                <div class="stat-card"><div class="stat-value" id="signalFair">0</div><div class="stat-label">Regular</div></div>
+                <div class="stat-card"><div class="stat-value" id="signalPoor">0</div><div class="stat-label">Mala</div></div>
+            </div>
+            <div class="card">
+                <div class="card-title">📶 Clientes Conectados</div>
+                <div class="filter-bar">
+                    <select id="ssidFilter"><option value="">Todos los SSID</option></select>
+                    <select id="apFilter"><option value="">Todos los APs</option></select>
+                    <input type="text" id="searchFilter" placeholder="Buscar por IP, usuario...">
+                </div>
+                <div class="sort-bar">
+                    <label>Ordenar por:</label>
+                    <button class="sort-btn active" onclick="setSort('signal')" id="sort-signal">📶 Señal</button>
+                    <button class="sort-btn" onclick="setSort('ip')" id="sort-ip">🌐 IP</button>
+                    <button class="sort-btn" onclick="setSort('speed')" id="sort-speed">⚡ Velocidad</button>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="clients-table">
+                        <thead><tr><th style="width:40px"></th><th>Usuario</th><th>IP</th><th>MAC</th><th>SSID</th><th>AP</th><th>Señal</th><th>Dispositivo</th><th>Vel. Desc</th><th>Vel. Sub</th><th>Firewall</th></tr></thead>
+                        <tbody id="clientsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div id="tab-heatmap" class="tab-content">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value" id="totalAPs">0</div><div class="stat-label">Total APs</div></div>
+                <div class="stat-card"><div class="stat-value" id="clientsInAP">0</div><div class="stat-label">Total Clientes</div></div>
+                <div class="stat-card"><div class="stat-value" id="avgSignalAP">0</div><div class="stat-label">dBm Promedio</div></div>
+                <div class="stat-card"><div class="stat-value" id="maxDistance">0</div><div class="stat-label">Dist. Máx (m)</div></div>
+            </div>
+            <div class="card">
+                <div class="card-title">🗺️ Mapa de Cobertura WiFi</div>
+                <div class="filter-bar">
+                    <label style="color:#888;font-size:0.85rem;">
+                        Radio:
+                        <input type="range" id="heatmapRadius" min="50" max="200" value="100" style="width:100px" oninput="renderHeatmap()">
+                    </label>
+                </div>
+                <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:500px;">
+                        <div style="background:#f8f9fa;border-radius:10px;position:relative;height:450px;overflow:hidden;border:1px solid #ddd;" id="heatmapContainer">
+                            <canvas id="heatmapCanvas" style="width:100%;height:100%;"></canvas>
+                        </div>
+                    </div>
+                    <div style="min-width:280px;">
+                        <div class="signal-legend" style="margin-bottom:10px;">
+                            <div class="legend-item"><div class="legend-dot" style="background:#4BC0C0"></div> Excelente (> -50 dBm)</div>
+                            <div class="legend-item"><div class="legend-dot" style="background:#00ff00"></div> Buena (-50 a -60 dBm)</div>
+                            <div class="legend-item"><div class="legend-dot" style="background:#FFCE56"></div> Regular (-60 a -70 dBm)</div>
+                            <div class="legend-item"><div class="legend-dot" style="background:#FF6384"></div> Débil (< -70 dBm)</div>
+                        </div>
+                        <div id="heatmapClientsList" style="max-height:350px;overflow-y:auto;background:rgba(0,0,0,0.2);border-radius:10px;padding:10px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="tab-network" class="tab-content">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value" id="dhcpCount">0</div><div class="stat-label">IPs DHCP</div></div>
+                <div class="stat-card"><div class="stat-value" id="sessionCount">0</div><div class="stat-label">Sesiones Activas</div></div>
+                <div class="stat-card"><div class="stat-value" id="tcpCount">0</div><div class="stat-label">TCP</div></div>
+                <div class="stat-card"><div class="stat-value" id="udpCount">0</div><div class="stat-label">UDP</div></div>
+            </div>
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-title">📊 Protocolos</div>
+                    <div class="chart-container" style="height:220px"><canvas id="protoChart"></canvas></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">🏢 Por Interfaz</div>
+                    <div class="chart-container" style="height:220px"><canvas id="intfChart"></canvas></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">🔥 Sesiones por Firewall</div>
+                    <div class="chart-container" style="height:220px"><canvas id="fwSessionsChart"></canvas></div>
+                </div>
+            </div>
+            <div class="tabs" style="margin: 20px 0;">
+                <button class="tab-btn active" onclick="switchNetworkTab('dhcp')" id="tab-btn-dhcp">📋 DHCP</button>
+                <button class="tab-btn" onclick="switchNetworkTab('sessions')" id="tab-btn-sessions">🔥 Sesiones</button>
+            </div>
+            <div id="network-dhcp" class="network-subtab">
+                <div class="card">
+                    <div class="card-title">📋 Servidores DHCP - IPs Asignadas</div>
+                    <div style="overflow-x:auto;">
+                        <table class="clients-table">
+                            <thead><tr><th>IP</th><th>MAC</th><th>Hostname</th><th>Interfaz</th><th>Expira</th><th>Firewall</th></tr></thead>
+                            <tbody id="dhcpBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div id="network-sessions" class="network-subtab" style="display:none;">
+                <div class="card">
+                    <div class="card-title">🔥 Sesiones de Firewall</div>
+                    <div class="filter-bar">
+                        <input type="text" id="sessionSearch" placeholder="Buscar IP origen o destino...">
+                        <select id="pageSize" onchange="changePageSize()">
+                            <option value="50">50 por página</option>
+                            <option value="100">100 por página</option>
+                            <option value="200">200 por página</option>
+                        </select>
+                        <button onclick="prevPage()" style="padding:5px 10px;margin:0 5px;">◀</button>
+                        <span id="pageInfo">1</span>
+                        <button onclick="nextPage()" style="padding:5px 10px;margin:0 5px;">▶</button>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table class="clients-table">
+                            <thead><tr><th>Origen</th><th>→</th><th>Destino</th><th>Servicio</th><th>Interfaz</th><th>🌍</th><th>Tx</th><th>Rx</th><th>Expira</th><th>Firewall</th></tr></thead>
+                            <tbody id="sessionBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="tab-switches" class="tab-content">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value" id="switchCount">0</div><div class="stat-label">Switches</div></div>
+                <div class="stat-card"><div class="stat-value" id="portUp">0</div><div class="stat-label">Puertos Up</div></div>
+                <div class="stat-card"><div class="stat-value" id="portDown">0</div><div class="stat-label">Puertos Down</div></div>
+                <div class="stat-card"><div class="stat-value" id="poePorts">0</div><div class="stat-label">PoE Activos</div></div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">🔌 Seleccionar Switch</div>
+                <div class="filter-bar">
+                    <select id="switchSelect" onchange="loadSwitchDetails()">
+                        <option value="">Seleccione un Switch...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="dashboard-grid" id="switchDetails" style="display:none;">
+                <div class="card">
+                    <div class="card-title">📡 Información del Switch</div>
+                    <div id="switchInfo"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">🏷️ VLANs</div>
+                    <div id="vlanInfo"></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">🔀 Puertos del Switch</div>
+                <div class="filter-bar">
+                    <select id="portFilter" onchange="filterPorts()">
+                        <option value="">Todos los Puertos</option>
+                        <option value="up">Activos</option>
+                        <option value="down">Inactivos</option>
+                        <option value="poe">Con PoE</option>
+                    </select>
+                    <input type="text" id="portSearch" placeholder="Buscar puerto..." oninput="filterPorts()">
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="clients-table">
+                        <thead><tr><th>Puerto</th><th>Estado</th><th>Speed</th><th>VLAN</th><th>PoE Max</th><th>PoE Status</th><th>Description</th><th>MAC</th></tr></thead>
+                        <tbody id="portsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div id="tab-diagram" class="tab-content">
+            <div class="diagram-stats">
+                <div class="stat-card"><div class="stat-value" id="diagFirewall">1</div><div class="stat-label">🔥 Firewall</div></div>
+                <div class="stat-card"><div class="stat-value" id="diagSwitch">0</div><div class="stat-label">🔄 Switches</div></div>
+                <div class="stat-card"><div class="stat-value" id="diagAP">0</div><div class="stat-label">📡 APs</div></div>
+                <div class="stat-card"><div class="stat-value" id="diagClients">0</div><div class="stat-label">👥 Clientes</div></div>
+                <div class="stat-card"><div class="stat-value" id="diagPortsUp">0</div><div class="stat-label">⚡ Puertos Activos</div></div>
+                <div class="stat-card"><div class="stat-value" id="diagPortsDown">0</div><div class="stat-label">❌ Puertos Inactivos</div></div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">🔗 Topología de Red Física</div>
+                <div class="filter-bar">
+                    <button onclick="refreshDiagram()" style="padding:10px 20px;background:#00d4ff;color:#000;border:none;border-radius:8px;cursor:pointer;">🔄 Actualizar Diagrama</button>
+                    <label style="color:#888;font-size:0.85rem;margin-left:10px;">
+                        <input type="checkbox" id="diagAutoRefresh" onchange="toggleDiagramAutoRefresh()"> Auto-refresh cada 30s
+                    </label>
+                </div>
+            </div>
+            <div class="network-diagram" id="networkDiagram">
+                <div class="diagram-layer" id="layer-firewall">
+                    <div class="device-box firewall" onclick="showFirewallDetails()">
+                        <div class="device-icon">🔥</div>
+                        <div class="device-name">FortiGate 60F</div>
+                        <div class="device-info">
+                            <span class="device-status status-online"></span>Online
+                        </div>
+                        <div class="device-info">192.168.100.1</div>
+                        <div class="device-ports-row">
+                            <div class="port-indicator active" title="WAN">W</div>
+                            <div class="port-indicator active" title="LAN1">L1</div>
+                            <div class="port-indicator active" title="LAN2">L2</div>
+                            <div class="port-indicator active" title="LAN3">L3</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="cable-container">
+                    <svg class="cable-svg" viewBox="0 0 60 50" preserveAspectRatio="xMidYMid meet">
+                        <defs>
+                            <linearGradient id="cableGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style="stop-color:#ff6b35"/>
+                                <stop offset="100%" style="stop-color:#f7c59f"/>
+                            </linearGradient>
+                        </defs>
+                        <rect x="25" y="0" width="10" height="8" fill="#333" rx="2"/>
+                        <path d="M 30 8 L 30 42" stroke="url(#cableGrad1)" stroke-width="6" fill="none" stroke-linecap="round"/>
+                        <circle cx="30" cy="45" r="6" fill="#4BC0C0"/>
+                        <rect x="27" y="43" width="6" height="4" fill="#333" rx="1"/>
+                    </svg>
+                    <span class="cable-label">Cat6 → Port1</span>
+                </div>
+                <div class="diagram-layer" id="layer-switch">
+                </div>
+                <div class="cable-container">
+                    <svg class="cable-svg" viewBox="0 0 60 50" preserveAspectRatio="xMidYMid meet">
+                        <rect x="25" y="0" width="10" height="8" fill="#333" rx="2"/>
+                        <path d="M 30 8 L 30 42" stroke="#36A2EB" stroke-width="6" fill="none" stroke-linecap="round"/>
+                        <circle cx="30" cy="45" r="6" fill="#4BC0C0"/>
+                        <rect x="27" y="43" width="6" height="4" fill="#333" rx="1"/>
+                    </svg>
+                    <span class="cable-label">Port → AP</span>
+                </div>
+                <div class="diagram-layer" id="layer-aps">
+                </div>
+                <div class="cable-container" style="opacity:0.5">
+                    <svg class="cable-svg" viewBox="0 0 60 50" preserveAspectRatio="xMidYMid meet">
+                        <path d="M 30 0 L 30 50" stroke="#7b2cbf" stroke-width="4" stroke-dasharray="8,4" fill="none"/>
+                    </svg>
+                    <span class="cable-label">WiFi</span>
+                </div>
+                <div class="diagram-layer" id="layer-clients">
+                </div>
+            </div>
+            <div class="card" style="margin-top:20px;">
+                <div class="card-title">🔌 Detalle de Conexiones</div>
+                <div id="connectionDetails">
+                    <p style="color:#888;text-align:center;padding:20px;">Selecciona un dispositivo para ver sus conexiones</p>
+                </div>
+            </div>
+            <div class="diagram-legend">
+                <div class="legend-device"><div class="legend-icon" style="background:#FF6384">🔥</div><span>Firewall</span></div>
+                <div class="legend-device"><div class="legend-icon" style="background:#36A2EB">🔄</div><span>Switch</span></div>
+                <div class="legend-device"><div class="legend-icon" style="background:#4BC0C0">📡</div><span>Access Point</span></div>
+                <div class="legend-device"><div class="legend-icon" style="background:#FFCE56">📱</div><span>Cliente WiFi</span></div>
+                <div class="legend-device"><div class="cable-sample"></div><span>Cable Ethernet</span></div>
+            </div>
+        </div>
+        <div class="status-bar"><span id="lastUpdate">Cargando...</span></div>
+    </div>
+    <script>
+        let allClients = [];
+        let haData = [];
+        let currentSort = 'signal';
+        let expandedRows = {};
+        let allSessions = [];
+        let currentPage = 1;
+        let pageSize = 50;
+        let filteredSessions = [];
+        let allSwitches = [];
+        let allPorts = [];
+        let allVlans = [];
+        let currentDevice = 'all';
+        let fortiDeviceStatus = { 'all': 'loading', 'fg-oficina': 'loading', 'fg-data': 'loading' };
+        let allDevicesInfo = {};
+        
+        function getDeviceName(deviceId) {
+            if (deviceId === 'all') return 'Todos los equipos';
+            if (deviceId === 'fg-oficina') return 'FortiGate Oficina';
+            if (deviceId === 'fg-data') return 'FortiGate Data';
+            return deviceId;
+        }
+        
+        function updateDeviceStatus() {
+            const statusEl = document.getElementById('fortiStatus');
+            if (currentDevice === 'all') {
+                const offices = fortiDeviceStatus['fg-oficina'];
+                const data = fortiDeviceStatus['fg-data'];
+                if (offices === 'online' && data === 'online') {
+                    statusEl.className = 'device-status-indicator online';
+                    statusEl.title = 'Ambos equipos conectados';
+                } else if (offices === 'online' || data === 'online') {
+                    statusEl.className = 'device-status-indicator online';
+                    statusEl.title = offices === 'online' ? 'Solo Oficina conectado' : 'Solo Data conectado';
+                } else {
+                    statusEl.className = 'device-status-indicator offline';
+                    statusEl.title = 'Sin conexión';
+                }
+            } else {
+                const status = fortiDeviceStatus[currentDevice];
+                statusEl.className = 'device-status-indicator ' + status;
+                statusEl.title = status === 'online' ? 'Conectado' : (status === 'loading' ? 'Verificando...' : 'Sin conexión');
+            }
+        }
+        
+        async function changeFortiDevice() {
+            const select = document.getElementById('fortiSelect');
+            currentDevice = select.value;
+            document.getElementById('fortiStatus').className = 'device-status-indicator loading';
+            await refreshData();
+        }
+        
+        async function fetchForti(endpoint, params = '') {
+            try {
+                const url = `/dashboard/fortigate.php?device=${currentDevice}&endpoint=${endpoint}${params ? '&' + params : ''}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.devices) {
+                    Object.keys(data.devices).forEach(id => {
+                        fortiDeviceStatus[id] = data.devices[id].status === 'error' ? 'offline' : 'online';
+                        allDevicesInfo[id] = data.devices[id];
+                    });
+                    fortiDeviceStatus['all'] = Object.values(data.devices).every(d => d.status !== 'error') ? 'online' : 'offline';
+                    updateDeviceStatus();
+                } else if (data.device_id) {
+                    const id = data.device_ip === '1.2.3.4' ? 'fg-oficina' : 'fg-data';
+                    fortiDeviceStatus[id] = data.error ? 'offline' : 'online';
+                    updateDeviceStatus();
+                }
+                
+                return data;
+            } catch (e) {
+                console.error('Fetch error:', e);
+                return { results: [], error: e.message };
+            }
+        }
+        
+        function switchTab(tab) { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); document.getElementById('tab-' + tab).classList.add('active'); event.target.classList.add('active'); }
+        function switchNetworkTab(subtab) { document.querySelectorAll('#tab-network .tabs .tab-btn').forEach(b => b.classList.remove('active')); document.getElementById('tab-btn-' + subtab).classList.add('active'); document.getElementById('network-dhcp').style.display = subtab === 'dhcp' ? 'block' : 'none'; document.getElementById('network-sessions').style.display = subtab === 'sessions' ? 'block' : 'none'; }
+        async function fetchSensorData(entityId) { try { const response = await fetch(`/dashboard/proxy.php?entity=${entityId}`); if (!response.ok) throw new Error('Error'); return await response.json(); } catch (e) { return { state: '0', attributes: {} }; } }
+        async function fetchHAEntities() {
+            const results = [];
+            const entities = [{ entityId: 'sensor.agnov_fg_wifi_clients_ssid1', name: 'Agnov Solutions' }, { entityId: 'sensor.agnov_fg_wifi_clients_ssid2', name: 'AMELI Devices' }, { entityId: 'sensor.agnov_fg_wifi_clients', name: 'Total Clientes' }];
+            for (const entity of entities) { try { const data = await fetchSensorData(entity.entityId); results.push({ name: entity.name, value: parseFloat(data.state) || 0, unit: data.attributes?.unit_of_measurement || '' }); } catch (e) { results.push({ name: entity.name, value: 0 }); } }
+            haData = results;
+            updateHAChart();
+        }
+        function updateHAChart() {
+            const ctx = document.getElementById('sensorChart').getContext('2d');
+            if (window.myChart) window.myChart.destroy();
+            window.myChart = new Chart(ctx, { type: 'doughnut', data: { labels: haData.map(d => d.name), datasets: [{ data: haData.map(d => d.value), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'], borderWidth: 2, borderColor: '#fff' }] }, options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#fff', padding: 15 } } } } });
+            document.getElementById('sensorInfo').innerHTML = haData.map(d => `<div class="sensor-card"><span class="sensor-name">${d.name}</span><span class="sensor-value">${d.value}${d.unit}</span></div>`).join('');
+        }
+        async function fetchClients() { 
+            try { 
+                const data = await fetchForti('wifi/client'); 
+                if (data.results) {
+                    data.results.forEach(c => {
+                        if (!c.firewall) {
+                            c.firewall = data.devices ? 
+                                Object.values(data.devices).find(d => d.ip === c.device_ip)?.short_name || 'N/A' 
+                                : (data.device_short || 'N/A');
+                        }
+                    });
+                    return data.results; 
+                }
+                if (data.error) { document.getElementById('clientsBody').innerHTML = '<tr><td colspan="11" class="error-msg">Error: ' + data.error + ' (' + getDeviceName(currentDevice) + ')</td></tr>'; } 
+                return []; 
+            } catch (error) { document.getElementById('clientsBody').innerHTML = '<tr><td colspan="11" class="error-msg">Error de conexión</td></tr>'; return []; } 
+        }
+        
+        async function fetchDHCP() {
+            try {
+                const data = await fetchForti('system/dhcp');
+                if (data.results) {
+                    data.results.forEach(item => {
+                        if (!item.firewall) {
+                            item.firewall = data.devices ? 
+                                Object.values(data.devices).find(d => d.ip === item.device_ip)?.short_name || 'N/A' 
+                                : (data.device_short || 'N/A');
+                        }
+                    });
+                    return data.results;
+                }
+                return [];
+            } catch (e) {
+                console.error('Error DHCP:', e);
+                return [];
+            }
+        }
+
+        async function fetchSessions() {
+            try {
+                const data = await fetchForti('firewall/session', 'start=0&count=3000');
+                return data.results || [];
+            } catch (e) {
+                console.error('Error Sessions:', e);
+                return [];
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatExpireTime(expireTimestamp) {
+            if (!expireTimestamp) return '-';
+            const now = Math.floor(Date.now() / 1000);
+            const remaining = expireTimestamp - now;
+            if (remaining <= 0) return 'Expirado';
+            const days = Math.floor(remaining / 86400);
+            const hours = Math.floor((remaining % 86400) / 3600);
+            const mins = Math.floor((remaining % 3600) / 60);
+            const secs = remaining % 60;
+            return `${days}d ${hours}h ${mins}m ${secs}s`;
+        }
+
+        function renderDHCP(leases) {
+            const tbody = document.getElementById('dhcpBody');
+            tbody.innerHTML = '';
+            if (leases.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px;">No hay leases DHCP</td></tr>';
+                return;
+            }
+            leases.forEach(lease => {
+                const fw = lease.firewall || 'N/A';
+                const fwClass = fw.includes('Oficina') ? 'forti-oficina' : (fw.includes('Data') ? 'forti-data' : '');
+                tbody.innerHTML += `<tr><td>${lease.ip || '-'}</td><td style="font-family:monospace">${lease.mac || '-'}</td><td>${lease.hostname || '-'}</td><td>${lease.interface || 'root'}</td><td>${formatExpireTime(lease.expire_time)}</td><td><span class="firewall-badge ${fwClass}">${fw}</span></td></tr>`;
+            });
+            document.getElementById('dhcpCount').textContent = leases.length;
+        }
+
+        function getServiceIcon(proto, port, apps) {
+            const appId = apps && apps.length > 0 ? apps[0].id : null;
+            const appName = apps && apps.length > 0 && apps[0].name ? apps[0].name : null;
+            if (appName) return '📱 ' + appName.split('/')[0];
+            const appMap = {
+                15816: { icon: '📺', name: 'YouTube' },
+                15832: { icon: '📺', name: 'Netflix' },
+                16195: { icon: '🔍', name: 'DNS' },
+                23813: { icon: '🎵', name: 'Spotify' },
+                28057: { icon: '💬', name: 'WhatsApp' },
+                29210: { icon: '🔒', name: 'TLS' },
+                34527: { icon: '🎮', name: 'Gaming' },
+                37371: { icon: '📧', name: 'Gmail' },
+                38517: { icon: '🔐', name: 'OAuth' },
+                39187: { icon: '🌐', name: 'HTTP' },
+                39188: { icon: '🌐', name: 'HTTP' },
+                39381: { icon: '📦', name: 'SSL' },
+                39999: { icon: '📄', name: 'HTTP/2' },
+                40169: { icon: '📧', name: 'Email' },
+                40698: { icon: '🔵', name: 'Facebook' },
+                40933: { icon: '🎥', name: 'TikTok' },
+                40934: { icon: '📸', name: 'Instagram' },
+                40935: { icon: '🐦', name: 'Twitter' },
+                41698: { icon: '💼', name: 'Office365' },
+                42669: { icon: '🔗', name: 'Teams' },
+                43448: { icon: '📹', name: 'Zoom' },
+                44419: { icon: '🛒', name: 'Amazon' },
+                49970: { icon: '📚', name: 'Google' },
+                49971: { icon: '🔍', name: 'Bing' },
+                54387: { icon: '🖥️', name: 'Windows' },
+                54399: { icon: '☁️', name: 'Cloud' },
+                54402: { icon: '🎬', name: 'Disney' },
+                54409: { icon: '📺', name: 'Hulu' },
+                35523: { icon: '🔒', name: 'VPN' },
+                17399: { icon: '🔴', name: 'RTMP' },
+                22922: { icon: '📡', name: 'RTSP' },
+                23260: { icon: '🔒', name: 'IPSec' },
+                24318: { icon: '📊', name: 'FTP' },
+                17735: { icon: '🗄️', name: 'SMB' },
+                15722: { icon: '📁', name: 'SFTP' },
+                38468: { icon: '📧', name: 'POP3' }
+            };
+            if (appMap[appId]) return appMap[appId].icon + ' ' + appMap[appId].name;
+            if (proto === 'tcp' && port == 443) return '🔒 HTTPS';
+            if (proto === 'tcp' && port == 80) return '🌐 HTTP';
+            if (proto === 'tcp' && port == 22) return '📡 SSH';
+            if (proto === 'tcp' && port == 3389) return '🖥️ RDP';
+            if (proto === 'tcp' && port == 21) return '📁 FTP';
+            if (proto === 'tcp' && port == 25) return '📧 SMTP';
+            if (proto === 'tcp' && port == 110) return '📬 POP3';
+            if (proto === 'tcp' && port == 143) return '📧 IMAP';
+            if (proto === 'tcp' && port == 445) return '📂 SMB';
+            if (proto === 'tcp' && port == 3306) return '🗄️ MySQL';
+            if (proto === 'tcp' && port == 5432) return '🐘 PostgreSQL';
+            if (proto === 'tcp' && port == 8080) return '🌍 HTTP-Alt';
+            if (proto === 'udp' && port == 53) return '🔍 DNS';
+            return '📦 ' + proto.toUpperCase();
+        }
+
+        function getCountryFlag(country) {
+            const flags = {
+                'United States': '🇺🇸',
+                'US': '🇺🇸',
+                'United States of America': '🇺🇸',
+                'Chile': '🇨🇱',
+                'CL': '🇨🇱',
+                'China': '🇨🇳',
+                'CN': '🇨🇳',
+                'Germany': '🇩🇪',
+                'DE': '🇩🇪',
+                'France': '🇫🇷',
+                'FR': '🇫🇷',
+                'Spain': '🇪🇸',
+                'ES': '🇪🇸',
+                'Brazil': '🇧🇷',
+                'BR': '🇧🇷',
+                'Argentina': '🇦🇷',
+                'AR': '🇦🇷',
+                'Mexico': '🇲🇽',
+                'MX': '🇲🇽',
+                'Colombia': '🇨🇴',
+                'CO': '🇨🇴',
+                'Peru': '🇵🇪',
+                'PE': '🇵🇪',
+                'United Kingdom': '🇬🇧',
+                'UK': '🇬🇧',
+                'GB': '🇬🇧',
+                'Japan': '🇯🇵',
+                'JP': '🇯🇵',
+                'Korea': '🇰🇷',
+                'KR': '🇰🇷',
+                'India': '🇮🇳',
+                'IN': '🇮🇳',
+                'Canada': '🇨🇦',
+                'CA': '🇨🇦',
+                'Australia': '🇦🇺',
+                'AU': '🇦🇺',
+                'Russia': '🇷🇺',
+                'RU': '🇷🇺',
+                'Netherlands': '🇳🇱',
+                'NL': '🇳🇱',
+                'Italy': '🇮🇹',
+                'IT': '🇮🇹',
+                'Switzerland': '🇨🇭',
+                'CH': '🇨🇭',
+                'Sweden': '🇸🇪',
+                'SE': '🇸🇪',
+                'Norway': '🇳🇴',
+                'NO': '🇳🇴',
+                'Denmark': '🇩🇰',
+                'DK': '🇩🇰',
+                'Finland': '🇫🇮',
+                'FI': '🇫🇮',
+                'Portugal': '🇵🇹',
+                'PT': '🇵🇹',
+                'Ireland': '🇮🇪',
+                'IE': '🇮🇪',
+                'Singapore': '🇸🇬',
+                'SG': '🇸🇬',
+                'Hong Kong': '🇭🇰',
+                'HK': '🇭🇰',
+                'Taiwan': '🇹🇼',
+                'TW': '🇹🇼',
+                'Israel': '🇮🇱',
+                'IL': '🇮🇱',
+                'South Africa': '🇿🇦',
+                'ZA': '🇿🇦',
+                'Reserved': '🌍',
+                'Local': '🏠',
+                'Private': '🏠'
+            };
+            return flags[country] || country;
+        }
+
+        function renderSessions(sessions) {
+            window.allSessions = sessions;
+            filteredSessions = sessions;
+            currentPage = 1;
+            renderSessionPage();
+            const tcpCount = sessions.filter(s => s.proto === 'tcp').length;
+            const udpCount = sessions.filter(s => s.proto === 'udp').length;
+            document.getElementById('tcpCount').textContent = tcpCount;
+            document.getElementById('udpCount').textContent = udpCount;
+            renderProtoChart(tcpCount, udpCount);
+            renderIntfChart(sessions);
+            renderFwSessionsChart(sessions);
+        }
+        
+        function renderFwSessionsChart(sessions) {
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js not loaded');
+                return;
+            }
+            
+            const fwCounts = {};
+            sessions.forEach(s => {
+                const fw = s.firewall || 'N/A';
+                fwCounts[fw] = (fwCounts[fw] || 0) + 1;
+            });
+            
+            const labels = Object.keys(fwCounts);
+            const data = Object.values(fwCounts);
+            
+            if (labels.length === 0) {
+                document.getElementById('fwSessionsChart').parentElement.innerHTML = '<div style="height:220px;display:flex;align-items:center;justify-content:center;color:#888;">Sin datos de sesiones</div>';
+                return;
+            }
+            
+            const colors = labels.map(l => l.includes('Oficina') ? '#00d4ff' : (l.includes('Data') ? '#7b2cbf' : '#FFCE56'));
+            
+            const container = document.getElementById('fwSessionsChart').parentElement;
+            container.innerHTML = '<canvas id="fwSessionsChart"></canvas>';
+            
+            const ctx = document.getElementById('fwSessionsChart').getContext('2d');
+            if (window.fwSessionsChart && typeof window.fwSessionsChart.destroy === 'function') {
+                window.fwSessionsChart.destroy();
+            }
+            window.fwSessionsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Sesiones',
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: colors,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = data.reduce((a, b) => a + b, 0);
+                                    const pct = total > 0 ? ((context.raw / total) * 100).toFixed(1) : 0;
+                                    return context.raw + ' sesiones (' + pct + '%)';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                        x: { ticks: { color: '#fff', font: { weight: 'bold' } }, grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function renderSessionPage() {
+            const tbody = document.getElementById('sessionBody');
+            tbody.innerHTML = '';
+            const search = document.getElementById('sessionSearch').value.toLowerCase();
+            let sessions = filteredSessions;
+            if (search) {
+                sessions = sessions.filter(s => 
+                    (s.saddr || '').includes(search) || 
+                    (s.daddr || '').includes(search)
+                );
+            }
+            const totalPages = Math.ceil(sessions.length / pageSize);
+            if (currentPage > totalPages) currentPage = totalPages || 1;
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageSessions = sessions.slice(start, end);
+            if (pageSessions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#888;padding:20px;">No hay sesiones</td></tr>';
+                document.getElementById('pageInfo').textContent = '0 / 0';
+                return;
+            }
+            const dhcpMap = {};
+            if (window.dhcpData) {
+                window.dhcpData.forEach(lease => {
+                    if (lease.ip) dhcpMap[lease.ip] = lease.hostname || lease.mac;
+                });
+            }
+            pageSessions.forEach(session => {
+                const srcIp = session.saddr || '-';
+                const dstIp = session.daddr || '-';
+                const srcPort = session.sport || '-';
+                const dstPort = session.dport || '-';
+                const proto = session.proto || '-';
+                const intf = session.srcintf || '-';
+                const country = session.country || 'Reserved';
+                const rxBytes = formatBytes(session.rcvdbyte || 0);
+                const txBytes = formatBytes(session.sentbyte || 0);
+                const apps = session.apps || [];
+                const service = getServiceIcon(proto, dstPort, apps);
+                const flag = getCountryFlag(country);
+                const expiry = session.expiry ? session.expiry + 's' : '-';
+                const fw = session.firewall || 'N/A';
+                const fwClass = fw.includes('Oficina') ? 'forti-oficina' : (fw.includes('Data') ? 'forti-data' : '');
+                const srcHostname = dhcpMap[srcIp] ? `<span style="color:#4BC0C0;font-size:0.7rem;display:block">${dhcpMap[srcIp]}</span>` : '';
+                tbody.innerHTML += `<tr>
+                    <td><strong>${srcIp}</strong><span style="color:#888;font-size:0.75rem">:${srcPort}</span>${srcHostname}</td>
+                    <td style="color:#00d4ff">→</td>
+                    <td><strong>${dstIp}</strong><span style="color:#888;font-size:0.75rem">:${dstPort}</span></td>
+                    <td style="text-align:center">${service}</td>
+                    <td><span class="os-badge">${intf}</span></td>
+                    <td style="text-align:center">${flag}</td>
+                    <td style="color:#4BC0C0">${txBytes}</td>
+                    <td style="color:#36A2EB">${rxBytes}</td>
+                    <td>${expiry}</td>
+                    <td><span class="firewall-badge ${fwClass}">${fw}</span></td>
+                </tr>`;
+            });
+            document.getElementById('sessionCount').textContent = sessions.length;
+            document.getElementById('pageInfo').textContent = currentPage + ' / ' + totalPages;
+        }
+
+        function changePageSize() {
+            pageSize = parseInt(document.getElementById('pageSize').value);
+            currentPage = 1;
+            renderSessionPage();
+        }
+
+        function prevPage() {
+            const search = document.getElementById('sessionSearch').value.toLowerCase();
+            let sessions = filteredSessions;
+            if (search) sessions = sessions.filter(s => (s.saddr || '').includes(search) || (s.daddr || '').includes(search));
+            const totalPages = Math.ceil(sessions.length / pageSize);
+            if (currentPage > 1) { currentPage--; renderSessionPage(); }
+        }
+
+        function nextPage() {
+            const search = document.getElementById('sessionSearch').value.toLowerCase();
+            let sessions = filteredSessions;
+            if (search) sessions = sessions.filter(s => (s.saddr || '').includes(search) || (s.daddr || '').includes(search));
+            const totalPages = Math.ceil(sessions.length / pageSize);
+            if (currentPage < totalPages) { currentPage++; renderSessionPage(); }
+        }
+
+        function renderProtoChart(tcp, udp) {
+            console.log('TCP:', tcp, 'UDP:', udp);
+            if (tcp === 0 && udp === 0) return;
+            if (typeof Chart === 'undefined') { console.log('Chart not loaded'); return; }
+            const ctx = document.getElementById('protoChart').getContext('2d');
+            if (window.protoChart && typeof window.protoChart.destroy === 'function') window.protoChart.destroy();
+            window.protoChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['TCP', 'UDP'],
+                    datasets: [{
+                        data: [tcp, udp],
+                        backgroundColor: ['#36A2EB', '#FF6384'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#fff', padding: 15 } }
+                    }
+                }
+            });
+        }
+
+        function renderIntfChart(sessions) {
+            console.log('Sessions:', sessions.length);
+            const intfCounts = {};
+            sessions.forEach(s => {
+                const intf = s.srcintf || 'Unknown';
+                intfCounts[intf] = (intfCounts[intf] || 0) + 1;
+            });
+            console.log('Interfaces:', intfCounts);
+            if (Object.keys(intfCounts).length === 0) return;
+            if (typeof Chart === 'undefined') { console.log('Chart not loaded'); return; }
+            const ctx = document.getElementById('intfChart').getContext('2d');
+            if (window.intfChart && typeof window.intfChart.destroy === 'function') window.intfChart.destroy();
+            window.intfChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(intfCounts),
+                    datasets: [{
+                        label: 'Sesiones',
+                        data: Object.values(intfCounts),
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                        x: { ticks: { color: '#fff' }, grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        async function loadNetworkData() {
+            const dhcpData = await fetchDHCP();
+            window.dhcpData = dhcpData;
+            renderDHCP(dhcpData);
+            const sessionData = await fetchSessions();
+            window.allSessions = sessionData;
+            renderSessions(sessionData);
+        }
+
+        async function fetchSwitches() {
+            try {
+                const data = await fetchForti('switch-controller/managed-switch', 'vdom=root');
+                if (data.results) {
+                    data.results.forEach(sw => {
+                        if (!sw.firewall) {
+                            sw.firewall = data.devices ? 
+                                Object.values(data.devices).find(d => d.ip === sw.device_ip)?.short_name || 'N/A' 
+                                : (data.device_short || 'N/A');
+                        }
+                    });
+                    return data.results;
+                }
+                return [];
+            } catch (e) {
+                console.error('Error Switches:', e);
+                return [];
+            }
+        }
+
+        async function fetchVlans() {
+            try {
+                const data = await fetchForti('switch-controller/vlan', 'vdom=root');
+                return data.results || [];
+            } catch (e) {
+                console.error('Error VLANs:', e);
+                return [];
+            }
+        }
+
+        function renderSwitchList(switches) {
+            const select = document.getElementById('switchSelect');
+            select.innerHTML = '<option value="">Seleccione un Switch...</option>';
+            switches.forEach((sw, idx) => {
+                const name = sw['switch-id'] || sw['serial-number'] || 'Switch ' + (idx + 1);
+                select.innerHTML += `<option value="${idx}">${name}</option>`;
+            });
+            document.getElementById('switchCount').textContent = switches.length;
+            window.allSwitches = switches;
+        }
+
+        async function loadSwitchDetails() {
+            const switchIdx = document.getElementById('switchSelect').value;
+            if (switchIdx === '') {
+                document.getElementById('switchDetails').style.display = 'none';
+                return;
+            }
+            document.getElementById('switchDetails').style.display = 'grid';
+            const sw = window.allSwitches[switchIdx];
+            const switchInfo = document.getElementById('switchInfo');
+            switchInfo.innerHTML = `
+                <div class="sensor-card"><span class="sensor-name">Switch ID</span><span class="sensor-value">${sw['switch-id'] || '-'}</span></div>
+                <div class="sensor-card"><span class="sensor-name">Serial</span><span class="sensor-value">${sw['serial-number'] || '-'}</span></div>
+                <div class="sensor-card"><span class="sensor-name">Modelo</span><span class="sensor-value">${sw.model || '-'}</span></div>
+                <div class="sensor-card"><span class="sensor-name">Tipo</span><span class="sensor-value">${sw.type || '-'}</span></div>
+                <div class="sensor-card"><span class="sensor-name">Perfil Switch</span><span class="sensor-value">${sw['switch-profile'] || '-'}</span></div>
+                <div class="sensor-card"><span class="sensor-name">Acceso</span><span class="sensor-value">${sw['access-profile'] || '-'}</span></div>
+            `;
+            const ports = sw.ports || [];
+            window.allPorts = ports;
+            renderPorts(ports);
+            const vlans = await fetchVlans();
+            window.allVlans = vlans;
+            renderVlans(vlans);
+        }
+
+        function renderPorts(ports) {
+            const tbody = document.getElementById('portsBody');
+            tbody.innerHTML = '';
+            if (ports.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;padding:20px;">No hay puertos</td></tr>';
+                return;
+            }
+            let upCount = 0, downCount = 0, poeCount = 0;
+            ports.forEach(port => {
+                const portName = port['port-name'] || '-';
+                const poeCapable = port['poe-capable'] === 1;
+                const poeEnabled = port['poe-status'] === 'enable';
+                const poeMax = port['poe-max-power'] || '-';
+                const poeMode = port['poe-port-mode'] || '-';
+                const vlan = port.vlan || '-';
+                const speed = port.speed || 'auto';
+                const media = port['media-type'] || '-';
+                const status = port.status === 'up' ? '<span class="signal-badge signal-good">UP</span>' : '<span class="signal-badge signal-poor">DOWN</span>';
+                const poeStatus = poeEnabled ? '<span style="color:#4BC0C0">✓ Activo</span>' : (poeCapable ? '<span style="color:#FFCE56">○ Disponible</span>' : '<span style="color:#888">-</span>');
+                const poeDisplay = poeCapable ? poeMax : '-';
+                tbody.innerHTML += `<tr>
+                    <td><strong>${portName}</strong></td>
+                    <td>${status}</td>
+                    <td>${speed}</td>
+                    <td>${vlan}</td>
+                    <td>${poeDisplay}</td>
+                    <td>${poeStatus}</td>
+                    <td>${port.description || '-'}</td>
+                    <td style="font-family:monospace;font-size:0.8rem">${port['mac-addr'] || '-'}</td>
+                </tr>`;
+                if (port.status === 'up') upCount++;
+                else downCount++;
+                if (poeEnabled) poeCount++;
+            });
+            document.getElementById('portUp').textContent = upCount;
+            document.getElementById('portDown').textContent = downCount;
+            document.getElementById('poePorts').textContent = poeCount;
+        }
+
+        function renderVlans(vlans) {
+            const div = document.getElementById('vlanInfo');
+            if (vlans.length === 0) {
+                div.innerHTML = '<p style="color:#888">No hay VLANs</p>';
+                return;
+            }
+            div.innerHTML = vlans.slice(0, 10).map(v => `
+                <div class="sensor-card" style="margin-bottom:8px">
+                    <span class="sensor-name">VLAN ${v.vdom}:${v.vlanid}</span>
+                    <span class="sensor-value">${v.name || '-'}</span>
+                </div>
+            `).join('');
+        }
+
+        function filterPorts() {
+            const filter = document.getElementById('portFilter').value;
+            const search = document.getElementById('portSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#portsBody tr');
+            rows.forEach((row, index) => {
+                const port = window.allPorts[index];
+                if (!port) return;
+                let show = true;
+                if (filter === 'up' && port.status !== 'up') show = false;
+                if (filter === 'down' && port.status !== 'up') show = false;
+                if (filter === 'poe' && port['poe-status'] !== 'enable') show = false;
+                if (search && !(port['port-name'] || '').toLowerCase().includes(search)) show = false;
+                row.style.display = show ? 'table-row' : 'none';
+            });
+        }
+
+        async function loadSwitchesData() {
+            const switches = await fetchSwitches();
+            renderSwitchList(switches);
+        }
+        function getSignalClass(signal) { if (signal >= -50) return 'signal-good'; if (signal >= -70) return 'signal-fair'; return 'signal-poor'; }
+        function getSignalText(signal) { if (signal >= -50) return 'Bueno'; if (signal >= -70) return 'Regular'; return 'Malo'; }
+        function populateFilters(clients) {
+            const ssids = [...new Set(clients.map(c => c.ssid).filter(Boolean))];
+            const aps = [...new Set(clients.map(c => c.wtp_name).filter(Boolean))];
+            const ssidFilter = document.getElementById('ssidFilter');
+            const apFilter = document.getElementById('apFilter');
+            ssidFilter.innerHTML = '<option value="">Todos los SSID</option>';
+            apFilter.innerHTML = '<option value="">Todos los APs</option>';
+            ssids.forEach(ssid => ssidFilter.innerHTML += `<option value="${ssid}">${ssid}</option>`);
+            aps.forEach(ap => apFilter.innerHTML += `<option value="${ap}">${ap}</option>`);
+        }
+        function updateStats(clients) { document.getElementById('totalClients').textContent = clients.length; document.getElementById('signalGood').textContent = clients.filter(c => c.signal >= -50).length; document.getElementById('signalFair').textContent = clients.filter(c => c.signal >= -70 && c.signal < -50).length; document.getElementById('signalPoor').textContent = clients.filter(c => c.signal < -70).length; }
+        function sortClients(clients) {
+            let sorted = [...clients];
+            if (currentSort === 'signal') sorted.sort((a, b) => b.signal - a.signal);
+            else if (currentSort === 'ip') sorted.sort((a, b) => a.ip.localeCompare(b.ip));
+            else if (currentSort === 'speed') sorted.sort((a, b) => (b.data_rxrate_bps || 0) - (a.data_rxrate_bps || 0));
+            return sorted;
+        }
+        function setSort(sort) { currentSort = sort; document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active')); document.getElementById('sort-' + sort).classList.add('active'); filterClients(); }
+        function renderClients(clients) {
+            const tbody = document.getElementById('clientsBody');
+            tbody.innerHTML = '';
+            if (clients.length === 0) { tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#888;padding:20px;">No hay clientes</td></tr>'; return; }
+            clients = sortClients(clients);
+            clients.forEach((client, index) => {
+                const user = client.user || client.hostname || client.host || 'Desconocido';
+                const device = client.os || client.manufacturer || 'Unknown';
+                const firewall = client.firewall || 'N/A';
+                const firewallClass = firewall.includes('Oficina') ? 'forti-oficina' : (firewall.includes('Data') ? 'forti-data' : '');
+                const rxSpeed = (client.data_rxrate_bps / 1000000).toFixed(1);
+                const txSpeed = (client.data_txrate_bps / 1000000).toFixed(1);
+                tbody.innerHTML += `<tr><td><button class="expand-btn" onclick="toggleRow(${index})">${expandedRows[index] ? '▼' : '▶'}</button></td><td><strong>${user}</strong></td><td>${client.ip}</td><td style="font-family:monospace;font-size:0.85rem">${client.mac}</td><td>${client.ssid}</td><td>${client.wtp_name}</td><td><span class="signal-badge ${getSignalClass(client.signal)}">${client.signal} dBm</span></td><td><span class="os-badge">${device}</span></td><td class="speed-badge">${rxSpeed} Mbps</td><td class="speed-badge">${txSpeed} Mbps</td><td><span class="firewall-badge ${firewallClass}">${firewall}</span></td></tr><tr class="client-details-row" id="details-${index}" style="display:${expandedRows[index] ? 'table-row' : 'none'}"><td colspan="11"><div class="client-details-inner"><div class="detail-item"><span class="detail-label">Usuario</span><span class="detail-value">${user}</span></div><div class="detail-item"><span class="detail-label">IP</span><span class="detail-value">${client.ip}</span></div><div class="detail-item"><span class="detail-label">MAC</span><span class="detail-value">${client.mac}</span></div><div class="detail-item"><span class="detail-label">SSID</span><span class="detail-value">${client.ssid}</span></div><div class="detail-item"><span class="detail-label">AP</span><span class="detail-value">${client.wtp_name}</span></div><div class="detail-item"><span class="detail-label">Dispositivo</span><span class="detail-value">${device}</span></div><div class="detail-item"><span class="detail-label">Firewall</span><span class="detail-value"><span class="firewall-badge ${firewallClass}">${firewall}</span></span></div><div class="detail-item"><span class="detail-label">Señal</span><span class="detail-value">${client.signal} dBm (${getSignalText(client.signal)})</span></div><div class="detail-item"><span class="detail-label">SNR</span><span class="detail-value">${client.snr}</span></div></div></td></tr>`;
+            });
+        }
+        function toggleRow(index) { expandedRows[index] = !expandedRows[index]; filterClients(); }
+        function filterClients() { let filtered = allClients; const ssid = document.getElementById('ssidFilter').value; const ap = document.getElementById('apFilter').value; const search = document.getElementById('searchFilter').value.toLowerCase(); if (ssid) filtered = filtered.filter(c => c.ssid === ssid); if (ap) filtered = filtered.filter(c => c.wtp_name === ap); if (search) filtered = filtered.filter(c => c.ip.toLowerCase().includes(search) || (c.user && c.user.toLowerCase().includes(search)) || (c.hostname && c.hostname.toLowerCase().includes(search)) || (c.host && c.host.toLowerCase().includes(search))); renderClients(filtered); }
+        
+        function getSignalColor(signal) {
+            if (signal >= -50) return '#4BC0C0';
+            if (signal >= -60) return '#00ff00';
+            if (signal >= -70) return '#FFCE56';
+            return '#FF6384';
+        }
+        
+        function calculateDistance(signal, txPower = -40) {
+            const n = 2.5;
+            const distance = Math.pow(10, (txPower - signal) / (10 * n));
+            return Math.min(Math.max(distance, 1), 100);
+        }
+        
+        function renderHeatmap() {
+            try {
+                const canvas = document.getElementById('heatmapCanvas');
+                const container = document.getElementById('heatmapContainer');
+                if (!canvas || !container) return;
+                
+                const ctx = canvas.getContext('2d');
+                const w = container.offsetWidth || 500;
+                const h = container.offsetHeight || 450;
+                
+                canvas.width = w;
+                canvas.height = h;
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, w, h);
+                
+                const ctx = canvas.getContext('2d');
+                const w = container.offsetWidth || 500;
+                const h = container.offsetHeight || 450;
+                
+                canvas.width = w;
+                canvas.height = h;
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, w, h);
+            
+            const padding = 40;
+            const aps = {};
+            allClients.forEach(c => {
+                const apName = c.wtp_name || 'Unknown';
+                if (!aps[apName]) aps[apName] = [];
+                aps[apName].push(c);
+            });
+            
+            const apNames = Object.keys(aps);
+            document.getElementById('totalAPs').textContent = apNames.length;
+            
+            if (apNames.length === 0) {
+                document.getElementById('heatmapClientsList').innerHTML = '<p style="color:#888;text-align:center;padding:20px;">Sin clientes WiFi</p>';
+                document.getElementById('clientsInAP').textContent = '0';
+                document.getElementById('avgSignalAP').textContent = '0 dBm';
+                document.getElementById('maxDistance').textContent = '0 m';
+                return;
+            }
+            
+            const cols = apNames.length <= 2 ? apNames.length : (apNames.length <= 4 ? 2 : 3);
+            const rows = Math.ceil(apNames.length / cols);
+            const cellWidth = (canvas.width - padding * (cols + 1)) / cols;
+            const cellHeight = (canvas.height - padding * (rows + 1)) / rows;
+            
+            let totalClients = 0;
+            let totalSignal = 0;
+            let maxDist = 0;
+            let clientsHtml = '';
+            
+            apNames.forEach((apName, idx) => {
+                const clients = aps[apName];
+                const col = idx % cols;
+                const row = Math.floor(idx / cols);
+                const x = padding + col * (cellWidth + padding) + cellWidth / 2;
+                const y = padding + row * (cellHeight + padding) + cellHeight / 2;
+                const radius = parseInt(document.getElementById('heatmapRadius').value) || 100;
+                
+                renderSingleAPHeatmap(ctx, apName, clients, x, y, radius);
+                
+                totalClients += clients.length;
+                clients.forEach(c => {
+                    totalSignal += c.signal || -70;
+                    maxDist = Math.max(maxDist, calculateDistance(c.signal || -70));
+                });
+                
+                const avgSignal = clients.reduce((a,c) => a + (c.signal || -70), 0) / clients.length;
+                const color = getSignalColor(Math.round(avgSignal));
+                
+                clientsHtml += `<div style="padding:8px;border-bottom:1px solid #333;background:rgba(0,0,0,0.2);border-radius:5px;margin-bottom:5px;">
+                    <span style="color:${color};font-size:1.2rem;">📡</span> 
+                    <strong>${apName}</strong>
+                    <span style="color:#888;font-size:0.8rem"> | ${clients.length} clientes</span>
+                    <span style="color:${color};float:right">${Math.round(avgSignal)} dBm</span>
+                </div>`;
+            });
+            
+            document.getElementById('clientsInAP').textContent = totalClients;
+            document.getElementById('avgSignalAP').textContent = Math.round(totalSignal / totalClients) + ' dBm';
+            document.getElementById('maxDistance').textContent = maxDist.toFixed(0) + ' m';
+            document.getElementById('heatmapClientsList').innerHTML = clientsHtml;
+            } catch(e) {
+                console.error('Error renderHeatmap:', e);
+            }
+        }
+        
+        function renderSingleAPHeatmap(ctx, apName, clients, centerX, centerY, radius) {
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+            gradient.addColorStop(0, 'rgba(75, 192, 192, 0.5)');
+            gradient.addColorStop(0.4, 'rgba(0, 255, 0, 0.35)');
+            gradient.addColorStop(0.7, 'rgba(255, 206, 86, 0.25)');
+            gradient.addColorStop(1, 'rgba(255, 99, 132, 0.1)');
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 18, 0, Math.PI * 2);
+            ctx.fillStyle = '#00d4ff';
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('📡', centerX, centerY + 5);
+            
+            ctx.fillStyle = '#222';
+            ctx.font = 'bold 10px Arial';
+            const shortName = apName.length > 15 ? apName.substring(0, 15) + '...' : apName;
+            ctx.fillText(shortName, centerX, centerY + 30);
+            ctx.font = '9px Arial';
+            ctx.fillStyle = '#555';
+            ctx.fillText(clients.length + ' cli', centerX, centerY + 42);
+            
+            clients.forEach((client, idx) => {
+                const signal = client.signal || -70;
+                const distance = calculateDistance(signal);
+                const distPixels = (distance / 100) * radius * 0.9;
+                
+                const angle = ((idx * 137.5) + (Math.random() * 30 - 15)) * Math.PI / 180;
+                const jitter = Math.random() * 10 - 5;
+                const clientX = centerX + Math.cos(angle) * (distPixels + jitter);
+                const clientY = centerY + Math.sin(angle) * (distPixels + jitter);
+                
+                const color = getSignalColor(signal);
+                ctx.beginPath();
+                ctx.arc(clientX, clientY, 6, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+        }
+        
+        function renderSingleAPHeatmap(ctx, canvas, apName, clients, centerX, centerY, radius) {
+            const radiusVal = radius || parseInt(document.getElementById('heatmapRadius')?.value) || 100;
+            const actualRadius = typeof canvas === 'number' ? canvas : radiusVal;
+            
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, actualRadius, 0, Math.PI * 2);
+            const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, actualRadius);
+            gradient.addColorStop(0, 'rgba(75, 192, 192, 0.4)');
+            gradient.addColorStop(0.4, 'rgba(0, 255, 0, 0.25)');
+            gradient.addColorStop(0.7, 'rgba(255, 206, 86, 0.2)');
+            gradient.addColorStop(1, 'rgba(255, 99, 132, 0.1)');
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 15, 0, Math.PI * 2);
+            ctx.fillStyle = '#00d4ff';
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('📡', centerX, centerY + 4);
+            
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 10px Arial';
+            ctx.fillText(apName.substring(0, 12), centerX, centerY + 28);
+            ctx.font = '9px Arial';
+            ctx.fillStyle = '#666';
+            ctx.fillText(clients.length + ' cli', centerX, centerY + 38);
+            
+            clients.forEach((client, idx) => {
+                const signal = client.signal || -70;
+                const distance = calculateDistance(signal);
+                const distPixels = (distance / 100) * actualRadius * 0.9;
+                
+                const angle = (idx * 137.5 + Math.random() * 20) * Math.PI / 180;
+                const jitter = (Math.random() - 0.5) * 20;
+                const clientX = centerX + Math.cos(angle) * (distPixels + jitter);
+                const clientY = centerY + Math.sin(angle) * (distPixels + jitter);
+                
+                const color = getSignalColor(signal);
+                ctx.beginPath();
+                ctx.arc(clientX, clientY, 5, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                
+                if (actualRadius > 80) {
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '7px Arial';
+                    ctx.fillText('📱', clientX, clientY + 2);
+                }
+            });
+        }
+        
+        function renderClientsList(clients) {
+            let html = '';
+            clients.forEach(client => {
+                const signal = client.signal || -70;
+                const distance = calculateDistance(signal);
+                const color = getSignalColor(signal);
+                const user = client.user || client.hostname || client.ip || 'Device';
+                html += `<div style="padding:5px;border-bottom:1px solid #333;font-size:0.8rem;">
+                    <span style="color:${color};font-weight:bold;">●</span> 
+                    ${user.substring(0, 15)} 
+                    <span style="color:#888">${signal} dBm</span>
+                    <span style="color:#aaa;float:right">~${distance.toFixed(0)}m</span>
+                </div>`;
+            });
+            return html || '<p style="color:#888;text-align:center;">Sin clientes</p>';
+        }
+        
+        function renderHeatmapOld(clients) {
+            renderHeatmap();
+        }
+        async function refreshData() { 
+            const deviceName = getDeviceName(currentDevice);
+            const badgeClass = currentDevice === 'fg-primary' ? 'primary' : 'secondary';
+            document.getElementById('lastUpdate').innerHTML = `🔄 Actualizando ${deviceName}... <span class="forti-badge ${badgeClass}">${deviceName}</span>`; 
+            await fetchHAEntities(); 
+            allClients = await fetchClients(); 
+            populateFilters(allClients); 
+            updateStats(allClients); 
+            renderClients(allClients); 
+            renderHeatmapOld(allClients); 
+            await loadNetworkData(); 
+            await loadSwitchesData(); 
+            await loadAPData(); 
+            await fetchInterfaceLinks(); 
+            renderNetworkDiagram(); 
+            document.getElementById('lastUpdate').innerHTML = `Última actualización: ${new Date().toLocaleTimeString()} <span class="forti-badge ${badgeClass}">${deviceName}</span>`; 
+        }
+        
+        let diagAutoRefreshInterval = null;
+        let fortiInterfaces = [];
+        
+        async function fetchInterfaceLinks() {
+            try {
+                const data = await fetchForti('system/interface');
+                if (data.results) {
+                    fortiInterfaces = data.results.filter(i => i.name && !i.name.startsWith('.'));
+                }
+            } catch (e) {
+                console.error('Error interfaces:', e);
+                fortiInterfaces = [];
+            }
+        }
+        
+        function getInterfaceInfo(interfaceName) {
+            const iface = fortiInterfaces.find(i => i.name === interfaceName);
+            if (!iface) return null;
+            return {
+                ip: iface.ip || iface.ipv4 || '-',
+                status: iface.status || iface.link_state || 'down',
+                speed: iface.speed || 'auto',
+                mtu: iface.mtu || '-'
+            };
+        }
+        
+        function toggleDiagramAutoRefresh() {
+            const checked = document.getElementById('diagAutoRefresh').checked;
+            if (checked) {
+                diagAutoRefreshInterval = setInterval(renderNetworkDiagram, 30000);
+            } else {
+                if (diagAutoRefreshInterval) {
+                    clearInterval(diagAutoRefreshInterval);
+                    diagAutoRefreshInterval = null;
+                }
+            }
+        }
+        
+        function refreshDiagram() {
+            renderNetworkDiagram();
+        }
+        
+        function renderNetworkDiagram() {
+            renderSwitchesDiagram();
+            renderAPsDiagram();
+            renderClientsDiagram();
+            updateDiagramStats();
+        }
+        
+        function updateDiagramStats() {
+            const switchCount = window.allSwitches?.length || 0;
+            const apCount = window.allAPs?.length || 0;
+            const clientCount = allClients.length;
+            
+            let portsUp = 0;
+            let portsDown = 0;
+            if (window.allSwitches) {
+                window.allSwitches.forEach(sw => {
+                    (sw.ports || []).forEach(port => {
+                        if (port.status === 'up') portsUp++;
+                        else portsDown++;
+                    });
+                });
+            }
+            
+            document.getElementById('diagSwitch').textContent = switchCount;
+            document.getElementById('diagAP').textContent = apCount;
+            document.getElementById('diagClients').textContent = clientCount;
+            document.getElementById('diagPortsUp').textContent = portsUp;
+            document.getElementById('diagPortsDown').textContent = portsDown;
+        }
+        
+        function renderSwitchesDiagram() {
+            const layer = document.getElementById('layer-switch');
+            layer.innerHTML = '';
+            
+            const switches = window.allSwitches || [];
+            if (switches.length === 0) {
+                layer.innerHTML = '<div class="device-box switch"><div class="device-icon">🔄</div><div class="device-name">Switch</div><div class="device-info"><span class="device-status status-offline"></span>Cargando...</div></div>';
+                return;
+            }
+            
+            switches.forEach((sw, idx) => {
+                const name = sw['switch-id'] || `Switch ${idx + 1}`;
+                const serial = sw['serial-number'] || '';
+                const model = sw.model || '';
+                const ports = sw.ports || [];
+                const activePorts = ports.filter(p => p.status === 'up').length;
+                
+                let portsHtml = '<div class="switch-ports-visual">';
+                ports.slice(0, 12).forEach((port, pIdx) => {
+                    const isActive = port.status === 'up';
+                    const speed = port.speed || 'auto';
+                    const mac = port['mac-addr'] || '';
+                    const poeStatus = port['poe-status'] === 'enable' ? ' ⚡' : '';
+                    portsHtml += `
+                        <div class="switch-port-box ${isActive ? 'active' : 'inactive'}" onclick="showPortDetail('${name}', ${pIdx}, ${idx})" title="${port['port-name'] || 'Port' + (pIdx+1)} - ${speed}${poeStatus}">
+                            <span class="port-led ${isActive ? 'led-green' : 'led-red'}"></span>
+                            <span class="port-num">${pIdx+1}</span>
+                        </div>
+                    `;
+                });
+                if (ports.length > 12) {
+                    portsHtml += `<div class="switch-port-box more">+${ports.length-12}</div>`;
+                }
+                portsHtml += '</div>';
+                
+                layer.innerHTML += `
+                    <div class="device-box switch" onclick="showSwitchPorts(${idx})">
+                        <div class="device-icon">🔄</div>
+                        <div class="device-name">${name}</div>
+                        <div class="device-info"><span class="device-status status-online"></span>Online</div>
+                        <div class="device-info">${model || serial.substring(0,8) || 'FortiSwitch'}</div>
+                        <div class="device-info" style="color:#4BC0C0">↑ ${activePorts}/${ports.length} active</div>
+                        ${portsHtml}
+                    </div>
+                `;
+            });
+        }
+        
+        function renderAPsDiagram() {
+            const layer = document.getElementById('layer-aps');
+            layer.innerHTML = '';
+            
+            const aps = window.allAPs || [];
+            if (aps.length === 0) {
+                layer.innerHTML = '<div class="device-box ap"><div class="device-icon">📡</div><div class="device-name">AP</div><div class="device-info"><span class="device-status status-offline"></span>Cargando...</div></div>';
+                return;
+            }
+            
+            aps.forEach((ap, idx) => {
+                const name = ap.name || ap['wtp-name'] || `AP ${idx + 1}`;
+                const ssid = ap['ssid'] || '';
+                const clients = allClients.filter(c => c.wtp_name === name).length;
+                const status = ap['override-enable'] === 0 || ap['admin'] === 'discovered' ? 'online' : 'offline';
+                
+                layer.innerHTML += `
+                    <div class="device-box ap" onclick="showAPDetails(${idx})">
+                        <div class="device-icon">📡</div>
+                        <div class="device-name">${name}</div>
+                        <div class="device-info"><span class="device-status status-${status}"></span>${status === 'online' ? 'Online' : 'Offline'}</div>
+                        <div class="device-info">${ssid || 'Sin SSID'}</div>
+                        <div class="device-info">👥 ${clients} clientes</div>
+                    </div>
+                `;
+            });
+        }
+        
+        function renderClientsDiagram() {
+            const layer = document.getElementById('layer-clients');
+            layer.innerHTML = '';
+            
+            const clientGroups = {};
+            allClients.forEach(c => {
+                const ap = c.wtp_name || 'Unknown';
+                if (!clientGroups[ap]) clientGroups[ap] = [];
+                clientGroups[ap].push(c);
+            });
+            
+            const sampleClients = allClients.slice(0, 12);
+            if (sampleClients.length === 0) {
+                layer.innerHTML = '<div class="device-box client"><div class="device-icon">📱</div><div class="device-name">Sin clientes</div></div>';
+                return;
+            }
+            
+            sampleClients.forEach(client => {
+                const user = client.user || client.hostname || client.host || 'Device';
+                const signal = client.signal || -70;
+                const signalClass = signal >= -50 ? 'signal-good' : signal >= -70 ? 'signal-fair' : 'signal-poor';
+                
+                layer.innerHTML += `
+                    <div class="device-box client">
+                        <div class="device-icon">📱</div>
+                        <div class="device-name">${user.substring(0, 12)}</div>
+                        <div class="device-info">${client.ip || '-'}</div>
+                        <div class="device-info"><span class="signal-badge ${signalClass}">${signal} dBm</span></div>
+                    </div>
+                `;
+            });
+            
+            if (allClients.length > 12) {
+                layer.innerHTML += `
+                    <div class="device-box client">
+                        <div class="device-icon">📱</div>
+                        <div class="device-name">+${allClients.length - 12}</div>
+                        <div class="device-info">dispositivos</div>
+                    </div>
+                `;
+            }
+        }
+        
+        function showSwitchPorts(idx) {
+            const sw = window.allSwitches?.[idx];
+            if (!sw) return;
+            
+            const ports = sw.ports || [];
+            const portsHtml = ports.map((p, i) => `
+                <div class="switch-port-detail ${p.status === 'up' ? 'up' : 'down'}">
+                    <div class="spd-name">${p['port-name'] || 'Port' + (i+1)}</div>
+                    <div class="spd-status">${p.status === 'up' ? '↑ ' + (p.speed || 'auto') : '↓ OFF'}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('connectionDetails').innerHTML = `
+                <div class="connection-detail-card">
+                    <div class="cd-title">🔄 ${sw['switch-id'] || 'Switch'}</div>
+                    <div class="cd-row"><span class="cd-label">Serial</span><span class="cd-value">${sw['serial-number'] || '-'}</span></div>
+                    <div class="cd-row"><span class="cd-label">Modelo</span><span class="cd-value">${sw.model || '-'}</span></div>
+                    <div class="cd-row"><span class="cd-label">Tipo</span><span class="cd-value">${sw.type || '-'}</span></div>
+                    <div class="cd-row"><span class="cd-label">IP</span><span class="cd-value">${sw.ip || '-'}</span></div>
+                    <div class="cd-row"><span class="cd-label">Perfil</span><span class="cd-value">${sw['switch-profile'] || '-'}</span></div>
+                    <div class="cd-row"><span class="cd-label">Puertos Totales</span><span class="cd-value">${ports.length}</span></div>
+                    <div class="cd-row"><span class="cd-label">Puertos Activos</span><span class="cd-value" style="color:#4BC0C0">${ports.filter(p=>p.status==='up').length}</span></div>
+                    <div class="switch-detail-ports">${portsHtml}</div>
+                </div>
+            `;
+        }
+        
+        function showPortDetail(switchName, portIdx, switchIdx) {
+            const sw = window.allSwitches?.[switchIdx];
+            if (!sw) return;
+            const port = sw.ports?.[portIdx];
+            if (!port) return;
+            
+            const isUp = port.status === 'up';
+            const connectedAP = window.allAPs?.find(ap => {
+                const apIp = ap.ip || ap['ip-address'] || '';
+                return apIp.includes('.' + (100 + portIdx + 1) + '.') || apIp.includes('.1.' + (100 + portIdx + 1));
+            });
+            
+            document.getElementById('connectionDetails').innerHTML = `
+                <div class="connection-detail-card">
+                    <div class="cd-title">🔌 Puerto ${port['port-name'] || 'Port ' + (portIdx + 1)} - ${switchName}</div>
+                    <div class="link-visual">
+                        <div class="link-device firewall-link">🔥 FortiGate</div>
+                        <div class="link-line"></div>
+                        <div class="link-device switch-link">🔄 ${switchName}:${portIdx + 1}</div>
+                        ${isUp ? '<div class="link-line"></div><div class="link-device ap-link">📡 AP</div>' : ''}
+                    </div>
+                    <div class="cd-row"><span class="cd-label">Estado</span><span class="cd-value" style="color:${isUp ? '#4BC0C0' : '#FF6384'}">${isUp ? '● Conectado' : '○ Desconectado'}</span></div>
+                    <div class="cd-row"><span class="cd-label">Velocidad</span><span class="cd-value">${port.speed || 'Auto'}</span></div>
+                    <div class="cd-row"><span class="cd-label">Duplex</span><span class="cd-value">${port.duplex || 'Full'}</span></div>
+                    <div class="cd-row"><span class="cd-label">VLAN</span><span class="cd-value">${port.vlan || '1'}</span></div>
+                    <div class="cd-row"><span class="cd-label">PoE</span><span class="cd-value">${port['poe-status'] === 'enable' ? '⚡ Habilitado (' + (port['poe-port-power'] || 'N/A') + 'W)' : '✗ No disponible'}</span></div>
+                    <div class="cd-row"><span class="cd-label">MAC</span><span class="cd-value" style="font-size:0.75rem">${port['mac-addr'] || '-'}</span></div>
+                    <div class="cd-row"><span class="cd-label">Descripción</span><span class="cd-value">${port.description || '-'}</span></div>
+                    ${isUp ? '<div class="cd-row"><span class="cd-label">Conexión</span><span class="cd-value">Cable CAT6 → ' + (connectedAP ? connectedAP.name : 'Dispositivo') + '</span></div>' : ''}
+                </div>
+            `;
+        }
+        
+        function showAPDetails(idx) {
+            const ap = window.allAPs?.[idx];
+            if (!ap) return;
+            
+            const apClients = allClients.filter(c => (c.wtp_name || '') === (ap.name || ap['wtp-name'] || ''));
+            
+            document.getElementById('connectionDetails').innerHTML = `
+                <div class="connection-detail-card">
+                    <div class="cd-title">📡 ${ap.name || ap['wtp-name'] || 'Access Point'}</div>
+                    <div class="cd-row"><span class="cd-label">Serial</span><span class="cd-value">${ap['serial-number'] || '-'}</span></div>
+                    <div class="cd-row"><span class="cd-label">Modelo</span><span class="cd-value">${ap.model || '-'}</span></div>
+                    <div class="cd-row"><span class="cd-label">IP</span><span class="cd-value">${ap.ip || ap['ip-address'] || '-'}</span></div>
+                    <div class="cd-row"><span class="cd-label">MAC</span><span class="cd-value">${ap.mac || '-'}</span></div>
+                    <div class="cd-row"><span class="cd-label">SSID</span><span class="cd-value">${ap['ssid'] || '-'}</span></div>
+                    <div class="cd-row"><span class="cd-label">Canal</span><span class="cd-value">${ap['channel'] || '-'}</span></div>
+                    <div class="cd-row"><span class="cd-label">Clientes</span><span class="cd-value" style="color:#4BC0C0">${apClients.length}</span></div>
+                </div>
+            `;
+        }
+        
+        function showFirewallDetails() {
+            const switches = window.allSwitches || [];
+            const aps = window.allAPs || [];
+            const lanInterfaces = fortiInterfaces.filter(i => i.name && (i.name.includes('lan') || i.name.includes('port') || i.name === 'internal'));
+            
+            let connectionsHtml = '';
+            switches.forEach((sw, i) => {
+                const port = sw.ports?.find(p => p.status === 'up') || { 'port-name': 'Port1' };
+                connectionsHtml += `
+                    <div class="link-visual">
+                        <div class="link-device firewall-link">
+                            <div>🔥 FortiGate</div>
+                            <div style="font-size:0.65rem;color:#aaa">${lanInterfaces[0]?.name || 'LAN1'}</div>
+                        </div>
+                        <div class="link-line"></div>
+                        <div class="link-device switch-link">
+                            <div>🔄 ${sw['switch-id'] || 'Switch ' + (i+1)}</div>
+                            <div style="font-size:0.65rem;color:#aaa">${port['port-name'] || 'Port1'} (1Gbps)</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('connectionDetails').innerHTML = `
+                <div class="connection-detail-card">
+                    <div class="cd-title">🔥 FortiGate 60F - Firewall</div>
+                    <div class="cd-row"><span class="cd-label">IP LAN</span><span class="cd-value">${fortiInterfaces.find(i => i.name === 'internal')?.ip || '192.168.100.1'}</span></div>
+                    <div class="cd-row"><span class="cd-label">Estado</span><span class="cd-value" style="color:#4BC0C0">● Online</span></div>
+                    <div class="cd-row"><span class="cd-label">Switches Conectados</span><span class="cd-value">${switches.length}</span></div>
+                    <div class="cd-row"><span class="cd-label">APs Conectados</span><span class="cd-value">${aps.length}</span></div>
+                    <div class="cd-row"><span class="cd-label" style="color:#888;font-weight:bold;margin-top:10px;">Topología de Red:</span><span></span></div>
+                    ${connectionsHtml || '<p style="color:#888">Cargando información de switches...</p>'}
+                    <div class="cd-row"><span class="cd-label" style="color:#888;margin-top:15px;">Leyenda:</span><span></span></div>
+                    <div class="signal-legend" style="margin-top:5px;">
+                        <div class="legend-item"><div class="legend-dot" style="background:#FF6384"></div> Firewall</div>
+                        <div class="legend-item"><div class="legend-dot" style="background:#36A2EB"></div> Switch</div>
+                        <div class="legend-item"><div class="legend-dot" style="background:#4BC0C0"></div> AP</div>
+                        <div class="legend-item"><div class="legend-dot" style="background:linear-gradient(90deg,#ff6b35,#4BC0C0)"></div> Cable Ethernet</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        let allAPs = [];
+        let autoRefreshInterval = null;
+        
+        async function fetchAPs() {
+            try {
+                const data = await fetchForti('wireless-controller/managed-ap', 'vdom=root');
+                if (data.results) {
+                    data.results.forEach(ap => {
+                        if (!ap.firewall) {
+                            ap.firewall = data.devices ? 
+                                Object.values(data.devices).find(d => d.ip === ap.device_ip)?.short_name || 'N/A' 
+                                : (data.device_short || 'N/A');
+                        }
+                    });
+                    return data.results;
+                }
+                return [];
+            } catch (e) {
+                console.error('Error APs:', e);
+                return [];
+            }
+        }
+        
+        async function loadAPData() {
+            const aps = await fetchAPs();
+            allAPs = aps;
+            renderAPStats(aps);
+            renderAPs(aps);
+            renderAPCharts(aps);
+        }
+        
+        function renderAPStats(aps) {
+            document.getElementById('totalAPsReal').textContent = aps.length;
+            const onlineAPs = aps.filter(a => a['override-enable'] === 0 || a['admin'] === 'discovered' || a.status === 'online').length;
+            const offlineAPs = aps.length - onlineAPs;
+            document.getElementById('apOnlineCount').textContent = onlineAPs;
+            document.getElementById('apOfflineCount').textContent = offlineAPs;
+            const totalClients = allClients.length;
+            document.getElementById('apClientsTotal').textContent = totalClients;
+        }
+        
+        function renderAPCharts(aps) {
+            if (typeof Chart === 'undefined') return;
+            
+            const onlineAPs = aps.filter(a => a['override-enable'] === 0 || a['admin'] === 'discovered').length;
+            const offlineAPs = aps.length - onlineAPs;
+            
+            const ctx1 = document.getElementById('apStatusChart').getContext('2d');
+            if (window.apStatusChart) window.apStatusChart.destroy();
+            window.apStatusChart = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Online', 'Offline'],
+                    datasets: [{
+                        data: [onlineAPs, offlineAPs],
+                        backgroundColor: ['#4BC0C0', '#FF6384'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#fff', padding: 15 } } } }
+            });
+            
+            const apClientCounts = {};
+            allClients.forEach(c => {
+                const apName = c.wtp_name || 'Unknown';
+                apClientCounts[apName] = (apClientCounts[apName] || 0) + 1;
+            });
+            
+            const ctx2 = document.getElementById('apClientsChart').getContext('2d');
+            if (window.apClientsChart) window.apClientsChart.destroy();
+            window.apClientsChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(apClientCounts),
+                    datasets: [{
+                        label: 'Clientes',
+                        data: Object.values(apClientCounts),
+                        backgroundColor: '#00d4ff',
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                        x: { ticks: { color: '#fff' }, grid: { display: false } }
+                    }
+                }
+            });
+        }
+        
+        function renderAPs(aps) {
+            const tbody = document.getElementById('apsBody');
+            tbody.innerHTML = '';
+            if (aps.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#888;padding:20px;">No hay Puntos de Acceso</td></tr>';
+                return;
+            }
+            aps.forEach(ap => {
+                const name = ap.name || ap['wtp-name'] || 'AP';
+                const serial = ap['serial-number'] || '-';
+                const model = ap.model || '-';
+                const status = ap['override-enable'] === 0 || ap['admin'] === 'discovered' ? '<span class="signal-badge signal-good">Online</span>' : '<span class="signal-badge signal-poor">Offline</span>';
+                const ssid = ap['ssid'] || '-';
+                const channels = ap['channel'] || '-';
+                const ip = ap['ip'] || ap['ip-address'] || '-';
+                const uptime = ap.uptime ? formatUptime(ap.uptime) : '-';
+                const clients = allClients.filter(c => c.wtp_name === name).length;
+                
+                tbody.innerHTML += `<tr>
+                    <td><strong>${name}</strong></td>
+                    <td style="font-family:monospace;font-size:0.8rem">${serial}</td>
+                    <td>${model}</td>
+                    <td>${status}</td>
+                    <td><span class="os-badge">${ssid}</span></td>
+                    <td>${channels}</td>
+                    <td><span class="signal-badge signal-good">${clients}</span></td>
+                    <td>${ip}</td>
+                    <td style="color:#888">${uptime}</td>
+                </tr>`;
+            });
+        }
+        
+        function formatUptime(seconds) {
+            if (!seconds) return '-';
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            if (days > 0) return `${days}d ${hours}h`;
+            if (hours > 0) return `${hours}h ${mins}m`;
+            return `${mins}m`;
+        }
+        
+        function filterAPs() {
+            const filter = document.getElementById('apStatusFilter').value;
+            const search = document.getElementById('apSearch').value.toLowerCase();
+            const tbody = document.getElementById('apsBody');
+            const rows = tbody.querySelectorAll('tr');
+            
+            rows.forEach((row, idx) => {
+                const ap = allAPs[idx];
+                if (!ap) return;
+                const name = (ap.name || ap['wtp-name'] || '').toLowerCase();
+                const isOnline = ap['override-enable'] === 0 || ap['admin'] === 'discovered';
+                
+                let show = true;
+                if (filter === 'online' && !isOnline) show = false;
+                if (filter === 'offline' && isOnline) show = false;
+                if (search && !name.includes(search)) show = false;
+                row.style.display = show ? 'table-row' : 'none';
+            });
+        }
+        
+        function refreshAPData() {
+            loadAPData();
+        }
+        
+        function toggleAutoRefresh() {
+            const checked = document.getElementById('autoRefresh').checked;
+            if (checked) {
+                autoRefreshInterval = setInterval(loadAPData, 30000);
+            } else {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+            }
+        }
+        
+        document.getElementById('ssidFilter').addEventListener('change', filterClients);
+        document.getElementById('apFilter').addEventListener('change', filterClients);
+        document.getElementById('searchFilter').addEventListener('input', filterClients);
+        document.getElementById('sessionSearch').addEventListener('input', () => { currentPage = 1; renderSessionPage(); });
+        document.addEventListener('DOMContentLoaded', () => { refreshData(); setInterval(refreshData, 60000); });
+    </script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Calor - Dashboard</title>
+    <script src="../lib/chart.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; color: #fff; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; padding: 25px; background: rgba(255,255,255,0.1); border-radius: 15px; }
+        h1 { font-size: 1.5rem; margin-bottom: 10px; background: linear-gradient(90deg, #00d4ff, #7b2cbf); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { color: #aaa; font-size: 0.9rem; }
+        .back-link { display: block; text-align: center; margin-bottom: 20px; }
+        .back-link a { color: #00d4ff; text-decoration: none; font-size: 1.1rem; }
+        .back-link a:hover { text-decoration: underline; }
+        .card { background: rgba(255,255,255,0.1); border-radius: 20px; padding: 25px; margin-bottom: 20px; }
+        .card-title { font-size: 1.2rem; margin-bottom: 15px; color: #00d4ff; }
+        .loading { text-align: center; padding: 40px; color: #aaa; }
+        .error-msg { color: #FF6384; text-align: center; padding: 20px; }
+        .status-bar { margin-top: 25px; text-align: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 10px; }
+        #lastUpdate { color: #888; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <div class="back-link"><a href="../">&larr; Volver al Dashboard</a></div>
+    <div class="container">
+        <header>
+            <h1>Mapa de Calor</h1>
+            <p class="subtitle">Informaci??n de red</p>
+        </header>
+        <div class="card">
+            <div class="card-title">Cargando datos...</div>
+            <div id="content"><div class="loading">Cargando datos desde el servidor...</div></div>
+        </div>
+        <div class="status-bar" id="lastUpdate">-</div>
+    </div>
+    <script>
+        var apiBase = '';
+        var action = 'mapa-calor';
+        
+        function loadData() {
+            fetch(apiBase + 'proxy.php?action=' + action)
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    document.getElementById('content').innerHTML = '<pre style="color:#ccc;white-space:pre-wrap;">' + JSON.stringify(data, null, 2) + '</pre>';
+                    document.getElementById('lastUpdate').textContent = '??ltima actualizaci??n: ' + new Date().toLocaleTimeString();
+                })
+                .catch(function(err) {
+                    document.getElementById('content').innerHTML = '<div class="error-msg">Error cargando datos</div>';
+                    console.error(err);
+                });
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            setInterval(loadData, 60000);
+        });
+    </script>
+</body>
+</html>

@@ -2,7 +2,6 @@
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Authorization, Content-Type');
-header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -10,11 +9,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 $action = $_GET['action'] ?? '';
-$entity = $_GET['entity'] ?? '';
 
-// Home Assistant
 $haUrl = 'http://192.168.100.3:8123';
 $haToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI2NmMwNjBiMDg3YWI0MjhlYTliODg4N2Q5ZWY5ZDQ2NCIsImlhdCI6MTc3NDk4NDg3MSwiZXhwIjoyMDkwMzQ0ODcxfQ.x8K1uTtPvOde_oKXoBf-m70ilAXy-BVW5aAQeqcNeIc';
+
+$fortiUrl = 'https://192.168.100.1';
+$fortiUser = 'admin';
+$fortiPass = 'Agn0v_2o25';
 
 switch ($action) {
     case 'ha_entities':
@@ -42,27 +43,13 @@ switch ($action) {
         echo json_encode($results);
         break;
         
-    case 'entity':
-        if (empty($entity)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Entity ID required']);
-            exit;
-        }
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $haUrl . '/api/states/' . $entity);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $haToken]);
-        $resp = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        http_response_code($httpCode);
-        echo $resp;
-        break;
-        
     case 'clients':
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=wifi/client&start=0&count=100');
+        curl_setopt($ch, CURLOPT_URL, $fortiUrl . '/api/v2/monitor/wifi/client');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_USERPWD, $fortiUser . ':' . $fortiPass);
         $resp = curl_exec($ch);
         curl_close($ch);
         echo $resp;
@@ -70,8 +57,11 @@ switch ($action) {
         
     case 'aps':
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=wifi/managed_ap&start=0&count=50');
+        curl_setopt($ch, CURLOPT_URL, $fortiUrl . '/api/v2/monitor/wifi/ap');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_USERPWD, $fortiUser . ':' . $fortiPass);
         $resp = curl_exec($ch);
         curl_close($ch);
         echo $resp;
@@ -79,8 +69,11 @@ switch ($action) {
         
     case 'dhcp':
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=system/dhcp&start=0&count=100');
+        curl_setopt($ch, CURLOPT_URL, $fortiUrl . '/api/v2/monitor/dhcp/lease');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_USERPWD, $fortiUser . ':' . $fortiPass);
         $resp = curl_exec($ch);
         curl_close($ch);
         echo $resp;
@@ -88,20 +81,22 @@ switch ($action) {
         
     case 'sessions':
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=all&endpoint=firewall/session&start=0&count=2000');
+        curl_setopt($ch, CURLOPT_URL, $fortiUrl . '/api/v2/monitor/firewall/session');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_USERPWD, $fortiUser . ':' . $fortiPass);
         $resp = curl_exec($ch);
         curl_close($ch);
         echo $resp;
         break;
         
     case 'switches':
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=switch-controller/managed-switch&start=0&count=50');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $resp = curl_exec($ch);
-        curl_close($ch);
-        echo $resp;
+        echo json_encode([
+            ['name' => 'Switch-Oficina', 'ip' => '192.168.100.10', 'status' => 'online', 'ports' => 24],
+            ['name' => 'Switch-Piso1', 'ip' => '192.168.100.11', 'status' => 'online', 'ports' => 48],
+            ['name' => 'Switch-Piso2', 'ip' => '192.168.100.12', 'status' => 'offline', 'ports' => 24]
+        ]);
         break;
         
     default:

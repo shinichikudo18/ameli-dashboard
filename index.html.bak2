@@ -417,24 +417,19 @@
                     });
                     
                     function getFlag(countryId) {
-                        var countryMap = {
-                            19523: 'CL', 21333: 'US', 23130: 'RS', 16967: 'UK',
-                            19519: 'AR', 19524: 'BR', 19977: 'JP', 20013: 'CN',
-                            20113: 'DE', 20107: 'ES', 20297: 'MX', 20302: 'CO',
-                            21825: 'AU', 16707: 'CA', 16730: 'IN', 17730: 'KR',
-                            17732: 'NZ', 17737: 'SG', 17747: 'TH', 18242: 'ID',
-                            18259: 'MY', 19268: 'PH', 19534: 'PE', 20035: 'VE',
-                            20306: 'EC', 21057: 'RU', 21058: 'UA', 21062: 'PL',
-                            21067: 'NL', 21076: 'SE', 21317: 'FR', 21836: 'IT',
-                            21842: 'PT', 22605: 'CH'
-                        };
-                        return countryMap[countryId] || 'XX';
-                    }
-
-                    function getPortIcon(dport, proto) {
-                        var icons = {53:"DNS",80:"HTTP",443:"HTTPS",22:"SSH",21:"FTP",25:"SMTP",123:"NTP",161:"SNMP",5060:"SIP",5061:"SIPS"};
-                        return icons[dport] || (proto.toUpperCase() + "/" + dport);
-                    }
+                        if (countryId === 19523) return 'CL';
+                        if (countryId === 21333) return 'US';
+                        if (countryId === 23130) return 'RS';
+                        if (countryId === 16967) return 'UK';
+                        if (countryId === 19519) return 'AR';
+                        if (countryId === 19524) return 'BR';
+                        if (countryId === 19977) return 'JP';
+                        if (countryId === 20013) return 'CN';
+                        if (countryId === 20113) return 'DE';
+                        if (countryId === 20107) return 'ES';
+                        if (countryId === 20297) return 'MX';
+                        if (countryId === 20302) return 'CO';
+                        return '-';
                     }
                     
                     var appIcons = {
@@ -460,7 +455,7 @@
                             'linkedin': 'LinkedIn', 'reddit': 'Reddit', 'github': 'GitHub', 'gitlab': 'GitLab'
                         };
                         sessions.slice(0, 50).forEach(function(sess) {
-                            var pd=getPortIcon(sess.dport,sess.proto);
+                            var proto = sess.proto;
                             var appId = 0;
                             if (sess.apps && sess.apps.length > 0) {
                                 appId = sess.apps[0].id || 0;
@@ -484,7 +479,7 @@
                             sessHtml += '<tr>';
                             sessHtml += '<td>' + origenHtml + '</td>';
                             sessHtml += '<td>' + (sess.daddr || '-') + '</td>';
-                            sessHtml += '<td>' + pd + '</td>';
+                            sessHtml += '<td>' + proto + '</td>';
                             sessHtml += '<td>' + flag + '</td>';
                             sessHtml += '<td>' + fw + '</td>';
                             sessHtml += '<td>' + (sess.username || '-') + '</td>';
