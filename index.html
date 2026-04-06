@@ -465,8 +465,16 @@
                             }
                             if (appId > 0) {
                                 var appName = sess.apps[0].name || '';
-                                var baseApp = appName.split('/')[0].toLowerCase();
-                                proto = (appIcons[appNames[baseApp]] || '') + ' ' + (appNames[baseApp] || appName);
+                                if (appName && !appName.match(/^[a-z]+\/[0-9]+$/)) {
+                                    var baseApp = appName.split('/')[0].toLowerCase();
+                                    proto = (appIcons[appNames[baseApp]] || '') + ' ' + (appNames[baseApp] || appName);
+                                } else if (appId === 52452) {
+                                    proto = 'Windows.Push.Notification';
+                                } else if (sess.app_list_id && sess.app_list_id > 0) {
+                                    proto = sess.proto + '/' + sess.dport + ' (App:' + appId + ')';
+                                } else {
+                                    proto = sess.proto + '/' + sess.dport;
+                                }
                             } else if (sess.dport) {
                                 if (sess.dport === 53) proto = '&#128270; DNS';
                                 else if (sess.dport === 80) proto = '&#127760; HTTP';
