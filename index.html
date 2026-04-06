@@ -240,22 +240,11 @@
                     document.getElementById('totalClients').textContent = clients.length || 0;
 
                     var good = 0, fair = 0, poor = 0;
-                    var signalBuckets = { 'Excelente': 0, 'Buena': 0, 'Regular': 0, 'Mala': 0 };
                     clients.forEach(function(c) {
                         var sig = c.rssi || c.signal || -50;
-                        if (sig >= -45) {
-                            good++;
-                            signalBuckets['Excelente']++;
-                        } else if (sig > -55) {
-                            good++;
-                            signalBuckets['Buena']++;
-                        } else if (sig > -70) {
-                            fair++;
-                            signalBuckets['Regular']++;
-                        } else {
-                            poor++;
-                            signalBuckets['Mala']++;
-                        }
+                        if (sig > -50) good++;
+                        else if (sig > -70) fair++;
+                        else poor++;
                     });
 
                     document.getElementById('signalGood').textContent = good;
@@ -267,24 +256,24 @@
                     if (sqCanvas) {
                         var sqCtx = sqCanvas.getContext('2d');
                         window.signalQualityChart = new Chart(sqCtx, {
-                        type: 'bar',
-                        data: {
-                            labels: Object.keys(signalBuckets),
-                            datasets: [{
-                                label: 'Clientes',
-                                data: Object.values(signalBuckets),
-                                backgroundColor: ['#00c853', '#7cb342', '#ffb300', '#f44336']
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } },
-                                y: { ticks: { color: '#fff', precision: 0 }, grid: { color: 'rgba(255,255,255,0.08)' } }
+                            type: 'bar',
+                            data: {
+                                labels: ['Buena Senal', 'Regular', 'Mala Senal'],
+                                datasets: [{
+                                    label: 'Clientes',
+                                    data: [good, fair, poor],
+                                    backgroundColor: ['#00c853', '#ffb300', '#f44336']
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } },
+                                    y: { ticks: { color: '#fff', precision: 0 }, grid: { color: 'rgba(255,255,255,0.08)' } }
+                                }
                             }
-                        }
-                    });
+                        });
                     }
 
                     if (clients.length === 0) {
