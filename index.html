@@ -226,9 +226,49 @@
         </div>
 
         <div id="tab-ems" class="tab-content">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value" id="emsDevices">0</div><div class="stat-label">Dispositivos</div></div>
+                <div class="stat-card"><div class="stat-value" id="emsEndpoints">0</div><div class="stat-label">Endpoints</div></div>
+                <div class="stat-card"><div class="stat-value" id="emsUsers">0</div><div class="stat-label">Usuarios</div></div>
+                <div class="stat-card"><div class="stat-value" id="emsAlerts">0</div><div class="stat-label">Alertas</div></div>
+                <div class="stat-card"><div class="stat-value" id="emsEppUsed">0</div><div class="stat-label">AV Usados</div></div>
+                <div class="stat-card"><div class="stat-value" id="emsSecurityIssues">0</div><div class="stat-label">Hallazgos</div></div>
+            </div>
+            <div class="dashboard-grid" style="margin-bottom:20px;">
+                <div class="card">
+                    <div class="card-title">Licencia EMS</div>
+                    <div id="emsLicense"><div class="loading">Cargando...</div></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Cupos de Seguridad</div>
+                    <div id="emsSeats"><div class="loading">Cargando...</div></div>
+                </div>
+            </div>
+            <div class="dashboard-grid" style="margin-bottom:20px;">
+                <div class="card">
+                    <div class="card-title">Sitios y Usuarios</div>
+                    <div id="emsSitesList"><div class="loading">Cargando...</div></div>
+                    <div style="height:12px"></div>
+                    <div id="emsUsersList"><div class="loading">Cargando...</div></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Licencias Activas</div>
+                    <div id="emsActiveLicenses"><div class="loading">Cargando...</div></div>
+                </div>
+            </div>
+            <div class="dashboard-grid" style="margin-bottom:20px;">
+                <div class="card">
+                    <div class="card-title">Seguridad / AV</div>
+                    <div id="emsSecurity"><div class="loading">Cargando...</div></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Endpoints</div>
+                    <div id="emsEndpointsList"><div class="loading">Cargando...</div></div>
+                </div>
+            </div>
             <div class="card">
-                <div class="card-title">FortiClient EMS</div>
-                <iframe src="forticlient-ems/" style="width:100%;height:900px;border:0;border-radius:15px;background:rgba(0,0,0,0.15);"></iframe>
+                <div class="card-title">Grupos de Trabajo</div>
+                <div id="emsGroupsContent"><div class="loading">Cargando...</div></div>
             </div>
         </div>
         <div class="status-bar"><span id="lastUpdate">-</span></div>
@@ -258,6 +298,8 @@
                     refreshSDWAN();
                 } else if (tabId === 'vpn') {
                     refreshVPN();
+                } else if (tabId === 'ems') {
+                    refreshEMS();
                 }
             });
         });
@@ -928,6 +970,97 @@
                 });
         }
 
+        function refreshEMS() {
+            document.getElementById('emsLicense').innerHTML = '<div class="loading">Cargando EMS...</div>';
+            document.getElementById('emsSeats').innerHTML = '<div class="loading">Cargando EMS...</div>';
+            document.getElementById('emsSitesList').innerHTML = '<div class="loading">Cargando EMS...</div>';
+            document.getElementById('emsUsersList').innerHTML = '<div class="loading">Cargando EMS...</div>';
+            document.getElementById('emsActiveLicenses').innerHTML = '<div class="loading">Cargando EMS...</div>';
+            document.getElementById('emsSecurity').innerHTML = '<div class="loading">Cargando EMS...</div>';
+            document.getElementById('emsEndpointsList').innerHTML = '<div class="loading">Cargando EMS...</div>';
+            document.getElementById('emsGroupsContent').innerHTML = '<div class="loading">Cargando EMS...</div>';
+
+            fetch('/dashboard/forticlient-ems/proxy.php?endpoint=summary')
+                .then(function(r) { return r.json(); })
+                .then(function(payload) {
+                    if (payload.error) throw new Error(payload.error);
+                    var data = payload.data || {};
+                    var summary = data.summary || {};
+                    var license = data.license || {};
+                    var workgroups = data.workgroups || [];
+                    var sites = data.sites || [];
+                    var security = data.security || {};
+                    var endpoints = data.assigned_endpoints || [];
+                    var users = data.users || [];
+                    var seats = license.seats || {};
+                    var used = license.used || {};
+                    var futureSeats = license.future_seats || {};
+                    var licenses = license.licenses || [];
+
+                    document.getElementById('emsDevices').textContent = summary.devices || 0;
+                    document.getElementById('emsEndpoints').textContent = summary.endpoints || 0;
+                    document.getElementById('emsUsers').textContent = summary.users || 0;
+                    document.getElementById('emsAlerts').textContent = summary.alerts || 0;
+                    document.getElementById('emsEppUsed').textContent = summary.epp_used || 0;
+                    document.getElementById('emsSecurityIssues').textContent = summary.security_issues || 0;
+
+                    document.getElementById('emsLicense').innerHTML =
+                        '<div class="sensor-card"><span class="sensor-name">Serie</span><span class="sensor-value">' + (license.sn || '-') + '</span></div>' +
+                        '<div class="sensor-card"><span class="sensor-name">HID</span><span class="sensor-value">' + (license.hid || '-') + '</span></div>' +
+                        '<div class="sensor-card"><span class="sensor-name">Sitio</span><span class="sensor-value">' + (summary.site || '-') + '</span></div>' +
+                        '<div class="sensor-card"><span class="sensor-name">Tipo</span><span class="sensor-value">' + (license.is_trial ? 'Trial' : 'Produccion') + '</span></div>' +
+                        '<div class="sensor-card"><span class="sensor-name">Versión</span><span class="sensor-value">' + (license.license_ver || '-') + '</span></div>';
+
+                    var seatKeys = Object.keys(Object.assign({}, seats, used, futureSeats)).sort();
+                    var seatsHtml = '<table class="clients-table"><thead><tr><th>Tipo</th><th>Usados</th><th>Cupos</th><th>Futuros</th></tr></thead><tbody>';
+                    seatKeys.forEach(function(key) {
+                        seatsHtml += '<tr><td>' + key + '</td><td>' + (used[key] || 0) + '</td><td>' + (seats[key] || 0) + '</td><td>' + (futureSeats[key] || 0) + '</td></tr>';
+                    });
+                    seatsHtml += '</tbody></table>';
+                    document.getElementById('emsSeats').innerHTML = seatsHtml;
+
+                    document.getElementById('emsSitesList').innerHTML = sites.length ? ('<table class="clients-table"><thead><tr><th>Sitio</th></tr></thead><tbody>' + sites.map(function(site) {
+                        return '<tr><td>' + site + '</td></tr>';
+                    }).join('') + '</tbody></table>') : '<div class="loading">No hay sitios</div>';
+
+                    document.getElementById('emsUsersList').innerHTML = users.length ? ('<table class="clients-table"><thead><tr><th>Usuario</th><th>Grupo</th><th>ID</th></tr></thead><tbody>' + users.map(function(user) {
+                        return '<tr><td>' + (user.name || user.username || user.user || '-') + '</td><td>' + (user.group || user.workgroup || '-') + '</td><td>' + (user.id || user.client_user_id || user.device_id || '-') + '</td></tr>';
+                    }).join('') + '</tbody></table>') : '<div class="loading">No hay usuarios identificados</div>';
+
+                    document.getElementById('emsActiveLicenses').innerHTML = licenses.length ? ('<table class="clients-table"><thead><tr><th>Tipo</th><th>Inicio</th><th>Vence</th></tr></thead><tbody>' + licenses.map(function(item) {
+                        return '<tr><td>' + (item.type || '-') + '</td><td>' + (item.start_date || '-') + '</td><td>' + (item.expiry_date || '-') + '</td></tr>';
+                    }).join('') + '</tbody></table>') : '<div class="loading">No hay licencias activas</div>';
+
+                    document.getElementById('emsSecurity').innerHTML = '<table class="clients-table"><thead><tr><th>Fuente</th><th>Conteo</th></tr></thead><tbody>' +
+                        '<tr><td>Forti Products</td><td>' + (security.forti_products_count || 0) + '</td></tr>' +
+                        '<tr><td>Profiles</td><td>' + (security.profiles_count || 0) + '</td></tr>' +
+                        '<tr><td>Zero Trust Tags</td><td>' + (security.zero_trust_count || 0) + '</td></tr>' +
+                        '<tr><td>Unread Alerts</td><td>' + (summary.alerts || 0) + '</td></tr>' +
+                        '<tr><td>SNI Update</td><td>' + (security.sni_status || '-') + '</td></tr>' +
+                        '</tbody></table>';
+
+                    document.getElementById('emsEndpointsList').innerHTML = endpoints.length ? ('<table class="clients-table"><thead><tr><th>Endpoint</th><th>Usuario</th><th>Grupo</th><th>Estado</th></tr></thead><tbody>' + endpoints.slice(0, 15).map(function(ep) {
+                        return '<tr><td>' + (ep.name || ep.device_name || ep.hostname || ep.id || '-') + '</td><td>' + (ep.username || ep.user_name || ep.user || '-') + '</td><td>' + (ep.group || ep.workgroup || '-') + '</td><td>' + (ep.status || ep.health || '-') + '</td></tr>';
+                    }).join('') + '</tbody></table>' + (endpoints.length > 15 ? '<div style="color:#888;margin-top:10px;">Mostrando 15 de ' + endpoints.length + '</div>' : '')) : '<div class="loading">No hay endpoints asignados</div>';
+
+                    document.getElementById('emsGroupsContent').innerHTML = workgroups.length ? ('<table class="clients-table"><thead><tr><th>Grupo</th><th>Ruta</th><th>Dispositivos</th><th>Política</th><th>Bloqueado</th><th>Tipo</th></tr></thead><tbody>' + workgroups.map(function(group) {
+                        return '<tr><td><strong>' + (group.name || '-') + '</strong></td><td>' + (group.full_path || '-') + '</td><td>' + (group.total_devices || 0) + '</td><td>' + (group.policy_name || '-') + '</td><td>' + ((group.blocked ? 'Sí' : 'No')) + '</td><td>' + (group.type || '-') + '</td></tr>';
+                    }).join('') + '</tbody></table>') : '<div class="loading">No hay grupos</div>';
+
+                    document.getElementById('lastUpdate').textContent = 'EMS actualizado: ' + new Date().toLocaleTimeString();
+                })
+                .catch(function(err) {
+                    document.getElementById('emsLicense').innerHTML = '<div class="error-msg">' + err.message + '</div>';
+                    document.getElementById('emsSeats').innerHTML = '<div class="error-msg">' + err.message + '</div>';
+                    document.getElementById('emsSitesList').innerHTML = '<div class="error-msg">' + err.message + '</div>';
+                    document.getElementById('emsUsersList').innerHTML = '<div class="error-msg">' + err.message + '</div>';
+                    document.getElementById('emsActiveLicenses').innerHTML = '<div class="error-msg">' + err.message + '</div>';
+                    document.getElementById('emsSecurity').innerHTML = '<div class="error-msg">' + err.message + '</div>';
+                    document.getElementById('emsEndpointsList').innerHTML = '<div class="error-msg">' + err.message + '</div>';
+                    document.getElementById('emsGroupsContent').innerHTML = '<div class="error-msg">' + err.message + '</div>';
+                });
+        }
+
         function refreshVPN() {
             document.getElementById('vpnUsersContent').innerHTML = '<div class="loading">Cargando VPN...</div>';
             if (window.vpnIpsecChart && typeof window.vpnIpsecChart.destroy === 'function') window.vpnIpsecChart.destroy();
@@ -1134,6 +1267,7 @@
             refreshSwitches();
             refreshSDWAN();
             refreshVPN();
+            refreshEMS();
         }
 
         document.addEventListener('DOMContentLoaded', initDashboard);
