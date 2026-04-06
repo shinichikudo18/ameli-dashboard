@@ -99,6 +99,111 @@ function fetchFromDevice($device, $endpoint, $vdom) {
         return $result;
     }
 
+    if ($endpoint === 'sdwan') {
+        $sdwanUrl = $baseUrl . '/system/sdwan?vdom=' . $vdom;
+        $interfaceUrl = $baseUrl . '/system/interface?vdom=' . $vdom;
+
+        list($sdwanResp, $sdwanCode, $sdwanErr) = $makeRequest($sdwanUrl);
+        if ($sdwanErr) {
+            return ['error' => $sdwanErr, 'http_code' => 500];
+        }
+        if ($sdwanCode !== 200) {
+            return ['error' => 'HTTP ' . $sdwanCode, 'http_code' => $sdwanCode, 'raw' => $sdwanResp];
+        }
+
+        list($ifaceResp, $ifaceCode, $ifaceErr) = $makeRequest($interfaceUrl);
+        $ifaceResults = [];
+        if (!$ifaceErr && $ifaceCode === 200) {
+            $ifaceData = json_decode($ifaceResp, true);
+            $ifaceResults = $ifaceData['results'] ?? [];
+        }
+
+        $sdwanData = json_decode($sdwanResp, true);
+        if ($sdwanData === null) {
+            return ['error' => 'Invalid JSON', 'http_code' => $sdwanCode, 'raw' => $sdwanResp];
+        }
+
+        $sdwan = $sdwanData['results'] ?? [];
+        $ifaceMap = [];
+        foreach ($ifaceResults as $iface) {
+            if (isset($iface['name'])) {
+                $ifaceMap[$iface['name']] = $iface;
+            }
+        }
+
+        $members = [];
+        foreach (($sdwan['members'] ?? []) as $member) {
+            $name = $member['interface'] ?? '';
+            $iface = $ifaceMap[$name] ?? [];
+            $member['interface_details'] = [
+                'status' => $iface['status'] ?? $iface['link'] ?? null,
+                'mode' => $iface['mode'] ?? null,
+                'ip' => $iface['ip'] ?? null,
+                'ip6' => $iface['ip6'] ?? null,
+                'mtu' => $iface['mtu'] ?? null,
+                'speed' => $iface['speed'] ?? null,
+                'type' => $iface['type'] ?? null,
+                'alias' => $iface['alias'] ?? null
+            ];
+            $members[] = $member;
+        }
+
+        $healthChecks = [];
+        foreach (($sdwan['health-check'] ?? []) as $hc) {
+            $healthChecks[] = [
+                'name' => $hc['name'] ?? '',
+                'server' => trim($hc['server'] ?? '', '"'),
+                'protocol' => $hc['protocol'] ?? '',
+                'interval' => $hc['interval'] ?? 0,
+                'failtime' => $hc['failtime'] ?? 0,
+                'recoverytime' => $hc['recoverytime'] ?? 0,
+                'members' => count($hc['members'] ?? []),
+                'sla' => count($hc['sla'] ?? [])
+            ];
+        }
+
+        $services = [];
+        foreach (($sdwan['service'] ?? []) as $svc) {
+            $services[] = [
+                'id' => $svc['id'] ?? null,
+                'name' => $svc['name'] ?? '',
+                'mode' => $svc['mode'] ?? '',
+                'status' => $svc['status'] ?? '',
+                'internet_service' => $svc['internet-service'] ?? '',
+                'internet_services' => array_map(function($x) { return $x['name'] ?? ''; }, $svc['internet-service-name'] ?? []),
+                'health_checks' => array_map(function($x) { return $x['name'] ?? ''; }, $svc['health-check'] ?? []),
+                'priority_members' => count($svc['priority-members'] ?? []),
+                'dst_count' => count($svc['dst'] ?? []),
+                'src_count' => count($svc['src'] ?? [])
+            ];
+        }
+
+        $zones = array_map(function($z) { return $z['name'] ?? ''; }, $sdwan['zone'] ?? []);
+        $enabledMembers = array_filter($members, function($m) { return ($m['status'] ?? '') === 'enable'; });
+
+        $normalized = [
+            'status' => $sdwan['status'] ?? 'unknown',
+            'mode' => $sdwan['load-balance-mode'] ?? 'unknown',
+            'zones' => $zones,
+            'members' => $members,
+            'health_checks' => $healthChecks,
+            'services' => $services,
+            'summary' => [
+                'zones' => count($zones),
+                'members' => count($members),
+                'enabled_members' => count($enabledMembers),
+                'health_checks' => count($healthChecks),
+                'services' => count($services)
+            ]
+        ];
+
+        $result = ['results' => [$normalized], 'http_code' => 200];
+        $result['device_id'] = $device['name'];
+        $result['device_short'] = $device['short_name'];
+        $result['device_ip'] = $device['ip'];
+        return $result;
+    }
+
     $url = $baseUrl . '/' . $endpoint . '?vdom=' . $vdom;
 
     if (isset($_GET['start'])) $url .= '&start=' . $_GET['start'];

@@ -80,6 +80,7 @@
             <button class="tab-btn" data-tab="heatmap">Mapa de Calor</button>
             <button class="tab-btn" data-tab="network">Red</button>
             <button class="tab-btn" data-tab="switches">Switches</button>
+            <button class="tab-btn" data-tab="sdwan">SD-WAN</button>
         </div>
         
         <div id="tab-ha" class="tab-content active">
@@ -170,6 +171,31 @@
             </div>
         </div>
         
+        <div id="tab-sdwan" class="tab-content">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value" id="sdwanStatus">-</div><div class="stat-label">Estado</div></div>
+                <div class="stat-card"><div class="stat-value" id="sdwanZones">-</div><div class="stat-label">Zonas</div></div>
+                <div class="stat-card"><div class="stat-value" id="sdwanMembers">-</div><div class="stat-label">Miembros</div></div>
+                <div class="stat-card"><div class="stat-value" id="sdwanHealthChecks">-</div><div class="stat-label">Health Checks</div></div>
+                <div class="stat-card"><div class="stat-value" id="sdwanServices">-</div><div class="stat-label">Servicios</div></div>
+            </div>
+            <div class="dashboard-grid" style="margin-bottom:20px;">
+                <div class="card"><div class="card-title">Resumen SD-WAN</div><div id="sdwanSummary"><div class="loading">Cargando...</div></div></div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">Miembros</div>
+                <div id="sdwanMembersContent"><div class="loading">Cargando...</div></div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">Health Checks</div>
+                <div id="sdwanHealthContent"><div class="loading">Cargando...</div></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Servicios</div>
+                <div id="sdwanServicesContent"><div class="loading">Cargando...</div></div>
+            </div>
+        </div>
+
         <div class="status-bar"><span id="lastUpdate">-</span></div>
     </div>
     
@@ -193,6 +219,8 @@
                 target.classList.add('active');
                 if (tabId === 'network') {
                     refreshNetwork();
+                } else if (tabId === 'sdwan') {
+                    refreshSDWAN();
                 }
             });
         });
@@ -719,6 +747,101 @@
                 });
         }
         
+        function refreshSDWAN() {
+            document.getElementById('sdwanSummary').innerHTML = '<div class="loading">Cargando SD-WAN...</div>';
+            fetch(apiBase + 'sdwan')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.error) {
+                        document.getElementById('sdwanSummary').innerHTML = '<div class="error-msg">Error: ' + data.error + '</div>';
+                        return;
+                    }
+                    var sdwans = data.results || [];
+                    if (sdwans.length === 0) {
+                        document.getElementById('sdwanSummary').innerHTML = '<div class="loading">No hay datos SD-WAN</div>';
+                        return;
+                    }
+
+                    var totalZones = 0;
+                    var totalMembers = 0;
+                    var totalEnabledMembers = 0;
+                    var totalHealthChecks = 0;
+                    var totalServices = 0;
+
+                    sdwans.forEach(function(sdwan) {
+                        var summary = sdwan.summary || {};
+                        totalZones += summary.zones || 0;
+                        totalMembers += summary.members || 0;
+                        totalEnabledMembers += summary.enabled_members || 0;
+                        totalHealthChecks += summary.health_checks || 0;
+                        totalServices += summary.services || 0;
+                    });
+
+                    document.getElementById('sdwanStatus').textContent = sdwans.length + ' firewalls';
+                    document.getElementById('sdwanZones').textContent = totalZones;
+                    document.getElementById('sdwanMembers').textContent = totalMembers;
+                    document.getElementById('sdwanHealthChecks').textContent = totalHealthChecks;
+                    document.getElementById('sdwanServices').textContent = totalServices;
+
+                    var summaryHtml = '';
+                    var membersHtml = '';
+                    var healthHtml = '';
+                    var servicesHtml = '';
+
+                    sdwans.forEach(function(sdwan) {
+                        var fw = sdwan.firewall || sdwan.device_short || sdwan.device_id || 'Firewall';
+                        var summary = sdwan.summary || {};
+                        summaryHtml += '<div class="card" style="margin-bottom:16px;">';
+                        summaryHtml += '<div class="card-title">' + fw + '</div>';
+                        summaryHtml += '<table class="clients-table"><tbody>';
+                        summaryHtml += '<tr><td>Estado</td><td>' + (sdwan.status || '-') + '</td></tr>';
+                        summaryHtml += '<tr><td>Modo</td><td>' + (sdwan.mode || '-') + '</td></tr>';
+                        summaryHtml += '<tr><td>Zonas</td><td>' + ((sdwan.zones || []).join(', ') || '-') + '</td></tr>';
+                        summaryHtml += '<tr><td>Miembros</td><td>' + (summary.members || 0) + ' (' + (summary.enabled_members || 0) + ' enable)</td></tr>';
+                        summaryHtml += '<tr><td>Health Checks</td><td>' + (summary.health_checks || 0) + '</td></tr>';
+                        summaryHtml += '<tr><td>Servicios</td><td>' + (summary.services || 0) + '</td></tr>';
+                        summaryHtml += '</tbody></table></div>';
+
+                        membersHtml += '<div class="card" style="margin-bottom:16px;"><div class="card-title">' + fw + ' - Miembros</div>';
+                        membersHtml += '<table class="clients-table"><thead><tr><th>Interface</th><th>Zone</th><th>Status</th><th>IP</th><th>Mode</th><th>Speed</th></tr></thead><tbody>';
+                        (sdwan.members || []).forEach(function(m) {
+                            var d = m.interface_details || {};
+                            membersHtml += '<tr>';
+                            membersHtml += '<td>' + (m.interface || '-') + '</td>';
+                            membersHtml += '<td>' + (m.zone || '-') + '</td>';
+                            membersHtml += '<td>' + (m.status || '-') + '</td>';
+                            membersHtml += '<td>' + (d.ip || '-') + '</td>';
+                            membersHtml += '<td>' + (d.mode || '-') + '</td>';
+                            membersHtml += '<td>' + (d.speed || '-') + '</td>';
+                            membersHtml += '</tr>';
+                        });
+                        membersHtml += '</tbody></table></div>';
+
+                        healthHtml += '<div class="card" style="margin-bottom:16px;"><div class="card-title">' + fw + ' - Health Checks</div>';
+                        healthHtml += '<table class="clients-table"><thead><tr><th>Name</th><th>Server</th><th>Protocol</th><th>Members</th><th>SLA</th><th>Interval</th></tr></thead><tbody>';
+                        (sdwan.health_checks || []).forEach(function(h) {
+                            healthHtml += '<tr><td>' + (h.name || '-') + '</td><td>' + (h.server || '-') + '</td><td>' + (h.protocol || '-') + '</td><td>' + (h.members || 0) + '</td><td>' + (h.sla || 0) + '</td><td>' + (h.interval || 0) + '</td></tr>';
+                        });
+                        healthHtml += '</tbody></table></div>';
+
+                        servicesHtml += '<div class="card" style="margin-bottom:16px;"><div class="card-title">' + fw + ' - Services</div>';
+                        servicesHtml += '<table class="clients-table"><thead><tr><th>Name</th><th>Mode</th><th>Status</th><th>Internet Service</th><th>Health Checks</th><th>Priority Members</th></tr></thead><tbody>';
+                        (sdwan.services || []).forEach(function(s) {
+                            servicesHtml += '<tr><td>' + (s.name || '-') + '</td><td>' + (s.mode || '-') + '</td><td>' + (s.status || '-') + '</td><td>' + (s.internet_service || '-') + '</td><td>' + ((s.health_checks || []).join(', ') || '-') + '</td><td>' + (s.priority_members || 0) + '</td></tr>';
+                        });
+                        servicesHtml += '</tbody></table></div>';
+                    });
+
+                    document.getElementById('sdwanSummary').innerHTML = summaryHtml;
+                    document.getElementById('sdwanMembersContent').innerHTML = membersHtml;
+                    document.getElementById('sdwanHealthContent').innerHTML = healthHtml;
+                    document.getElementById('sdwanServicesContent').innerHTML = servicesHtml;
+                })
+                .catch(function(err) {
+                    document.getElementById('sdwanSummary').innerHTML = '<div class="error-msg">Error: ' + err.message + '</div>';
+                });
+        }
+
         function refreshSwitches() {
             fetch(apiBase + 'switches')
                 .then(function(r) { return r.json(); })
@@ -818,6 +941,7 @@
             refreshHeatmap();
             refreshNetwork();
             refreshSwitches();
+            refreshSDWAN();
         }
 
         document.addEventListener('DOMContentLoaded', initDashboard);

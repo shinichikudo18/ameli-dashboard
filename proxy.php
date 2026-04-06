@@ -103,6 +103,15 @@ switch ($action) {
         curl_close($ch);
         echo $resp;
         break;
+
+    case 'sdwan':
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=all&endpoint=sdwan');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $resp = curl_exec($ch);
+        curl_close($ch);
+        echo $resp;
+        break;
         
     default:
         http_response_code(400);
