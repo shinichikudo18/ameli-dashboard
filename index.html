@@ -102,6 +102,9 @@
                 <div class="stat-card"><div class="stat-value" id="signalFair">-</div><div class="stat-label">Regular</div></div>
                 <div class="stat-card"><div class="stat-value" id="signalPoor">-</div><div class="stat-label">Mala Senal</div></div>
             </div>
+            <div class="dashboard-grid" style="margin-bottom:20px;">
+                <div class="card"><div class="card-title">Signal Quality</div><div class="chart-container"><canvas id="signalQualityChart"></canvas></div></div>
+            </div>
             <div class="card">
                 <div class="card-title">Clientes Conectados</div>
                 <div id="clientsContent"><div class="loading">Cargando...</div></div>
@@ -260,8 +263,10 @@
                     document.getElementById('signalPoor').textContent = poor;
 
                     if (window.signalQualityChart) window.signalQualityChart.destroy();
-                    var sqCtx = document.getElementById('signalQualityChart').getContext('2d');
-                    window.signalQualityChart = new Chart(sqCtx, {
+                    var sqCanvas = document.getElementById('signalQualityChart');
+                    if (sqCanvas) {
+                        var sqCtx = sqCanvas.getContext('2d');
+                        window.signalQualityChart = new Chart(sqCtx, {
                         type: 'bar',
                         data: {
                             labels: Object.keys(signalBuckets),
@@ -280,6 +285,7 @@
                             }
                         }
                     });
+                    }
 
                     if (clients.length === 0) {
                         document.getElementById('clientsContent').innerHTML = '<div class="loading">No hay clientes conectados</div>';
