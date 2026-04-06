@@ -760,9 +760,19 @@
                             var status = (sw['dynamically-discovered'] === 1 || sw['fsw-wan1-peer'] === 'fortilink' || sw['fsw-wan1-admin'] === 'enable');
                             var portsUp = 0;
                             var portsTotal = 0;
+                            var uplinkPorts = [];
+                            var poePorts = 0;
+                            var vlanSet = {};
                             if (sw.ports && sw.ports.length) {
                                 portsTotal = sw.ports.length;
-                                sw.ports.forEach(function(p) { if (p.status === 'up') portsUp++; });
+                                sw.ports.forEach(function(p) {
+                                    if (p.status === 'up') portsUp++;
+                                    if (p['poe-status'] === 'enable') poePorts++;
+                                    if (p.vlan) vlanSet[p.vlan] = true;
+                                    if (p['fgt-peer-device-name'] || p['fgt-peer-port-name']) {
+                                        uplinkPorts.push(p['port-name'] || '-');
+                                    }
+                                });
                             }
                             html += '<div class="switch-card ' + (status ? 'online' : 'offline') + '">';
                             html += '<div class="switch-name">' + (sw.name || sw.serial || sw['switch-id'] || 'Switch') + '</div>';
@@ -771,7 +781,24 @@
                             html += '<div>IP: ' + (sw.device_ip || sw.ip || '-') + '</div>';
                             html += '<div>Serie: ' + (sw['switch-id'] || sw.serial || '-') + '</div>';
                             html += '<div>Puertos: ' + portsUp + '/' + portsTotal + '</div>';
-                            html += '</div></div>';
+                            html += '<div>PoE: ' + poePorts + ' puertos</div>';
+                            html += '<div>VLANs: ' + Object.keys(vlanSet).slice(0, 4).join(', ') + '</div>';
+                            html += '<div>Uplinks: ' + (uplinkPorts.length ? uplinkPorts.join(', ') : '-') + '</div>';
+                            html += '</div>';
+                            if (sw.ports && sw.ports.length) {
+                                html += '<div style="margin-top:12px; max-height:180px; overflow:auto;">';
+                                html += '<table class="clients-table"><thead><tr><th>Puerto</th><th>Estado</th><th>VLAN</th><th>PoE</th></tr></thead><tbody>';
+                                sw.ports.slice(0, 12).forEach(function(p) {
+                                    html += '<tr>';
+                                    html += '<td>' + (p['port-name'] || '-') + '</td>';
+                                    html += '<td>' + (p.status || '-') + '</td>';
+                                    html += '<td>' + (p.vlan || '-') + '</td>';
+                                    html += '<td>' + (p['poe-status'] || '-') + '</td>';
+                                    html += '</tr>';
+                                });
+                                html += '</tbody></table></div>';
+                            }
+                            html += '</div>';
                         });
                         html += '</div></div>';
                     });
