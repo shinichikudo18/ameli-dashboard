@@ -43,43 +43,88 @@ function fetchFromDevice($device, $endpoint, $vdom) {
     global $monitorEndpoints;
     $isMonitor = in_array($endpoint, $monitorEndpoints);
     $baseUrl = $isMonitor ? 'https://' . $device['ip'] . '/api/v2/monitor' : 'https://' . $device['ip'] . '/api/v2/cmdb';
+
+    $makeRequest = function($url) use ($device) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $device['token']
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        return [$response, $httpCode, $error];
+    };
+
+    if ($endpoint === 'firewall/session') {
+        $allDetails = [];
+
+        foreach ([0, 1000] as $start) {
+            $url = $baseUrl . '/firewall/session/select?vdom=' . $vdom . '&count=1000&start=' . $start;
+            list($response, $httpCode, $error) = $makeRequest($url);
+
+            if ($error) {
+                return ['error' => $error, 'http_code' => 500];
+            }
+
+            if ($httpCode !== 200) {
+                return ['error' => 'HTTP ' . $httpCode, 'http_code' => $httpCode, 'raw' => $response];
+            }
+
+            $result = json_decode($response, true);
+            if ($result === null) {
+                return ['error' => 'Invalid JSON', 'http_code' => $httpCode, 'raw' => $response];
+            }
+
+            $details = $result['results']['details'] ?? [];
+            if (!empty($details)) {
+                $allDetails = array_merge($allDetails, $details);
+            }
+
+            if (count($details) < 1000) {
+                break;
+            }
+        }
+
+        $result = ['results' => ['details' => $allDetails], 'http_code' => 200];
+        $result['device_id'] = $device['name'];
+        $result['device_short'] = $device['short_name'];
+        $result['device_ip'] = $device['ip'];
+        return $result;
+    }
+
     $url = $baseUrl . '/' . $endpoint . '?vdom=' . $vdom;
-    
+
     if (isset($_GET['start'])) $url .= '&start=' . $_GET['start'];
     if (isset($_GET['count'])) $url .= '&count=' . $_GET['count'];
     if (isset($_GET['switch_id'])) $url .= '&switch_id=' . $_GET['switch_id'];
-    
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Authorization: Bearer ' . $device['token']
-    ]);
-    
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $error = curl_error($ch);
-    curl_close($ch);
-    
+
+    list($response, $httpCode, $error) = $makeRequest($url);
+
     if ($error) {
         return ['error' => $error, 'http_code' => 500];
     }
-    
+
     $result = json_decode($response, true);
     if ($result === null) {
         return ['error' => 'Invalid JSON', 'http_code' => $httpCode, 'raw' => $response];
     }
-    
+
     $result['device_id'] = $device['name'];
     $result['device_short'] = $device['short_name'];
     $result['device_ip'] = $device['ip'];
     $result['http_code'] = $httpCode;
-    
+
     return $result;
 }
+
 
 if ($deviceId === 'all') {
     $allResults = [];
