@@ -294,7 +294,9 @@
                         return;
                     }
 
-                    var aps = apData.results || [];
+                    var aps = (apData.results || []).filter(function(ap) {
+                        return ap.status === 'connected' || ap.connection_state === 'Connected';
+                    });
                     var clients = clientData.results || [];
                     document.getElementById('totalAPs').textContent = aps.length || 0;
 
