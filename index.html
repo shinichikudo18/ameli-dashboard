@@ -1313,12 +1313,18 @@
 
                 var online = summary.peers_available || 0;
                 var offline = summary.peers_unavailable || 0;
-                document.getElementById('fpbxExtensions').textContent = summary.extensions_total || 0;
-                document.getElementById('fpbxTrunks').textContent = summary.trunks_total || 0;
-                document.getElementById('fpbxQueues').textContent = summary.queues_total || 0;
-                document.getElementById('fpbxOnline').textContent = online;
-                document.getElementById('fpbxOffline').textContent = offline;
-                document.getElementById('fpbxCalls').textContent = summary.active_calls || 0;
+                var fpbxExtensionsEl = document.getElementById('fpbxExtensions');
+                if (fpbxExtensionsEl) fpbxExtensionsEl.textContent = summary.extensions_total || 0;
+                var fpbxTrunksEl = document.getElementById('fpbxTrunks');
+                if (fpbxTrunksEl) fpbxTrunksEl.textContent = summary.trunks_total || 0;
+                var fpbxQueuesEl = document.getElementById('fpbxQueues');
+                if (fpbxQueuesEl) fpbxQueuesEl.textContent = summary.queues_total || 0;
+                var fpbxOnlineEl = document.getElementById('fpbxOnline');
+                if (fpbxOnlineEl) fpbxOnlineEl.textContent = online;
+                var fpbxOfflineEl = document.getElementById('fpbxOffline');
+                if (fpbxOfflineEl) fpbxOfflineEl.textContent = offline;
+                var fpbxCallsEl = document.getElementById('fpbxCalls');
+                if (fpbxCallsEl) fpbxCallsEl.textContent = summary.active_calls || 0;
 
                 document.getElementById('freepbxSummary').innerHTML = '<table class="clients-table"><tbody>' +
                     '<tr><td>Total extensiones</td><td>' + esc(summary.extensions_total || 0) + '</td></tr>' +
