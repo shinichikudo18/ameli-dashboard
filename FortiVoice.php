@@ -9,129 +9,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-$action = $_GET['action'] ?? '';
-$entity = $_GET['entity'] ?? '';
+$action = $_GET['action'] ?? 'sip_phones';
 
-// Home Assistant
-$haUrl = 'http://192.168.100.3:8123';
-$haToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI2NmMwNjBiMDg3YWI0MjhlYTliODg4N2Q5ZWY5ZDQ2NCIsImlhdCI6MTc3NDk4NDg3MSwiZXhwIjoyMDkwMzQ0ODcxfQ.x8K1uTtPvOde_oKXoBf-m70ilAXy-BVW5aAQeqcNeIc';
+$fvUrl = 'https://192.168.100.6';
+$fvUser = 'ameli';
+$fvPass = 'AdmAgnov!2025';
+
+function fv_request($url, $endpoint, $cookieFile, $headers = [], $post = null) {
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url . $endpoint);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($ch, CURLOPT_COOKIEJAR, $cookieFile);
+    curl_setopt($ch, CURLOPT_COOKIEFILE, $cookieFile);
+    if (!empty($headers)) {
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    }
+    if ($post !== null) {
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post));
+    }
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    return [$code, $resp];
+}
+
+function fv_login($fvUrl, $fvUser, $fvPass) {
+    $cookieFile = tempnam(sys_get_temp_dir(), 'fvcookie_');
+    list($code, $resp) = fv_request(
+        $fvUrl,
+        '/api/v1/VoiceadminLogin/',
+        $cookieFile,
+        ['Content-Type: application/json'],
+        ['name' => $fvUser, 'password' => $fvPass]
+    );
+
+    $data = json_decode($resp, true);
+    if ($code >= 200 && $code < 300) {
+        return [$data ?: [], $cookieFile];
+    }
+
+    @unlink($cookieFile);
+    return [null, null];
+}
+
+list($login, $cookieFile) = fv_login($fvUrl, $fvUser, $fvPass);
+if (!$login || !$cookieFile) {
+    http_response_code(502);
+    echo json_encode(['error' => 'FortiVoice login failed']);
+    exit;
+}
 
 switch ($action) {
-    case 'ha_entities':
-        $entities = [
-            'sensor.agnov_fg_wifi_clients_ssid1',
-            'sensor.agnov_fg_wifi_clients_ssid2', 
-            'sensor.agnov_fg_wifi_clients'
-        ];
-        $results = [];
-        foreach ($entities as $ent) {
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $haUrl . '/api/states/' . $ent);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $haToken]);
-            $resp = curl_exec($ch);
-            $data = json_decode($resp, true);
-            curl_close($ch);
-            $results[] = [
-                'name' => $ent,
-                'value' => isset($data['state']) ? floatval($data['state']) : 0,
-                'unit' => $data['attributes']['unit_of_measurement'] ?? '',
-                'showInChart' => true
-            ];
-        }
-        echo json_encode($results);
+    case 'login':
+        echo json_encode($login);
         break;
-        
-    case 'entity':
-        if (empty($entity)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Entity ID required']);
-            exit;
-        }
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $haUrl . '/api/states/' . $entity);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $haToken]);
-        $resp = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        http_response_code($httpCode);
-        echo $resp;
-        break;
-        
-    case 'clients':
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=wifi/client&start=0&count=100');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $resp = curl_exec($ch);
-        curl_close($ch);
-        echo $resp;
-        break;
-        
-    case 'aps':
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=wifi/managed_ap&start=0&count=50');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $resp = curl_exec($ch);
-        curl_close($ch);
-        echo $resp;
-        break;
-        
-    case 'dhcp':
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=system/dhcp&start=0&count=100');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $resp = curl_exec($ch);
-        curl_close($ch);
-        echo $resp;
-        break;
-        
-    case 'sessions':
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=all&endpoint=firewall/session&start=0&count=2000');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $resp = curl_exec($ch);
-        curl_close($ch);
-        echo $resp;
-        break;
-        
-    case 'switches':
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=all&endpoint=switch-controller/managed-switch&start=0&count=50');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $resp = curl_exec($ch);
-        curl_close($ch);
+
+    case 'licenses':
+        list($code, $resp) = fv_request(
+            $fvUrl,
+            '/api/v1/SysStatusLicinfo',
+            $cookieFile,
+            ['Content-Type: application/json'],
+            ['reqAction' => 22]
+        );
+        http_response_code($code ?: 200);
         echo $resp;
         break;
 
-    case 'sdwan':
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=all&endpoint=sdwan');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $resp = curl_exec($ch);
-        curl_close($ch);
-        echo $resp;
-        break;
-
-    case 'vpn':
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=all&endpoint=vpn');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $resp = curl_exec($ch);
-        curl_close($ch);
-        echo $resp;
-        break;
-
-    case 'vpn-users':
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=all&endpoint=user/firewall');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $resp = curl_exec($ch);
-        curl_close($ch);
-        echo $resp;
-        break;
-        
+    case 'sip_phones':
     default:
-        http_response_code(400);
-        echo json_encode(['error' => 'Invalid action']);
+        list($code, $resp) = fv_request(
+            $fvUrl,
+            '/api/v1/DeviceSip_phone?reqAction=1&mdomain=system&startIndex=0&pageSize=500&extraParam=',
+            $cookieFile
+        );
+        http_response_code($code ?: 200);
+        echo $resp;
+        break;
 }
+
+@unlink($cookieFile);

@@ -1087,33 +1087,50 @@
             fetch(apiBase + 'fortivoice')
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
-                    var items = data.results || data.data || data.devices || data.sip_phones || data || [];
+                    var items = data.collection || data.results || data.data || data.devices || data.sip_phones || [];
                     if (!Array.isArray(items)) items = [];
 
+                    function tryDecode(value) {
+                        if (!value || typeof value !== 'string') return value || '-';
+                        if (!/^[A-Za-z0-9+/=]+$/.test(value) || value.length % 4 !== 0) return value;
+                        try {
+                            var decoded = atob(value);
+                            return /^[ -~]+$/.test(decoded) ? decoded : value;
+                        } catch (e) {
+                            return value;
+                        }
+                    }
+
+                    var rows = [];
                     var online = 0;
                     var offline = 0;
-                    var licenses = data.license || data.licenses || data.licinfo || [];
-                    if (!Array.isArray(licenses)) licenses = licenses.results || licenses.data || [];
 
-                    var rows = items.map(function(item) {
-                        var state = (item.status || item.state || item.online || item.enabled || '').toString().toLowerCase();
-                        var isOnline = state === 'online' || state === 'up' || state === 'true' || state === '1' || item.online === true;
-                        if (isOnline) online++; else offline++;
+                    items.forEach(function(item) {
+                        var accounts = item.accounts || [];
+                        if (typeof accounts === 'string') {
+                            try { accounts = JSON.parse(accounts || '[]'); } catch (e) { accounts = []; }
+                        }
+                        if (!Array.isArray(accounts) || accounts.length === 0) accounts = [null];
 
-                        return '<tr>' +
-                            '<td>' + (item.name || item.extension || item.display_name || item.device_name || item.id || '-') + '</td>' +
-                            '<td>' + (item.extension || item.ext || item.number || '-') + '</td>' +
-                            '<td>' + (item.ip || item.ipaddr || item.ip_address || '-') + '</td>' +
-                            '<td>' + (item.status || item.state || (isOnline ? 'online' : 'offline') || '-') + '</td>' +
-                        '</tr>';
-                    }).join('');
+                        accounts.forEach(function(account) {
+                            var isOnline = Number((account && account.registration_status) || item.registration_status || 0) === 1;
+                            if (isOnline) online++; else offline++;
 
-                    document.getElementById('fvDevices').textContent = items.length;
-                    document.getElementById('fvLicenses').textContent = licenses.length || (data.license_count || data.total_licenses || '-');
+                            rows.push('<tr>' +
+                                '<td>' + tryDecode((account && account.associated_display_name) || item.associated_display_name || item.name || item.description || item.phone_type || item.mkey) + '</td>' +
+                                '<td>' + ((account && account.associated_number) || item.associated_number || (account && account.associated_id) || item.associated_id || '-') + '</td>' +
+                                '<td>' + ((account && account.device_ip) || item.device_ip || '-') + '</td>' +
+                                '<td>' + (isOnline ? 'online' : 'offline') + '</td>' +
+                            '</tr>');
+                        });
+                    });
+
+                    document.getElementById('fvDevices').textContent = data.totalRemoteCount || items.length;
+                    document.getElementById('fvLicenses').textContent = data.token ? 1 : '-';
                     document.getElementById('fvOnline').textContent = online;
                     document.getElementById('fvOffline').textContent = offline;
-                    document.getElementById('fortivoiceContent').innerHTML = items.length ? (
-                        '<table class="clients-table"><thead><tr><th>Nombre</th><th>Extensión</th><th>IP</th><th>Estado</th></tr></thead><tbody>' + rows + '</tbody></table>'
+                    document.getElementById('fortivoiceContent').innerHTML = rows.length ? (
+                        '<table class="clients-table"><thead><tr><th>Nombre</th><th>Extensión</th><th>IP</th><th>Estado</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>'
                     ) : '<div class="loading">No hay dispositivos SIP</div>';
                     document.getElementById('lastUpdate').textContent = 'FortiVoice actualizado: ' + new Date().toLocaleTimeString();
                 })
