@@ -351,6 +351,51 @@
                 <div id="freepbxAsteriskContent"><div class="loading">Cargando...</div></div>
             </div>
         </div>
+
+        <div id="tab-freepbx" class="tab-content">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value" id="fpbxExtensions">-</div><div class="stat-label">Extensiones</div></div>
+                <div class="stat-card"><div class="stat-value" id="fpbxTrunks">-</div><div class="stat-label">Troncales</div></div>
+                <div class="stat-card"><div class="stat-value" id="fpbxQueues">-</div><div class="stat-label">Colas</div></div>
+                <div class="stat-card"><div class="stat-value" id="fpbxOnline">-</div><div class="stat-label">Online</div></div>
+                <div class="stat-card"><div class="stat-value" id="fpbxOffline">-</div><div class="stat-label">Offline</div></div>
+                <div class="stat-card"><div class="stat-value" id="fpbxCalls">-</div><div class="stat-label">Llamadas</div></div>
+            </div>
+            <div class="dashboard-grid" style="margin-bottom:20px;">
+                <div class="card">
+                    <div class="card-title">Tecnologías</div>
+                    <canvas id="freepbxTechChart" height="240"></canvas>
+                </div>
+                <div class="card">
+                    <div class="card-title">Peers</div>
+                    <canvas id="freepbxPeerChart" height="240"></canvas>
+                </div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">Resumen</div>
+                <div id="freepbxSummary"><div class="loading">Cargando...</div></div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">Extensiones</div>
+                <div id="freepbxExtensionsContent"><div class="loading">Cargando...</div></div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">Troncales</div>
+                <div id="freepbxTrunksContent"><div class="loading">Cargando...</div></div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">Colas</div>
+                <div id="freepbxQueuesContent"><div class="loading">Cargando...</div></div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">Peers / Estado</div>
+                <div id="freepbxPeersContent"><div class="loading">Cargando...</div></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Asterisk Info</div>
+                <div id="freepbxAsteriskContent"><div class="loading">Cargando...</div></div>
+            </div>
+        </div>
         <div class="status-bar"><span id="lastUpdate">-</span></div>
     </div>
     
@@ -1243,7 +1288,6 @@
             });
         }
 
-
         function refreshFreePBX() {
             var content = document.getElementById('freepbxExtensionsContent');
             if (content) content.innerHTML = '<div class="loading">Cargando FreePBX...</div>';
@@ -1275,7 +1319,6 @@
                 document.getElementById('fpbxOnline').textContent = online;
                 document.getElementById('fpbxOffline').textContent = offline;
                 document.getElementById('fpbxCalls').textContent = summary.active_calls || 0;
-                document.getElementById('fpbxAri').textContent = (data.asterisk && data.asterisk.ari_available) ? 'OK' : 'No ARI';
 
                 document.getElementById('freepbxSummary').innerHTML = '<table class="clients-table"><tbody>' +
                     '<tr><td>Total extensiones</td><td>' + esc(summary.extensions_total || 0) + '</td></tr>' +
@@ -1358,7 +1401,6 @@
                 document.getElementById('freepbxSummary').innerHTML = '<div class="error-msg">Error: ' + err.message + '</div>';
             });
         }
-
 
         function refreshVPN() {
             document.getElementById('vpnUsersContent').innerHTML = '<div class="loading">Cargando VPN...</div>';
@@ -1568,6 +1610,7 @@
             refreshVPN();
             refreshEMS();
             refreshFortiVoice();
+            refreshFreePBX();
         }
 
         document.addEventListener('DOMContentLoaded', initDashboard);
