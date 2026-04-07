@@ -83,6 +83,7 @@
             <button class="tab-btn" data-tab="sdwan">SD-WAN</button>
             <button class="tab-btn" data-tab="vpn">VPN</button>
             <button class="tab-btn" data-tab="ems">FortiClient EMS</button>
+            <button class="tab-btn" data-tab="fortivoice">FortiVoice</button>
         </div>
         
         <div id="tab-ha" class="tab-content active">
@@ -271,6 +272,19 @@
                 <div id="emsGroupsContent"><div class="loading">Cargando...</div></div>
             </div>
         </div>
+
+        <div id="tab-fortivoice" class="tab-content">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value" id="fvDevices">-</div><div class="stat-label">Dispositivos SIP</div></div>
+                <div class="stat-card"><div class="stat-value" id="fvLicenses">-</div><div class="stat-label">Licencias</div></div>
+                <div class="stat-card"><div class="stat-value" id="fvOnline">-</div><div class="stat-label">Online</div></div>
+                <div class="stat-card"><div class="stat-value" id="fvOffline">-</div><div class="stat-label">Offline</div></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Dispositivos SIP</div>
+                <div id="fortivoiceContent"><div class="loading">Cargando...</div></div>
+            </div>
+        </div>
         <div class="status-bar"><span id="lastUpdate">-</span></div>
     </div>
     
@@ -300,6 +314,8 @@
                     refreshVPN();
                 } else if (tabId === 'ems') {
                     refreshEMS();
+                } else if (tabId === 'fortivoice') {
+                    refreshFortiVoice();
                 }
             });
         });
@@ -1061,6 +1077,47 @@
                 });
         }
 
+        function refreshFortiVoice() {
+            var content = document.getElementById('fortivoiceContent');
+            if (content) content.innerHTML = '<div class="loading">Cargando FortiVoice...</div>';
+            fetch(apiBase + 'fortivoice')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var items = data.results || data.data || data.devices || data.sip_phones || data || [];
+                    if (!Array.isArray(items)) items = [];
+
+                    var online = 0;
+                    var offline = 0;
+                    var licenses = data.license || data.licenses || data.licinfo || [];
+                    if (!Array.isArray(licenses)) licenses = licenses.results || licenses.data || [];
+
+                    var rows = items.map(function(item) {
+                        var state = (item.status || item.state || item.online || item.enabled || '').toString().toLowerCase();
+                        var isOnline = state === 'online' || state === 'up' || state === 'true' || state === '1' || item.online === true;
+                        if (isOnline) online++; else offline++;
+
+                        return '<tr>' +
+                            '<td>' + (item.name || item.extension || item.display_name || item.device_name || item.id || '-') + '</td>' +
+                            '<td>' + (item.extension || item.ext || item.number || '-') + '</td>' +
+                            '<td>' + (item.ip || item.ipaddr || item.ip_address || '-') + '</td>' +
+                            '<td>' + (item.status || item.state || (isOnline ? 'online' : 'offline') || '-') + '</td>' +
+                        '</tr>';
+                    }).join('');
+
+                    document.getElementById('fvDevices').textContent = items.length;
+                    document.getElementById('fvLicenses').textContent = licenses.length || (data.license_count || data.total_licenses || '-');
+                    document.getElementById('fvOnline').textContent = online;
+                    document.getElementById('fvOffline').textContent = offline;
+                    document.getElementById('fortivoiceContent').innerHTML = items.length ? (
+                        '<table class="clients-table"><thead><tr><th>Nombre</th><th>Extensión</th><th>IP</th><th>Estado</th></tr></thead><tbody>' + rows + '</tbody></table>'
+                    ) : '<div class="loading">No hay dispositivos SIP</div>';
+                    document.getElementById('lastUpdate').textContent = 'FortiVoice actualizado: ' + new Date().toLocaleTimeString();
+                })
+                .catch(function(err) {
+                    document.getElementById('fortivoiceContent').innerHTML = '<div class="error-msg">Error: ' + err.message + '</div>';
+                });
+        }
+
         function refreshVPN() {
             document.getElementById('vpnUsersContent').innerHTML = '<div class="loading">Cargando VPN...</div>';
             if (window.vpnIpsecChart && typeof window.vpnIpsecChart.destroy === 'function') window.vpnIpsecChart.destroy();
@@ -1268,6 +1325,7 @@
             refreshSDWAN();
             refreshVPN();
             refreshEMS();
+            refreshFortiVoice();
         }
 
         document.addEventListener('DOMContentLoaded', initDashboard);

@@ -130,6 +130,15 @@ switch ($action) {
         curl_close($ch);
         echo $resp;
         break;
+
+    case 'fortivoice':
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/FortiVoice.php?action=sip_phones');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $resp = curl_exec($ch);
+        curl_close($ch);
+        echo $resp;
+        break;
         
     default:
         http_response_code(400);
