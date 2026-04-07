@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Red Wifi - Fortigate + Home Assistant</title>
+    <title>AMELI Dashboard</title>
+    <link rel="icon" type="image/jpeg" href="https://i.postimg.cc/XqqN8yF5/512x512.jpg">
+    <link rel="apple-touch-icon" href="https://i.postimg.cc/XqqN8yF5/512x512.jpg">
     <link rel=stylesheet href=https://cdn.jsdelivr.net/npm/flag-icons@6.6.6/css/flag-icons.min.css>
     <script src="lib/chart.min.js"></script>
     <style>
@@ -11,6 +13,8 @@
         body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; color: #fff; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; }
         header { text-align: center; margin-bottom: 30px; padding: 25px; background: rgba(255,255,255,0.1); border-radius: 15px; }
+        .brand { display: inline-flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center; }
+        .brand-logo { width: 54px; height: 54px; border-radius: 14px; object-fit: cover; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
         h1 { font-size: 2rem; margin-bottom: 10px; background: linear-gradient(90deg, #00d4ff, #7b2cbf); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .subtitle { color: #aaa; font-size: 1rem; }
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -71,7 +75,10 @@
 <body>
     <div class="container">
         <header>
-            <h1>Dashboard Red Wifi</h1>
+            <div class="brand">
+                <img class="brand-logo" src="https://i.postimg.cc/XqqN8yF5/512x512.jpg" alt="AMELI">
+                <h1>AMELI Dashboard</h1>
+            </div>
             <p class="subtitle">Fortigate + Home Assistant</p>
         </header>
         <div class="tabs">
