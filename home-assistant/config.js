@@ -2,6 +2,15 @@ const HA_CONFIG = {
     proxyUrl: '/dashboard/proxy.php',
     entities: [
         { entityId: 'sensor.oficinasala_de_reuniones_temperature', name: 'Temperatura Sala de Reuniones', showInChart: true, kind: 'sensor' },
+        { entityId: 'sensor.oficinasala_de_reuniones_humidity', name: 'Humedad Sala de Reuniones', showInChart: true, kind: 'sensor' },
+        { entityId: 'sensor.oficinasala_de_comercial_temperature', name: 'Sala Comercial', showInChart: true, kind: 'sensor' },
+        { entityId: 'sensor.oficinasala_de_comercial_humidity', name: 'Humedad Sala Comercial', showInChart: true, kind: 'sensor' },
+        { entityId: 'sensor.oficinasala_gerencia_temperature', name: 'Sala de Gerencia', showInChart: true, kind: 'sensor' },
+        { entityId: 'sensor.oficinasala_gerencia_humidity', name: 'Humedad Sala de Gerencia', showInChart: true, kind: 'sensor' },
+        { entityId: 'sensor.oficinasala_de_subgerencia_temperature', name: 'Sala de Subgerencia', showInChart: true, kind: 'sensor' },
+        { entityId: 'sensor.oficinasala_de_subgerencia_humidity', name: 'Humedad Sala de Subgerencia', showInChart: true, kind: 'sensor' },
+        { entityId: 'sensor.oficinasala_de_proyectos_temperature', name: 'Sala de Proyectos', showInChart: true, kind: 'sensor' },
+        { entityId: 'sensor.oficinasala_de_proyectos_humidity', name: 'Humedad Sala de Proyectos', showInChart: true, kind: 'sensor' },
         { entityId: 'switch.oficinasala_de_reuniones', name: 'Luz Sala de Reuniones', showInChart: false, kind: 'switch' }
     ]
 };

@@ -27,11 +27,18 @@
         .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
         .card { background: rgba(255,255,255,0.1); border-radius: 20px; padding: 25px; }
         .card-title { font-size: 1.2rem; margin-bottom: 15px; color: #00d4ff; }
-        .ha-tile { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 140px; }
-        .ha-icon { width: 72px; height: 72px; border-radius: 18px; display: grid; place-items: center; font-size: 2rem; background: rgba(0,212,255,0.15); color: #00d4ff; flex-shrink: 0; }
-        .ha-label { color: #aaa; font-size: 0.95rem; margin-bottom: 6px; }
-        .ha-value { font-size: 2rem; font-weight: 700; color: #fff; line-height: 1; }
-        .ha-state { margin-top: 10px; color: #9fe7ff; font-size: 0.92rem; }
+        .ha-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+        .ha-card { background: rgba(0,0,0,0.18); border-radius: 16px; padding: 16px; min-height: 142px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid rgba(255,255,255,0.08); }
+        .ha-card.on { border-color: rgba(75,192,192,0.5); }
+        .ha-card.off { border-color: rgba(255,99,132,0.45); }
+        .ha-card .ha-icon { width: 56px; height: 56px; border-radius: 14px; display: grid; place-items: center; font-size: 1.6rem; background: rgba(0,212,255,0.15); color: #00d4ff; flex-shrink: 0; }
+        .ha-label { color: #aaa; font-size: 0.8rem; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+        .ha-value { font-size: 1.7rem; font-weight: 700; color: #fff; line-height: 1; }
+        .ha-state { margin-top: 8px; color: #9fe7ff; font-size: 0.85rem; }
+        .ha-metric { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 8px; }
+        .ha-metric:first-of-type { margin-top: 0; }
+        .ha-metric-name { color: #b8c7d9; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        .ha-metric-value { color: #fff; font-size: 1.15rem; font-weight: 700; }
         .chart-container { position: relative; height: 250px; display: flex; justify-content: center; }
         .sensor-card { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; border-left: 4px solid #00d4ff; }
         .sensor-name { color: #ccc; }
@@ -100,27 +107,53 @@
         </div>
         
         <div id="tab-ha" class="tab-content active">
-            <div class="dashboard-grid">
-                <div class="card">
-                    <div class="card-title">Temperatura Sala de Reuniones</div>
-                    <div class="ha-tile">
-                        <div>
-                            <div class="ha-label">Temperatura</div>
-                            <div class="ha-value" id="haTempValue">--</div>
-                            <div class="ha-state" id="haTempState">Cargando...</div>
-                        </div>
-                        <div class="ha-icon">🌡️</div>
+            <div class="ha-grid">
+                <div class="ha-card" id="haReunionesCard">
+                    <div>
+                        <div class="ha-label">Sala de Reuniones</div>
+                        <div class="ha-metric"><span class="ha-metric-name">Temperatura</span><span class="ha-metric-value" id="haTempValue">--</span></div>
+                        <div class="ha-metric"><span class="ha-metric-name">Humedad</span><span class="ha-metric-value" id="haTempHumidity">--</span></div>
                     </div>
+                    <div class="ha-icon">🌡️</div>
                 </div>
-                <div class="card">
-                    <div class="card-title">Luz Sala de Reuniones</div>
-                    <div class="ha-tile">
-                        <div>
-                            <div class="ha-label">Estado</div>
-                            <div class="ha-state" id="haLightState">Cargando...</div>
-                        </div>
-                        <div class="ha-icon">💡</div>
+                <div class="ha-card" id="haCommercialCard">
+                    <div>
+                        <div class="ha-label">Sala Comercial</div>
+                        <div class="ha-metric"><span class="ha-metric-name">Temperatura</span><span class="ha-metric-value" id="haCommercialValue">--</span></div>
+                        <div class="ha-metric"><span class="ha-metric-name">Humedad</span><span class="ha-metric-value" id="haCommercialHumidity">--</span></div>
                     </div>
+                    <div class="ha-icon">🌡️</div>
+                </div>
+                <div class="ha-card" id="haGerenciaCard">
+                    <div>
+                        <div class="ha-label">Sala de Gerencia</div>
+                        <div class="ha-metric"><span class="ha-metric-name">Temperatura</span><span class="ha-metric-value" id="haGerenciaValue">--</span></div>
+                        <div class="ha-metric"><span class="ha-metric-name">Humedad</span><span class="ha-metric-value" id="haGerenciaHumidity">--</span></div>
+                    </div>
+                    <div class="ha-icon">🌡️</div>
+                </div>
+                <div class="ha-card" id="haSubgerenciaCard">
+                    <div>
+                        <div class="ha-label">Sala de Subgerencia</div>
+                        <div class="ha-metric"><span class="ha-metric-name">Temperatura</span><span class="ha-metric-value" id="haSubgerenciaValue">--</span></div>
+                        <div class="ha-metric"><span class="ha-metric-name">Humedad</span><span class="ha-metric-value" id="haSubgerenciaHumidity">--</span></div>
+                    </div>
+                    <div class="ha-icon">🌡️</div>
+                </div>
+                <div class="ha-card" id="haProyectosCard">
+                    <div>
+                        <div class="ha-label">Sala de Proyectos</div>
+                        <div class="ha-metric"><span class="ha-metric-name">Temperatura</span><span class="ha-metric-value" id="haProyectosValue">--</span></div>
+                        <div class="ha-metric"><span class="ha-metric-name">Humedad</span><span class="ha-metric-value" id="haProyectosHumidity">--</span></div>
+                    </div>
+                    <div class="ha-icon">🌡️</div>
+                </div>
+                <div class="ha-card" id="haLightCard">
+                    <div>
+                        <div class="ha-label">Luz Sala de Reuniones</div>
+                        <div class="ha-state" id="haLightState">Cargando...</div>
+                    </div>
+                    <div class="ha-icon">💡</div>
                 </div>
             </div>
         </div>
@@ -423,7 +456,7 @@
         <div class="status-bar"><span id="lastUpdate">-</span></div>
     </div>
     
-    <script src="home-assistant/config.js?v=3"></script>
+    <script src="home-assistant/config.js?v=5"></script>
     <script>
         var myChart = null;
         var apiBase = '/dashboard/proxy.php?action=';
@@ -483,18 +516,34 @@
         function refreshHA() {
             document.getElementById('lastUpdate').textContent = 'Actualizando...';
             fetchAllEntities().then(function(data) {
-                var temp = data.find(function(d) { return d.kind === 'sensor'; }) || data[0] || {};
-                var light = data.find(function(d) { return d.kind === 'switch'; }) || data[1] || {};
+                function setMetric(entity, valueId, cardId, suffix) {
+                    var valueEl = document.getElementById(valueId);
+                    var cardEl = document.getElementById(cardId);
+                    if (valueEl) valueEl.textContent = entity.error ? '--' : (entity.value + (entity.unit || suffix || ''));
+                    if (cardEl) cardEl.className = 'ha-card ' + (entity.error ? '' : 'on');
+                }
 
-                var tempValue = document.getElementById('haTempValue');
-                var tempState = document.getElementById('haTempState');
-                var lightState = document.getElementById('haLightState');
+                function setLight(entity) {
+                    var stateEl = document.getElementById('haLightState');
+                    var cardEl = document.getElementById('haLightCard');
+                    var isOn = entity.state === 'on' || entity.value === 1 || entity.value === '1';
+                    if (stateEl) stateEl.textContent = entity.error ? 'Sin datos' : (isOn ? 'Encendida' : 'Apagada');
+                    if (cardEl) cardEl.className = 'ha-card ' + (entity.error ? '' : (isOn ? 'on' : 'off'));
+                }
 
-                if (tempValue) tempValue.textContent = temp.error ? '--' : (temp.value + (temp.unit || ''));
-                if (tempState) tempState.textContent = temp.error ? 'Sin datos' : ('Actualizado: ' + (temp.lastChanged ? new Date(temp.lastChanged).toLocaleTimeString() : new Date().toLocaleTimeString()));
+                function byId(id) { return data.find(function(d) { return d.entityId === id; }) || {}; }
 
-                var isOn = light.state === 'on' || light.value === 1 || light.value === '1';
-                if (lightState) lightState.textContent = light.error ? 'Sin datos' : (isOn ? 'Encendida' : 'Apagada');
+                setMetric(byId('sensor.oficinasala_de_reuniones_temperature'), 'haTempValue', 'haReunionesCard', '°');
+                setMetric(byId('sensor.oficinasala_de_reuniones_humidity'), 'haTempHumidity', 'haReunionesCard', '%');
+                setMetric(byId('sensor.oficinasala_de_comercial_temperature'), 'haCommercialValue', 'haCommercialCard', '°');
+                setMetric(byId('sensor.oficinasala_de_comercial_humidity'), 'haCommercialHumidity', 'haCommercialCard', '%');
+                setMetric(byId('sensor.oficinasala_gerencia_temperature'), 'haGerenciaValue', 'haGerenciaCard', '°');
+                setMetric(byId('sensor.oficinasala_gerencia_humidity'), 'haGerenciaHumidity', 'haGerenciaCard', '%');
+                setMetric(byId('sensor.oficinasala_de_subgerencia_temperature'), 'haSubgerenciaValue', 'haSubgerenciaCard', '°');
+                setMetric(byId('sensor.oficinasala_de_subgerencia_humidity'), 'haSubgerenciaHumidity', 'haSubgerenciaCard', '%');
+                setMetric(byId('sensor.oficinasala_de_proyectos_temperature'), 'haProyectosValue', 'haProyectosCard', '°');
+                setMetric(byId('sensor.oficinasala_de_proyectos_humidity'), 'haProyectosHumidity', 'haProyectosCard', '%');
+                setLight(byId('switch.oficinasala_de_reuniones'));
 
                 document.getElementById('lastUpdate').textContent = 'Actualizacion: ' + new Date().toLocaleTimeString();
             }).catch(function(err) {
