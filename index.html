@@ -279,14 +279,30 @@
 
         <div id="tab-fortivoice" class="tab-content">
             <div class="stats-grid">
-                <div class="stat-card"><div class="stat-value" id="fvDevices">-</div><div class="stat-label">Dispositivos SIP</div></div>
-                <div class="stat-card"><div class="stat-value" id="fvLicenses">-</div><div class="stat-label">Licencias</div></div>
+                <div class="stat-card"><div class="stat-value" id="fvDevices">-</div><div class="stat-label">Dispositivos</div></div>
+                <div class="stat-card"><div class="stat-value" id="fvRegistered">-</div><div class="stat-label">Registrados</div></div>
+                <div class="stat-card"><div class="stat-value" id="fvAccounts">-</div><div class="stat-label">Cuentas</div></div>
+                <div class="stat-card"><div class="stat-value" id="fvLicenses">-</div><div class="stat-label">Licencia</div></div>
                 <div class="stat-card"><div class="stat-value" id="fvOnline">-</div><div class="stat-label">Online</div></div>
                 <div class="stat-card"><div class="stat-value" id="fvOffline">-</div><div class="stat-label">Offline</div></div>
             </div>
-            <div class="card">
+            <div class="dashboard-grid" style="margin-bottom:20px;">
+                <div class="card">
+                    <div class="card-title">Resumen</div>
+                    <div id="fortivoiceSummary"><div class="loading">Cargando...</div></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Licencias</div>
+                    <div id="fortivoiceLicenses"><div class="loading">Cargando...</div></div>
+                </div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
                 <div class="card-title">Dispositivos SIP</div>
                 <div id="fortivoiceContent"><div class="loading">Cargando...</div></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Cuentas asociadas</div>
+                <div id="fortivoiceAccounts"><div class="loading">Cargando...</div></div>
             </div>
         </div>
         <div class="status-bar"><span id="lastUpdate">-</span></div>
@@ -1084,59 +1100,99 @@
         function refreshFortiVoice() {
             var content = document.getElementById('fortivoiceContent');
             if (content) content.innerHTML = '<div class="loading">Cargando FortiVoice...</div>';
-            fetch(apiBase + 'fortivoice')
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    var items = data.collection || data.results || data.data || data.devices || data.sip_phones || [];
-                    if (!Array.isArray(items)) items = [];
 
-                    function tryDecode(value) {
-                        if (!value || typeof value !== 'string') return value || '-';
-                        if (!/^[A-Za-z0-9+/=]+$/.test(value) || value.length % 4 !== 0) return value;
-                        try {
-                            var decoded = atob(value);
-                            return /^[ -~]+$/.test(decoded) ? decoded : value;
-                        } catch (e) {
-                            return value;
-                        }
+            Promise.all([
+                fetch(apiBase + 'fortivoice').then(function(r) { return r.json(); }),
+                fetch(apiBase + 'fortivoice-licenses').then(function(r) { return r.json(); })
+            ])
+            .then(function(results) {
+                var data = results[0] || {};
+                var lic = results[1] || {};
+                var items = data.collection || [];
+                if (!Array.isArray(items)) items = [];
+
+                function tryDecode(value) {
+                    if (!value || typeof value !== 'string') return value || '-';
+                    if (!/^[A-Za-z0-9+/=]+$/.test(value) || value.length % 4 !== 0) return value;
+                    try {
+                        var decoded = atob(value);
+                        return /^[ -~]+$/.test(decoded) ? decoded : value;
+                    } catch (e) {
+                        return value;
                     }
+                }
 
-                    var rows = [];
-                    var online = 0;
-                    var offline = 0;
+                function parseAccounts(item) {
+                    var accounts = item.accounts || [];
+                    if (typeof accounts === 'string') {
+                        try { accounts = JSON.parse(accounts || '[]'); } catch (e) { accounts = []; }
+                    }
+                    return Array.isArray(accounts) ? accounts : [];
+                }
 
-                    items.forEach(function(item) {
-                        var accounts = item.accounts || [];
-                        if (typeof accounts === 'string') {
-                            try { accounts = JSON.parse(accounts || '[]'); } catch (e) { accounts = []; }
-                        }
-                        if (!Array.isArray(accounts) || accounts.length === 0) accounts = [null];
+                var summary = { devices: items.length, registered: 0, accounts: 0, online: 0, offline: 0, unassigned: 0, byType: {} };
+                var deviceRows = [];
+                var accountRows = [];
 
-                        accounts.forEach(function(account) {
-                            var isOnline = Number((account && account.registration_status) || item.registration_status || 0) === 1;
-                            if (isOnline) online++; else offline++;
+                items.forEach(function(item) {
+                    var accounts = parseAccounts(item);
+                    if (String(item.unassigned || '') === '1' || String(item.unassigned || '') === '2') summary.unassigned++;
+                    summary.byType[item.phone_type || 'Unknown'] = (summary.byType[item.phone_type || 'Unknown'] || 0) + 1;
 
-                            rows.push('<tr>' +
-                                '<td>' + tryDecode((account && account.associated_display_name) || item.associated_display_name || item.name || item.description || item.phone_type || item.mkey) + '</td>' +
-                                '<td>' + ((account && account.associated_number) || item.associated_number || (account && account.associated_id) || item.associated_id || '-') + '</td>' +
-                                '<td>' + ((account && account.device_ip) || item.device_ip || '-') + '</td>' +
-                                '<td>' + (isOnline ? 'online' : 'offline') + '</td>' +
-                            '</tr>');
-                        });
+                    deviceRows.push('<tr>' +
+                        '<td>' + tryDecode(item.name || item.description || item.phone_type || item.mkey) + '</td>' +
+                        '<td>' + (item.phone_type || '-') + '</td>' +
+                        '<td>' + (item.mkey || '-') + '</td>' +
+                        '<td>' + (item.device_ip || '-') + '</td>' +
+                        '<td>' + (item.unassigned || '-') + '</td>' +
+                        '<td>' + (item.phone_profile || '-') + '</td>' +
+                        '<td>' + (accounts.length || item.accounts_count || 0) + '</td>' +
+                        '<td>' + (item.rt_firmware_info || '-') + '</td>' +
+                    '</tr>');
+
+                    accounts.forEach(function(account) {
+                        var reg = Number(account.registration_status || 0) === 1;
+                        if (reg) summary.registered++;
+                        if (reg) summary.online++; else summary.offline++;
+                        summary.accounts++;
+                        accountRows.push('<tr>' +
+                            '<td>' + tryDecode(account.associated_display_name) + '</td>' +
+                            '<td>' + (account.associated_number || '-') + '</td>' +
+                            '<td>' + (account.associated_id || '-') + '</td>' +
+                            '<td>' + (account.device_ip || '-') + '</td>' +
+                            '<td>' + (reg ? 'online' : 'offline') + '</td>' +
+                            '<td>' + (account.softclient_license || '-') + '</td>' +
+                        '</tr>');
                     });
-
-                    document.getElementById('fvDevices').textContent = data.totalRemoteCount || items.length;
-                    document.getElementById('fvLicenses').textContent = data.token ? 1 : '-';
-                    document.getElementById('fvOnline').textContent = online;
-                    document.getElementById('fvOffline').textContent = offline;
-                    document.getElementById('fortivoiceContent').innerHTML = rows.length ? (
-                        '<table class="clients-table"><thead><tr><th>Nombre</th><th>Extensión</th><th>IP</th><th>Estado</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>'
-                    ) : '<div class="loading">No hay dispositivos SIP</div>';
-                    document.getElementById('lastUpdate').textContent = 'FortiVoice actualizado: ' + new Date().toLocaleTimeString();
-                })
-                .catch(function(err) {
-                    document.getElementById('fortivoiceContent').innerHTML = '<div class="error-msg">Error: ' + err.message + '</div>';
                 });
+
+                document.getElementById('fvDevices').textContent = summary.devices;
+                document.getElementById('fvRegistered').textContent = summary.registered;
+                document.getElementById('fvAccounts').textContent = summary.accounts;
+                document.getElementById('fvLicenses').textContent = lic.token || lic.collection ? 'OK' : '-';
+                document.getElementById('fvOnline').textContent = summary.online;
+                document.getElementById('fvOffline').textContent = summary.offline;
+
+                document.getElementById('fortivoiceSummary').innerHTML = '<table class="clients-table"><tbody>' +
+                    '<tr><td>Total dispositivos</td><td>' + summary.devices + '</td></tr>' +
+                    '<tr><td>Registrados</td><td>' + summary.registered + '</td></tr>' +
+                    '<tr><td>Sin asignar</td><td>' + summary.unassigned + '</td></tr>' +
+                    '<tr><td>Cuentas asociadas</td><td>' + summary.accounts + '</td></tr>' +
+                    '<tr><td>Modelos</td><td>' + Object.keys(summary.byType).slice(0, 8).map(function(k) { return k + ' (' + summary.byType[k] + ')'; }).join(', ') + '</td></tr>' +
+                    '</tbody></table>';
+
+                document.getElementById('fortivoiceLicenses').innerHTML = '<pre style="white-space:pre-wrap;word-break:break-word;color:#d7e3ff;">' + JSON.stringify(lic, null, 2) + '</pre>';
+                document.getElementById('fortivoiceContent').innerHTML = deviceRows.length ? (
+                    '<div style="overflow:auto; max-height:420px;"><table class="clients-table"><thead><tr><th>Nombre</th><th>Tipo</th><th>MAC</th><th>IP</th><th>Unassigned</th><th>Perfil</th><th>Cuentas</th><th>Firmware</th></tr></thead><tbody>' + deviceRows.join('') + '</tbody></table></div>'
+                ) : '<div class="loading">No hay dispositivos SIP</div>';
+                document.getElementById('fortivoiceAccounts').innerHTML = accountRows.length ? (
+                    '<div style="overflow:auto; max-height:420px;"><table class="clients-table"><thead><tr><th>Nombre</th><th>Extensión</th><th>ID</th><th>IP</th><th>Estado</th><th>Softclient</th></tr></thead><tbody>' + accountRows.join('') + '</tbody></table></div>'
+                ) : '<div class="loading">No hay cuentas asociadas</div>';
+                document.getElementById('lastUpdate').textContent = 'FortiVoice actualizado: ' + new Date().toLocaleTimeString();
+            })
+            .catch(function(err) {
+                document.getElementById('fortivoiceContent').innerHTML = '<div class="error-msg">Error: ' + err.message + '</div>';
+            });
         }
 
         function refreshVPN() {

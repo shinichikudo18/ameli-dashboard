@@ -139,10 +139,10 @@ switch ($action) {
         curl_close($ch);
         echo $resp;
         break;
-        
-    case 'fortivoice':
+
+    case 'fortivoice-licenses':
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/FortiVoice.php?action=sip_phones');
+        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/FortiVoice.php?action=licenses');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $resp = curl_exec($ch);
         curl_close($ch);
