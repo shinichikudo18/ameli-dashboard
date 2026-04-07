@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AMELI Dashboard</title>
-    <link rel="icon" type="image/jpeg" href="https://i.postimg.cc/XqqN8yF5/512x512.jpg">
-    <link rel="apple-touch-icon" href="https://i.postimg.cc/XqqN8yF5/512x512.jpg">
+    <link rel="icon" type="image/jpeg" href="ameli-logo.jpg">
+    <link rel="apple-touch-icon" href="ameli-logo.jpg">
     <link rel=stylesheet href=https://cdn.jsdelivr.net/npm/flag-icons@6.6.6/css/flag-icons.min.css>
     <script src="lib/chart.min.js"></script>
     <style>
@@ -76,7 +76,7 @@
     <div class="container">
         <header>
             <div class="brand">
-                <img class="brand-logo" src="https://i.postimg.cc/XqqN8yF5/512x512.jpg" alt="AMELI">
+                <img class="brand-logo" src="ameli-logo.jpg" alt="AMELI">
                 <h1>AMELI Dashboard</h1>
             </div>
             <p class="subtitle">Fortigate + Home Assistant</p>
@@ -1183,7 +1183,7 @@
                         return '<tr><td><strong>' + (group.name || '-') + '</strong></td><td>' + (group.full_path || '-') + '</td><td>' + (group.total_devices || 0) + '</td><td>' + (group.policy_name || '-') + '</td><td>' + ((group.blocked ? 'Sí' : 'No')) + '</td><td>' + (group.type || '-') + '</td></tr>';
                     }).join('') + '</tbody></table>') : '<div class="loading">No hay grupos</div>';
 
-                    document.getElementById('lastUpdate').textContent = 'EMS actualizado: ' + new Date().toLocaleTimeString();
+                    document.getElementById('lastUpdate').textContent = 'AMELI actualizado: ' + new Date().toLocaleTimeString();
                 })
                 .catch(function(err) {
                     document.getElementById('emsLicense').innerHTML = '<div class="error-msg">' + err.message + '</div>';
