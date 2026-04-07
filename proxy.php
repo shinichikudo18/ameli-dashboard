@@ -149,6 +149,15 @@ switch ($action) {
         echo $resp;
         break;
 
+    case 'freepbx':
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/FreePBX.php?action=dashboard');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $resp = curl_exec($ch);
+        curl_close($ch);
+        echo $resp;
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'Invalid action']);

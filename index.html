@@ -85,6 +85,7 @@
             <button class="tab-btn" data-tab="ems">FortiClient EMS</button>
             <button class="tab-btn" data-tab="soc">SOC</button>
             <button class="tab-btn" data-tab="fortivoice">FortiVoice</button>
+            <button class="tab-btn" data-tab="freepbx">FreePBX</button>
         </div>
         
         <div id="tab-ha" class="tab-content active">
@@ -305,6 +306,51 @@
                 <div id="fortivoiceAccounts"><div class="loading">Cargando...</div></div>
             </div>
         </div>
+
+        <div id="tab-freepbx" class="tab-content">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value" id="fpbxExtensions">-</div><div class="stat-label">Extensiones</div></div>
+                <div class="stat-card"><div class="stat-value" id="fpbxTrunks">-</div><div class="stat-label">Troncales</div></div>
+                <div class="stat-card"><div class="stat-value" id="fpbxQueues">-</div><div class="stat-label">Colas</div></div>
+                <div class="stat-card"><div class="stat-value" id="fpbxOnline">-</div><div class="stat-label">Online</div></div>
+                <div class="stat-card"><div class="stat-value" id="fpbxOffline">-</div><div class="stat-label">Offline</div></div>
+                <div class="stat-card"><div class="stat-value" id="fpbxCalls">-</div><div class="stat-label">Llamadas</div></div>
+            </div>
+            <div class="dashboard-grid" style="margin-bottom:20px;">
+                <div class="card">
+                    <div class="card-title">Tecnologías</div>
+                    <canvas id="freepbxTechChart" height="240"></canvas>
+                </div>
+                <div class="card">
+                    <div class="card-title">Peers</div>
+                    <canvas id="freepbxPeerChart" height="240"></canvas>
+                </div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">Resumen</div>
+                <div id="freepbxSummary"><div class="loading">Cargando...</div></div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">Extensiones</div>
+                <div id="freepbxExtensionsContent"><div class="loading">Cargando...</div></div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">Troncales</div>
+                <div id="freepbxTrunksContent"><div class="loading">Cargando...</div></div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">Colas</div>
+                <div id="freepbxQueuesContent"><div class="loading">Cargando...</div></div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">Peers / Estado</div>
+                <div id="freepbxPeersContent"><div class="loading">Cargando...</div></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Asterisk Info</div>
+                <div id="freepbxAsteriskContent"><div class="loading">Cargando...</div></div>
+            </div>
+        </div>
         <div class="status-bar"><span id="lastUpdate">-</span></div>
     </div>
     
@@ -336,6 +382,8 @@
                     refreshEMS();
                 } else if (tabId === 'fortivoice') {
                     refreshFortiVoice();
+                } else if (tabId === 'freepbx') {
+                    refreshFreePBX();
                 }
             });
         });
@@ -1194,6 +1242,123 @@
                 document.getElementById('fortivoiceContent').innerHTML = '<div class="error-msg">Error: ' + err.message + '</div>';
             });
         }
+
+
+        function refreshFreePBX() {
+            var content = document.getElementById('freepbxExtensionsContent');
+            if (content) content.innerHTML = '<div class="loading">Cargando FreePBX...</div>';
+            Promise.all([
+                fetch(apiBase + 'freepbx').then(function(r) { return r.json(); })
+            ])
+            .then(function(results) {
+                var data = results[0] || {};
+                var summary = data.summary || {};
+                var extensions = data.extensions || [];
+                var trunks = data.trunks || [];
+                var queues = data.queues || [];
+                var peers = data.peers || [];
+
+                function esc(value) {
+                    return String(value == null ? '-' : value)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;');
+                }
+
+                var online = summary.peers_available || 0;
+                var offline = summary.peers_unavailable || 0;
+                document.getElementById('fpbxExtensions').textContent = summary.extensions_total || 0;
+                document.getElementById('fpbxTrunks').textContent = summary.trunks_total || 0;
+                document.getElementById('fpbxQueues').textContent = summary.queues_total || 0;
+                document.getElementById('fpbxOnline').textContent = online;
+                document.getElementById('fpbxOffline').textContent = offline;
+                document.getElementById('fpbxCalls').textContent = summary.active_calls || 0;
+                document.getElementById('fpbxAri').textContent = (data.asterisk && data.asterisk.ari_available) ? 'OK' : 'No ARI';
+
+                document.getElementById('freepbxSummary').innerHTML = '<table class="clients-table"><tbody>' +
+                    '<tr><td>Total extensiones</td><td>' + esc(summary.extensions_total || 0) + '</td></tr>' +
+                    '<tr><td>PJSIP</td><td>' + esc(summary.pjsip_extensions || 0) + '</td></tr>' +
+                    '<tr><td>DAHDI</td><td>' + esc(summary.dahdi_extensions || 0) + '</td></tr>' +
+                    '<tr><td>IAX2</td><td>' + esc(summary.iax2_extensions || 0) + '</td></tr>' +
+                    '<tr><td>Troncales</td><td>' + esc(summary.trunks_total || 0) + '</td></tr>' +
+                    '<tr><td>Colas</td><td>' + esc(summary.queues_total || 0) + '</td></tr>' +
+                    '<tr><td>Peers online</td><td>' + esc(online) + '</td></tr>' +
+                    '<tr><td>Peers offline</td><td>' + esc(offline) + '</td></tr>' +
+                    '<tr><td>Llamadas activas</td><td>' + esc(summary.active_calls || 0) + '</td></tr>' +
+                    '<tr><td>ARI</td><td>' + esc((data.asterisk && data.asterisk.ari_message) || '-') + '</td></tr>' +
+                    '</tbody></table>';
+
+                var techLabels = Object.keys(summary.tech_counts || {});
+                var techValues = techLabels.map(function(k) { return summary.tech_counts[k]; });
+                var peerLabels = ['Online', 'Offline'];
+                var peerValues = [online, offline];
+
+                if (window.freepbxTechChart && typeof window.freepbxTechChart.destroy === 'function') window.freepbxTechChart.destroy();
+                if (window.freepbxPeerChart && typeof window.freepbxPeerChart.destroy === 'function') window.freepbxPeerChart.destroy();
+                var techCanvas = document.getElementById('freepbxTechChart');
+                var peerCanvas = document.getElementById('freepbxPeerChart');
+                if (techCanvas && techCanvas.getContext && techLabels.length) {
+                    window.freepbxTechChart = new Chart(techCanvas.getContext('2d'), {
+                        type: 'doughnut',
+                        data: { labels: techLabels, datasets: [{ data: techValues, backgroundColor: ['#36A2EB', '#FF6384', '#4BC0C0', '#FFCE56', '#9966FF', '#FF9F40'] }] },
+                        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#fff' } } } }
+                    });
+                }
+                if (peerCanvas && peerCanvas.getContext) {
+                    window.freepbxPeerChart = new Chart(peerCanvas.getContext('2d'), {
+                        type: 'bar',
+                        data: { labels: peerLabels, datasets: [{ label: 'Peers', data: peerValues, backgroundColor: ['#4BC0C0', '#FF6384'] }] },
+                        options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } }, y: { ticks: { color: '#fff', precision: 0 }, grid: { color: 'rgba(255,255,255,0.08)' } } } }
+                    });
+                }
+
+                var extRows = extensions.map(function(ext) {
+                    return '<tr>' +
+                        '<td>' + esc(ext.extension || ext.id || '-') + '</td>' +
+                        '<td>' + esc(ext.name || ext.description || '-') + '</td>' +
+                        '<td>' + esc(ext.tech || '-') + '</td>' +
+                        '<td>' + esc(ext.dial || '-') + '</td>' +
+                        '<td>' + esc(ext.devicetype || '-') + '</td>' +
+                        '<td>' + esc((ext.settings && ext.settings.dnd) ? 'DND' : 'Ready') + '</td>' +
+                    '</tr>';
+                }).join('');
+
+                var trunkRows = trunks.map(function(t) {
+                    return '<tr><td>' + esc(t.name) + '</td><td>' + esc(t.tech) + '</td><td>' + esc(t.callerid) + '</td><td>' + esc(t.status) + '</td></tr>';
+                }).join('');
+
+                var queueRows = queues.length ? queues.map(function(q) {
+                    return '<tr><td>' + esc(q.queue) + '</td><td>' + esc(q.description) + '</td><td>-</td></tr>';
+                }).join('') : '<tr><td colspan="3">No hay colas configuradas</td></tr>';
+
+                var peerRows = peers.map(function(p) {
+                    return '<tr><td>' + esc(p.endpoint) + '</td><td>' + esc(p.status) + '</td><td>' + (p.available ? 'online' : 'offline') + '</td></tr>';
+                }).join('');
+
+                document.getElementById('freepbxExtensionsContent').innerHTML = extRows ? (
+                    '<div style="overflow:auto; max-height:420px;"><table class="clients-table"><thead><tr><th>Ext</th><th>Nombre</th><th>Tecnología</th><th>Dial</th><th>Tipo</th><th>Estado</th></tr></thead><tbody>' + extRows + '</tbody></table></div>'
+                ) : '<div class="loading">No hay extensiones</div>';
+                document.getElementById('freepbxTrunksContent').innerHTML = trunkRows ? (
+                    '<div style="overflow:auto; max-height:320px;"><table class="clients-table"><thead><tr><th>Nombre</th><th>Tech</th><th>CallerID</th><th>Status</th></tr></thead><tbody>' + trunkRows + '</tbody></table></div>'
+                ) : '<div class="loading">No hay troncales</div>';
+                document.getElementById('freepbxQueuesContent').innerHTML = '<table class="clients-table"><thead><tr><th>Cola</th><th>Descripción</th><th>Miembros</th></tr></thead><tbody>' + queueRows + '</tbody></table>';
+                document.getElementById('freepbxPeersContent').innerHTML = peerRows ? (
+                    '<div style="overflow:auto; max-height:320px;"><table class="clients-table"><thead><tr><th>Endpoint</th><th>Estado</th><th>Online</th></tr></thead><tbody>' + peerRows + '</tbody></table></div>'
+                ) : '<div class="loading">No hay peers detectados</div>';
+                document.getElementById('freepbxAsteriskContent').innerHTML = '<table class="clients-table"><tbody>' +
+                    '<tr><td>ARI</td><td>' + esc((data.asterisk && data.asterisk.ari_message) || '-') + '</td></tr>' +
+                    '<tr><td>Llamadas activas</td><td>' + esc((data.asterisk && data.asterisk.active_calls) || 0) + '</td></tr>' +
+                    '</tbody></table>';
+
+                document.getElementById('lastUpdate').textContent = 'FreePBX actualizado: ' + new Date().toLocaleTimeString();
+            })
+            .catch(function(err) {
+                document.getElementById('freepbxSummary').innerHTML = '<div class="error-msg">Error: ' + err.message + '</div>';
+            });
+        }
+
 
         function refreshVPN() {
             document.getElementById('vpnUsersContent').innerHTML = '<div class="loading">Cargando VPN...</div>';
