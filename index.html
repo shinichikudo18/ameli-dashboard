@@ -117,7 +117,6 @@
                     <div class="ha-tile">
                         <div>
                             <div class="ha-label">Estado</div>
-                            <div class="ha-value" id="haLightValue">--</div>
                             <div class="ha-state" id="haLightState">Cargando...</div>
                         </div>
                         <div class="ha-icon">💡</div>
@@ -489,14 +488,12 @@
 
                 var tempValue = document.getElementById('haTempValue');
                 var tempState = document.getElementById('haTempState');
-                var lightValue = document.getElementById('haLightValue');
                 var lightState = document.getElementById('haLightState');
 
                 if (tempValue) tempValue.textContent = temp.error ? '--' : (temp.value + (temp.unit || ''));
                 if (tempState) tempState.textContent = temp.error ? 'Sin datos' : ('Actualizado: ' + (temp.lastChanged ? new Date(temp.lastChanged).toLocaleTimeString() : new Date().toLocaleTimeString()));
 
                 var isOn = light.state === 'on' || light.value === 1 || light.value === '1';
-                if (lightValue) lightValue.textContent = light.error ? '--' : (isOn ? '1' : '0');
                 if (lightState) lightState.textContent = light.error ? 'Sin datos' : (isOn ? 'Encendida' : 'Apagada');
 
                 document.getElementById('lastUpdate').textContent = 'Actualizacion: ' + new Date().toLocaleTimeString();
