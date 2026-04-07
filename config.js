@@ -1,9 +1,8 @@
 const HA_CONFIG = {
     proxyUrl: '/dashboard/proxy.php',
     entities: [
-        { entityId: 'sensor.agnov_fg_wifi_clients_ssid1', name: 'Agnov Solutions', showInChart: true },
-        { entityId: 'sensor.agnov_fg_wifi_clients_ssid2', name: 'AMELI Devices', showInChart: true },
-        { entityId: 'sensor.agnov_fg_wifi_clients', name: 'Total Clientes', showInChart: false }
+        { entityId: 'sensor.oficinasala_de_reuniones_temperature', name: 'Temperatura Sala de Reuniones', showInChart: true, kind: 'sensor' },
+        { entityId: 'switch.oficinasala_de_reuniones', name: 'Luz Sala de Reuniones', showInChart: false, kind: 'switch' }
     ]
 };
 
@@ -20,14 +19,17 @@ async function fetchAllEntities() {
             const data = await fetchSensorData(entity.entityId);
             results.push({
                 name: entity.name,
-                value: parseFloat(data.state) || 0,
+                value: entity.kind === 'switch' ? (data.state === 'on' ? 1 : 0) : (parseFloat(data.state) || 0),
+                state: data.state,
                 unit: data.attributes?.unit_of_measurement || '',
                 lastChanged: data.last_changed,
+                entityId: entity.entityId,
+                kind: entity.kind || 'sensor',
                 showInChart: entity.showInChart !== false
             });
         } catch (error) {
             console.error('Error fetching ' + entity.name + ':', error);
-            results.push({ name: entity.name, value: 0, error: true, showInChart: entity.showInChart !== false });
+            results.push({ name: entity.name, value: 0, error: true, state: 'unavailable', kind: entity.kind || 'sensor', showInChart: entity.showInChart !== false });
         }
     }
     return results;
@@ -79,7 +81,7 @@ function updateChart(data) {
     infoDiv.innerHTML = data.map(d => 
         '<div class="sensor-card">' +
             '<div class="sensor-name">' + d.name + '</div>' +
-            '<div class="sensor-value">' + (d.error ? 'Error' : d.value) + (d.unit || '') + '</div>' +
+            '<div class="sensor-value">' + (d.error ? 'Error' : (d.kind === 'switch' ? (d.state === 'on' ? 'Encendida' : 'Apagada') : d.value)) + (d.kind === 'switch' ? '' : (d.unit || '')) + '</div>' +
         '</div>'
     ).join('');
 }
