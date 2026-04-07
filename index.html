@@ -27,6 +27,11 @@
         .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
         .card { background: rgba(255,255,255,0.1); border-radius: 20px; padding: 25px; }
         .card-title { font-size: 1.2rem; margin-bottom: 15px; color: #00d4ff; }
+        .ha-tile { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 140px; }
+        .ha-icon { width: 72px; height: 72px; border-radius: 18px; display: grid; place-items: center; font-size: 2rem; background: rgba(0,212,255,0.15); color: #00d4ff; flex-shrink: 0; }
+        .ha-label { color: #aaa; font-size: 0.95rem; margin-bottom: 6px; }
+        .ha-value { font-size: 2rem; font-weight: 700; color: #fff; line-height: 1; }
+        .ha-state { margin-top: 10px; color: #9fe7ff; font-size: 0.92rem; }
         .chart-container { position: relative; height: 250px; display: flex; justify-content: center; }
         .sensor-card { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; border-left: 4px solid #00d4ff; }
         .sensor-name { color: #ccc; }
@@ -97,12 +102,26 @@
         <div id="tab-ha" class="tab-content active">
             <div class="dashboard-grid">
                 <div class="card">
-                    <div class="card-title">Home Assistant</div>
-                    <div class="chart-container"><canvas id="sensorChart"></canvas></div>
+                    <div class="card-title">Temperatura Sala de Reuniones</div>
+                    <div class="ha-tile">
+                        <div>
+                            <div class="ha-label">Temperatura</div>
+                            <div class="ha-value" id="haTempValue">--</div>
+                            <div class="ha-state" id="haTempState">Cargando...</div>
+                        </div>
+                        <div class="ha-icon">🌡️</div>
+                    </div>
                 </div>
                 <div class="card">
-                    <div class="card-title">Detalles</div>
-                    <div id="sensorInfo"><div class="loading">Cargando datos...</div></div>
+                    <div class="card-title">Luz Sala de Reuniones</div>
+                    <div class="ha-tile">
+                        <div>
+                            <div class="ha-label">Estado</div>
+                            <div class="ha-value" id="haLightValue">--</div>
+                            <div class="ha-state" id="haLightState">Cargando...</div>
+                        </div>
+                        <div class="ha-icon">💡</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -405,7 +424,7 @@
         <div class="status-bar"><span id="lastUpdate">-</span></div>
     </div>
     
-    <script src="home-assistant/config.js?v=2"></script>
+    <script src="home-assistant/config.js?v=3"></script>
     <script>
         var myChart = null;
         var apiBase = '/dashboard/proxy.php?action=';
@@ -465,7 +484,21 @@
         function refreshHA() {
             document.getElementById('lastUpdate').textContent = 'Actualizando...';
             fetchAllEntities().then(function(data) {
-                updateChart(data);
+                var temp = data.find(function(d) { return d.kind === 'sensor'; }) || data[0] || {};
+                var light = data.find(function(d) { return d.kind === 'switch'; }) || data[1] || {};
+
+                var tempValue = document.getElementById('haTempValue');
+                var tempState = document.getElementById('haTempState');
+                var lightValue = document.getElementById('haLightValue');
+                var lightState = document.getElementById('haLightState');
+
+                if (tempValue) tempValue.textContent = temp.error ? '--' : (temp.value + (temp.unit || ''));
+                if (tempState) tempState.textContent = temp.error ? 'Sin datos' : ('Actualizado: ' + (temp.lastChanged ? new Date(temp.lastChanged).toLocaleTimeString() : new Date().toLocaleTimeString()));
+
+                var isOn = light.state === 'on' || light.value === 1 || light.value === '1';
+                if (lightValue) lightValue.textContent = light.error ? '--' : (isOn ? '1' : '0');
+                if (lightState) lightState.textContent = light.error ? 'Sin datos' : (isOn ? 'Encendida' : 'Apagada');
+
                 document.getElementById('lastUpdate').textContent = 'Actualizacion: ' + new Date().toLocaleTimeString();
             }).catch(function(err) {
                 console.error(err);
