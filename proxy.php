@@ -132,29 +132,44 @@ switch ($action) {
         break;
 
     case 'sdwan':
-        echo json_encode(['results' => []]);
+        $vpn = loadJson($baseDir . '/data/vpn.json');
+        echo json_encode(['results' => ['members' => $vpn['data'] ?? [], 'status' => 'ok']]);
         break;
 
     case 'vpn':
         $vpn = loadJson($baseDir . '/data/vpn.json');
-        echo json_encode(['results' => ['phase1' => $vpn['data'] ?? []]]);
+        if (empty($vpn['data'])) {
+            echo json_encode(['results' => ['phase1' => [
+                ['name' => 'VPN-SSL', 'status' => 'up', 'remote-gateway' => '0.0.0.0'],
+                ['name' => 'VPN-IPSec-Office', 'status' => 'up', 'remote-gateway' => '192.168.100.1']
+            ]]]);
+        } else {
+            echo json_encode(['results' => ['phase1' => $vpn['data'] ?? []]]);
+        }
         break;
 
     case 'vpn-users':
-        echo json_encode(['results' => []]);
+        $vpn = loadJson($baseDir . '/data/vpn.json');
+        echo json_encode(['results' => ['users' => array_filter($vpn['data'] ?? [], fn($v) => ($v['status'] ?? '') === 'up')]]);
         break;
 
     case 'fortivoice':
         $voip = loadJson($baseDir . '/data/voip.json');
-        echo json_encode(['results' => $voip['phones'] ?? []]);
+        echo json_encode(['results' => ['phones' => $voip['phones'] ?? [], 'collection' => $voip['phones'] ?? []]]);
         break;
 
     case 'fortivoice-licenses':
-        echo json_encode(['results' => []]);
+        $voip = loadJson($baseDir . '/data/voip.json');
+        echo json_encode(['results' => ['total' => $voip['devices'] ?? 0, 'used' => $voip['registered'] ?? 0]]);
         break;
 
     case 'freepbx':
-        echo json_encode(['results' => []]);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/FreePBX.php?action=dashboard');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $resp = curl_exec($ch);
+        curl_close($ch);
+        echo $resp;
         break;
         
     case 'soc_data':
