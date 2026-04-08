@@ -412,6 +412,21 @@
                     <div class="soc-card-label">Memoria</div>
                     <div class="soc-card-value" id="socMemory">--%</div>
                 </div>
+                <div class="soc-card">
+                    <div class="soc-card-icon">📱</div>
+                    <div class="soc-card-label">DHCP Devices</div>
+                    <div class="soc-card-value" id="socDhcp">--</div>
+                </div>
+                <div class="soc-card">
+                    <div class="soc-card-icon">🔌</div>
+                    <div class="soc-card-label">Interfaces</div>
+                    <div class="soc-card-value" id="socInterfaces">--</div>
+                </div>
+                <div class="soc-card">
+                    <div class="soc-card-icon">☎️</div>
+                    <div class="soc-card-label">VoIP Reg.</div>
+                    <div class="soc-card-value" id="socVoipReg">--</div>
+                </div>
             </div>
             <div class="dashboard-grid" style="margin-bottom:20px;">
                 <div class="card">
@@ -465,6 +480,26 @@
                         <div class="soc-control-item"><span class="soc-control-name">VPN</span><span class="soc-control-status soc-ok">● <span id="socVPNActive">--</span>/<span id="socVPNTotal">--</span> túneles</span></div>
                         <div class="soc-control-item"><span class="soc-control-name">VoIP FortiVoice</span><span class="soc-control-status soc-ok">● <span id="socVoipRegistered">--</span>/<span id="socVoipDevices">--</span> registrados</span></div>
                     </div>
+                </div>
+            </div>
+            <div class="dashboard-grid" style="margin-bottom:20px;">
+                <div class="card">
+                    <div class="card-title">Interfaces de Red</div>
+                    <table class="soc-table">
+                        <thead><tr><th>Nombre</th><th>IP</th><th>Tipo</th><th>Estado</th></tr></thead>
+                        <tbody id="socInterfacesTable">
+                            <tr><td colspan="4" style="text-align:center;color:#888;">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card">
+                    <div class="card-title">Teléfonos VoIP Registrados</div>
+                    <table class="soc-table">
+                        <thead><tr><th>Extensión</th><th>Nombre</th><th>MAC</th></tr></thead>
+                        <tbody id="socVoipTable">
+                            <tr><td colspan="3" style="text-align:center;color:#888;">Cargando...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
             <div class="card">
@@ -776,6 +811,9 @@
                 document.getElementById('socVPNTotal').textContent = data.vpn?.total || 0;
                 document.getElementById('socVoipRegistered').textContent = data.voip?.registered || 0;
                 document.getElementById('socVoipDevices').textContent = data.voip?.devices || 0;
+                document.getElementById('socDhcp').textContent = data.dhcp?.leases || 0;
+                document.getElementById('socInterfaces').textContent = data.interfaces ? Object.keys(data.interfaces).length : 0;
+                document.getElementById('socVoipReg').textContent = data.voip?.registered || 0;
                 document.getElementById('socWifiAps').textContent = data.wifi?.aps || 0;
                 document.getElementById('socWifiClients').textContent = data.wifi?.clients || 0;
                 document.getElementById('socPolicies').textContent = data.policies?.total || 0;
@@ -784,6 +822,19 @@
                 document.getElementById('socCpu').textContent += '%';
                 document.getElementById('socMemory').textContent = data.system?.memory || 0;
                 document.getElementById('socMemory').textContent += '%';
+                var intfTable = document.getElementById('socInterfacesTable');
+                if(intfTable && data.interfaces){
+                    var intfHtml = '';
+                    for(var key in data.interfaces){
+                        var i = data.interfaces[key];
+                        intfHtml += '<tr><td>'+i.name+'</td><td>'+i.ip+'</td><td>'+i.type+'</td><td>'+(i.status==='up'?'<span style="color:#4BC0C0">↑ Activa</span>':'<span style="color:#FF6384">↓ Inactiva</span>')+'</td></tr>';
+                    }
+                    intfTable.innerHTML = intfHtml || '<tr><td colspan="4" style="text-align:center;color:#888;">Sin datos</td></tr>';
+                }
+                var voipTable = document.getElementById('socVoipTable');
+                if(voipTable && data.voip?.phones?.length){
+                    voipTable.innerHTML = data.voip.phones.map(function(p){return '<tr><td>'+p.number+'</td><td>'+p.name+'</td><td>'+p.mac+'</td></tr>';}).join('');
+                }
                 var severityData = [data.alerts?.critical || 0, data.alerts?.medium || 0, data.alerts?.low || 0, data.alerts?.info || 0];
                 var trafficData = [];
                 for(var i=0;i<12;i++) trafficData.push(Math.floor(Math.random()*(data.firewall?.blocked || 10)));
