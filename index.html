@@ -673,12 +673,20 @@
 
                 function toggleLight() {
                     var entityId = window.haLightEntityId;
-                    if (!entityId) return;
+                    console.log('Toggle clicked, entityId:', entityId);
+                    if (!entityId) {
+                        console.error('No entityId found');
+                        return;
+                    }
                     fetch('/dashboard/proxy.php?action=ha_service', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                         body: 'service=toggle&entity=' + entityId
-                    }).then(function(r) { return r.json(); }).then(function(data) {
+                    }).then(function(r) { 
+                        console.log('Response:', r);
+                        return r.json(); 
+                    }).then(function(data) {
+                        console.log('Data:', data);
                         refreshHA();
                     }).catch(function(err) {
                         console.error('Error toggling light:', err);
