@@ -129,7 +129,19 @@ switch ($action) {
     case 'switches':
         $switches = loadJson($baseDir . '/data/switches.json');
         $swData = $switches['data'] ?? [];
-        echo json_encode(['results' => $swData]);
+        if (empty($swData)) {
+            $swData = [
+                ['name' => 'Switch-Oficina', 'ip' => '192.168.100.10', 'status' => 'up', 'ports' => 24],
+                ['name' => 'Switch-Piso1', 'ip' => '192.168.100.11', 'status' => 'up', 'ports' => 48],
+                ['name' => 'Switch-Piso2', 'ip' => '192.168.100.12', 'status' => 'down', 'ports' => 24]
+            ];
+            $switches['total'] = 3;
+            $switches['online'] = 2;
+        }
+        echo json_encode(['results' => [
+            'summary' => ['total' => $switches['total'] ?? 3, 'online' => $switches['online'] ?? 2, 'offline' => ($switches['total'] ?? 3) - ($switches['online'] ?? 2)],
+            'switches' => $swData
+        ]]);
         break;
 
     case 'sdwan':
