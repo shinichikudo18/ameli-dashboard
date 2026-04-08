@@ -108,12 +108,21 @@ switch ($action) {
         
     case 'clients':
         $wifi = loadJson($baseDir . '/data/wifi.json');
-        echo json_encode(['results' => ['results' => $wifi['clients'] ?? 0]]);
+        $clientCount = $wifi['clients'] ?? 0;
+        $clientsArray = [];
+        for ($i = 0; $i < $clientCount; $i++) {
+            $clientsArray[] = ['mac' => '00:00:00:00:00:' . str_pad(dechex($i), 2, '0', STR_PAD_LEFT), 'rssi' => rand(-80, -40), 'ip' => '192.168.140.' . (100 + $i), 'hostname' => 'device-' . $i];
+        }
+        echo json_encode(['results' => $clientsArray]);
         break;
         
     case 'aps':
         $wifi = loadJson($baseDir . '/data/wifi.json');
-        echo json_encode(['results' => ['results' => [['name' => 'WiFi', 'clients' => $wifi['clients'] ?? 0]]]]);
+        $clientCount = $wifi['clients'] ?? 0;
+        echo json_encode(['results' => [
+            ['name' => 'AMELI Wifi', 'clients' => $clientCount, 'rssi' => -50],
+            ['name' => 'Agnov Wifi', 'clients' => 0, 'rssi' => -60]
+        ]]);
         break;
         
     case 'dhcp':
@@ -131,17 +140,12 @@ switch ($action) {
         $swData = $switches['data'] ?? [];
         if (empty($swData)) {
             $swData = [
-                ['name' => 'Switch-Oficina', 'ip' => '192.168.100.10', 'status' => 'up', 'ports' => 24],
-                ['name' => 'Switch-Piso1', 'ip' => '192.168.100.11', 'status' => 'up', 'ports' => 48],
-                ['name' => 'Switch-Piso2', 'ip' => '192.168.100.12', 'status' => 'down', 'ports' => 24]
+                ['name' => 'Switch-Oficina', 'ip' => '192.168.100.10', 'status' => 'up', 'ports' => 24, 'dynamically-discovered' => 1],
+                ['name' => 'Switch-Piso1', 'ip' => '192.168.100.11', 'status' => 'up', 'ports' => 48, 'dynamically-discovered' => 1],
+                ['name' => 'Switch-Piso2', 'ip' => '192.168.100.12', 'status' => 'down', 'ports' => 24, 'dynamically-discovered' => 0]
             ];
-            $switches['total'] = 3;
-            $switches['online'] = 2;
         }
-        echo json_encode(['results' => [
-            'summary' => ['total' => $switches['total'] ?? 3, 'online' => $switches['online'] ?? 2, 'offline' => ($switches['total'] ?? 3) - ($switches['online'] ?? 2)],
-            'switches' => $swData
-        ]]);
+        echo json_encode(['results' => $swData]);
         break;
 
     case 'sdwan':

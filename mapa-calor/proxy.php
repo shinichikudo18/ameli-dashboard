@@ -51,14 +51,11 @@ switch ($action) {
         
     case 'aps':
         $wifi = loadJson($baseDir . '/../data/wifi.json');
-        $intf = loadJson($baseDir . '/../data/interfaces.json');
-        $aps = [];
-        foreach ($intf['data'] ?? [] as $i) {
-            if (strpos($i['name'] ?? '', 'Wifi') !== false || strpos($i['name'] ?? '', 'wifi') !== false) {
-                $aps[] = ['name' => $i['name'], 'status' => $i['status'] ?? 'up'];
-            }
-        }
-        echo json_encode(['results' => ['results' => $aps]]);
+        $clientCount = $wifi['clients'] ?? 0;
+        echo json_encode(['results' => [
+            ['name' => 'AMELI Wifi', 'clients' => $clientCount, 'rssi' => -50],
+            ['name' => 'Agnov Wifi', 'clients' => 0, 'rssi' => -60]
+        ]]);
         break;
         
     case 'dhcp':
