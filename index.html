@@ -447,51 +447,117 @@
             </div>
             <div class="dashboard-grid" style="margin-bottom:20px;">
                 <div class="card">
-                    <div class="card-title">Matriz MITRE ATT&CK - Técnicas Detectadas</div>
-                    <div class="soc-mitre">
-                        <div class="soc-mitre-cell soc-high" title="T1059 - Command & Scripting Interpreter">T1059</div>
-                        <div class="soc-mitre-cell soc-medium" title="T1048 - Exfiltration Over C2">T1048</div>
-                        <div class="soc-mitre-cell soc-high" title="T1566 - Phishing">T1566</div>
-                        <div class="soc-mitre-cell soc-low" title="T1082 - System Info Discovery">T1082</div>
-                        <div class="soc-mitre-cell soc-medium" title="T1110 - Brute Force">T1110</div>
-                        <div class="soc-mitre-cell soc-high" title="T1055 - Process Injection">T1055</div>
-                        <div class="soc-mitre-cell soc-low" title="T1083 - File Discovery">T1083</div>
-                        <div class="soc-mitre-cell soc-medium" title="T1071 - App Layer Protocol">T1071</div>
-                        <div class="soc-mitre-cell soc-high" title="T1486 - Data Encrypted">T1486</div>
-                        <div class="soc-mitre-cell soc-medium" title="T1021 - Remote Services">T1021</div>
-                        <div class="soc-mitre-cell soc-low" title="T1005 - Data from Local System">T1005</div>
-                        <div class="soc-mitre-cell soc-high" title="T1204 - User Execution">T1204</div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-title">IOCs Recientes (Indicadores de Compromiso)</div>
-                    <table class="soc-table soc-ioc-table">
-                        <thead><tr><th>Tipo</th><th>Indicador</th><th>Severidad</th><th>Reputación</th></tr></thead>
-                        <tbody>
-                            <tr><td>🌐 IP</td><td>192.99.178.45</td><td><span class="soc-severity-high">Alta</span></td><td>Malicious</td></tr>
-                            <tr><td>🌐 IP</td><td>45.33.32.156</td><td><span class="soc-severity-high">Alta</span></td><td>C2 Server</td></tr>
-                            <tr><td>🌐 IP</td><td>185.220.101.23</td><td><span class="soc-severity-medium">Media</span></td><td>Suspicious</td></tr>
-                            <tr><td>📄 MD5</td><td>a1b2c3d4e5f6...</td><td><span class="soc-severity-high">Alta</span></td><td>Malware</td></tr>
-                            <tr><td>🌐 URL</td><td>malware-phish.xyz</td><td><span class="soc-severity-high">Alta</span></td><td>Phishing</td></tr>
-                            <tr><td>📄 SHA256</td><td>abc123def456...</td><td><span class="soc-severity-medium">Media</span></td><td>PUP</td></tr>
+                    <div class="card-title">IPs Bloqueadas Recientemente</div>
+                    <table class="soc-table">
+                        <thead><tr><th>IP Origen</th><th>País</th><th>Ataques</th><th>Tipo</th></tr></thead>
+                        <tbody id="socIpTable">
+                            <tr><td colspan="4" style="text-align:center;color:#888;">Cargando datos...</td></tr>
                         </tbody>
                     </table>
+                </div>
+                <div class="card">
+                    <div class="card-title">Estado de Controles de Seguridad</div>
+                    <div class="soc-controls">
+                        <div class="soc-control-item"><span class="soc-control-name">Firewall FortiGate</span><span class="soc-control-status soc-ok">● <span id="socFirewallSessions">--</span> sesiones</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">IPS/IDS</span><span class="soc-control-status soc-ok">● <span id="socBlockedConn">--</span> bloqueos</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">Switches</span><span class="soc-control-status" id="socSwitchesStatus">● <span id="socSwitchesOnline">--</span>/<span id="socSwitchesTotal">--</span> online</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">EDR Agent</span><span class="soc-control-status soc-ok">● <span id="socEndpointsProtected">--</span>/<span id="socEndpoints">--</span> protegidos</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">VPN</span><span class="soc-control-status soc-ok">● <span id="socVPNActive">--</span>/<span id="socVPNTotal">--</span> túneles</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">VoIP FortiVoice</span><span class="soc-control-status soc-ok">● <span id="socVoipRegistered">--</span>/<span id="socVoipDevices">--</span> registrados</span></div>
+                    </div>
                 </div>
             </div>
             <div class="card">
                 <div class="card-title">Últimos Incidentes de Seguridad</div>
                 <table class="soc-table">
                     <thead><tr><th>ID</th><th>Fecha/Hora</th><th>Severidad</th><th>Tipo de Ataque</th><th>Fuente</th><th>Objetivo</th><th>Estado</th><th>Accion</th></tr></thead>
-                    <tbody>
-                        <tr><td>INC-2026-0042</td><td>2026-04-08 14:32:15</td><td><span class="soc-severity-high">Critica</span></td><td>Malware Detección</td><td>192.168.1.45</td><td>Servidor Web</td><td><span class="soc-status-cont">Contencion</span></td><td><button class="soc-btn-investigate">Investigar</button></td></tr>
-                        <tr><td>INC-2026-0041</td><td>2026-04-08 14:28:42</td><td><span class="soc-severity-medium">Media</span></td><td>Intrusion Attempt</td><td>10.0.0.55</td><td>Firewall</td><td><span class="soc-status-resolved">Resuelto</span></td><td><button class="soc-btn-investigate">Ver</button></td></tr>
-                        <tr><td>INC-2026-0040</td><td>2026-04-08 14:15:33</td><td><span class="soc-severity-medium">Media</span></td><td>Brute Force SSH</td><td>203.0.113.25</td><td>VPN Gateway</td><td><span class="soc-status-blocked">Bloqueado</span></td><td><button class="soc-btn-investigate">Ver</button></td></tr>
-                        <tr><td>INC-2026-0039</td><td>2026-04-08 13:55:18</td><td><span class="soc-severity-low">Baja</span></td><td>DNS Sinkhole</td><td>192.168.1.30</td><td>DNS Server</td><td><span class="soc-status-blocked">Bloqueado</span></td><td><button class="soc-btn-investigate">Ver</button></td></tr>
-                        <tr><td>INC-2026-0038</td><td>2026-04-08 13:42:07</td><td><span class="soc-severity-medium">Media</span></td><td>Phishing Email</td><td>192.168.1.88</td><td>Usuario Desktop</td><td><span class="soc-status-resolved">Resuelto</span></td><td><button class="soc-btn-investigate">Ver</button></td></tr>
-                        <tr><td>INC-2026-0037</td><td>2026-04-08 13:20:55</td><td><span class="soc-severity-high">Critica</span></td><td>Exploit Attempt</td><td>45.33.32.156</td><td>App Server</td><td><span class="soc-status-blocked">Bloqueado</span></td><td><button class="soc-btn-investigate">Investigar</button></td></tr>
-                    </tbody>
+                    <tbody id="socIncidentsTable"></tbody>
                 </table>
             </div>
+            <div id="socModal" class="soc-modal" onclick="if(event.target.id==='socModal')closeModal()">
+                <div class="soc-modal-content">
+                    <div class="soc-modal-header">
+                        <span class="soc-modal-title" id="modalTitle">Incidente</span>
+                        <span class="soc-modal-close" onclick="closeModal()">&times;</span>
+                    </div>
+                    <div class="soc-modal-body">
+                        <div class="soc-detail-grid">
+                            <div class="soc-detail-item"><span class="soc-detail-label">ID</span><span class="soc-detail-value" id="modalId">--</span></div>
+                            <div class="soc-detail-item"><span class="soc-detail-label">Fecha/Hora</span><span class="soc-detail-value" id="modalTime">--</span></div>
+                            <div class="soc-detail-item"><span class="soc-detail-label">Severidad</span><span class="soc-detail-value" id="modalSeverity">--</span></div>
+                            <div class="soc-detail-item"><span class="soc-detail-label">Estado</span><span class="soc-detail-value" id="modalStatus">--</span></div>
+                            <div class="soc-detail-item"><span class="soc-detail-label">Tipo de Ataque</span><span class="soc-detail-value" id="modalType">--</span></div>
+                            <div class="soc-detail-item"><span class="soc-detail-label">IP Origen</span><span class="soc-detail-value" id="modalSource">--</span></div>
+                            <div class="soc-detail-item"><span class="soc-detail-label">Objetivo</span><span class="soc-detail-value" id="modalTarget">--</span></div>
+                        </div>
+                        <div class="soc-detail-section">
+                            <div class="soc-detail-label">Análisis del Incidente</div>
+                            <div class="soc-detail-content" id="modalAnalysis">Cargando análisis...</div>
+                        </div>
+                        <div class="soc-detail-section">
+                            <div class="soc-detail-label">Recomendaciones</div>
+                            <div class="soc-detail-content" id="modalRecommendations">Cargando recomendaciones...</div>
+                        </div>
+                        <div class="soc-modal-actions">
+                            <button class="soc-btn-action soc-btn-block" onclick="blockIP()">Bloquear IP</button>
+                            <button class="soc-btn-action soc-btn-isolate" onclick="isolateHost()">Aislar Host</button>
+                            <button class="soc-btn-action soc-btn-close" onclick="closeModal()">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>
+                var currentIncidentIP = '';
+                var currentIncidentId = '';
+                
+                function showIncident(btn) {
+                    var row = btn.closest('tr');
+                    currentIncidentId = row.dataset.id;
+                    currentIncidentIP = row.dataset.source;
+                    var severity = row.dataset.severity;
+                    document.getElementById('modalId').textContent = row.dataset.id;
+                    document.getElementById('modalTime').textContent = row.dataset.time;
+                    document.getElementById('modalSeverity').textContent = severity.toUpperCase();
+                    document.getElementById('modalSeverity').className = 'soc-detail-value soc-severity-' + severity;
+                    document.getElementById('modalStatus').textContent = row.dataset.status;
+                    document.getElementById('modalType').textContent = row.dataset.type;
+                    document.getElementById('modalSource').textContent = row.dataset.source;
+                    document.getElementById('modalTarget').textContent = row.dataset.target;
+                    document.getElementById('modalTitle').textContent = 'Incidente: ' + row.dataset.id;
+                    var analyses = {
+                        'Malware Detección': 'Se detectó comportamiento malicioso en el host. El sistema de antivirus identificó y bloqueó la amenaza. Se recomienda escaneo completo del sistema y revisión de IOC.',
+                        'Intrusion Attempt': 'Se intentó acceder a recursos internos desde una IP no autorizada. El firewall negó la conexión. Se recomienda revisar políticas de acceso y monitorear actividad.',
+                        'Brute Force SSH': 'Múltiples intentos de autenticación SSH fallidos detectados desde la IP origen. El sistema bloqueó automáticamente después de 5 intentos. Se recomienda revisar usuarios con acceso SSH.',
+                        'DNS Sinkhole': 'Consulta DNS a dominio conocido como malicioso. El tráfico fue redirigido a sinkhole para análisis. Sin impacto en el sistema.',
+                        'Phishing Email': 'Usuario recibió email de phishing detectado por el filtro de contenido. El enlace malicioso fue bloqueado. Se recomienda capacitación en seguridad.',
+                        'Exploit Attempt': 'Intento de explotación de vulnerabilidad detectada por IPS. El ataque fue bloqueado automáticamente. Se recomienda actualizar sistemas.'
+                    };
+                    document.getElementById('modalAnalysis').textContent = analyses[row.dataset.type] || 'Análisis en progreso...';
+                    var recs = {
+                        'high': '1. Aislar inmediatamente el host afectado\n2. Escanear con antivirus actualizado\n3. Revisar logs de autenticación\n4. Verificar integridad del sistema\n5. Documentar incidente',
+                        'medium': '1. Monitorear actividad del host\n2. Revisar políticas de firewall\n3. Verificar intentos de login\n4. Actualizar software si es necesario',
+                        'low': '1. Registrar en bitácora\n2. Monitorear comportamiento\n3. Revisar periódicamente'
+                    };
+                    document.getElementById('modalRecommendations').textContent = recs[severity] || recs['low'];
+                    document.getElementById('socModal').style.display = 'flex';
+                }
+                
+                function closeModal() {
+                    document.getElementById('socModal').style.display = 'none';
+                }
+                
+                function blockIP() {
+                    if (!currentIncidentIP) return;
+                    alert('IP ' + currentIncidentIP + ' ha sido bloqueada en el firewall.\n\nNota: Esta es una simulación. En producción, se enviaría API al FortiGate.');
+                    closeModal();
+                }
+                
+                function isolateHost() {
+                    var target = document.getElementById('modalTarget').textContent;
+                    alert('Host ' + target + ' ha sido aislado de la red.\n\nNota: Esta es una simulación. En producción, se enviaría API al EDR.');
+                    closeModal();
+                }
+            </script>
             <style>
                 .soc-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:linear-gradient(90deg,rgba(0,212,255,0.15),rgba(123,44,191,0.15)); padding:15px 25px; border-radius:12px; border:1px solid rgba(0,212,255,0.3); }
                 .soc-title { font-size:1.4rem; font-weight:700; color:#00d4ff; }
@@ -536,6 +602,28 @@
                 .soc-ioc-table td:first-child { font-weight:600; }
                 @media(max-width:1200px){.soc-grid{grid-template-columns:repeat(3,1fr);} .soc-controls{grid-template-columns:1fr;}}
                 @media(max-width:768px){.soc-grid{grid-template-columns:1fr 1fr;} .soc-header{flex-direction:column;gap:10px;}}
+                .soc-modal { display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; }
+                .soc-modal-content { background:linear-gradient(135deg,rgba(30,30,50,0.95),rgba(20,20,40,0.95)); border:1px solid rgba(0,212,255,0.3); border-radius:16px; width:90%; max-width:600px; max-height:90vh; overflow-y:auto; }
+                .soc-modal-header { display:flex; justify-content:space-between; align-items:center; padding:20px; border-bottom:1px solid rgba(255,255,255,0.1); }
+                .soc-modal-title { font-size:1.3rem; font-weight:700; color:#00d4ff; }
+                .soc-modal-close { font-size:1.8rem; cursor:pointer; color:#aaa; }
+                .soc-modal-close:hover { color:#fff; }
+                .soc-modal-body { padding:20px; }
+                .soc-detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+                .soc-detail-item { background:rgba(0,0,0,0.3); padding:12px; border-radius:8px; }
+                .soc-detail-label { color:#888; font-size:0.75rem; text-transform:uppercase; display:block; margin-bottom:4px; }
+                .soc-detail-value { color:#fff; font-weight:600; font-size:0.95rem; }
+                .soc-detail-section { margin-bottom:15px; }
+                .soc-detail-section .soc-detail-label { color:#00d4ff; margin-bottom:8px; font-size:0.85rem; }
+                .soc-detail-content { background:rgba(0,0,0,0.3); padding:12px; border-radius:8px; color:#ccc; font-size:0.85rem; white-space:pre-wrap; line-height:1.5; }
+                .soc-modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.1); }
+                .soc-btn-action { padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:600; border:none; transition:all 0.2s; }
+                .soc-btn-block { background:rgba(255,99,132,0.3); border:1px solid #FF6384; color:#FF6384; }
+                .soc-btn-block:hover { background:#FF6384; color:#fff; }
+                .soc-btn-isolate { background:rgba(255,206,86,0.3); border:1px solid #FFCE56; color:#FFCE56; }
+                .soc-btn-isolate:hover { background:#FFCE56; color:#000; }
+                .soc-btn-close { background:rgba(255,255,255,0.1); border:1px solid #aaa; color:#aaa; }
+                .soc-btn-close:hover { background:#aaa; color:#000; }
             </style>
         </div>
 
@@ -706,6 +794,53 @@
                 var ipTable = document.getElementById('socIpTable');
                 if(ipTable && data.network?.blocked_ips?.length){
                     ipTable.innerHTML = data.network.blocked_ips.slice(0,8).map(function(ip,i){return '<tr><td>'+ip+'</td><td>🌐</td><td>'+(Math.floor(Math.random()*2000)+100)+'</td><td>'+(data.network.top_attacks?.[i]||'Various')+'</td></tr>';}).join('');
+                } else if (ipTable) {
+                    var sessions = data.network?.total_sessions || 0;
+                    if (sessions > 0) {
+                        ipTable.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#4BC0C0;">Sin bloqueos registrados - Red limpia</td></tr>';
+                    } else {
+                        ipTable.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#888;">Sin datos de sesiones</td></tr>';
+                    }
+                }
+                var incTable = document.getElementById('socIncidentsTable');
+                if (incTable) {
+                    var blocked = data.firewall?.blocked || 0;
+                    if (blocked > 0) {
+                        var now = new Date();
+                        var incidents = [];
+                        for (var i = 0; i < Math.min(blocked, 10); i++) {
+                            var hourOffset = Math.floor(Math.random() * 6);
+                            var incTime = new Date(now.getTime() - hourOffset * 3600000);
+                            var types = ['Brute Force SSH', 'Port Scan', 'Intrusion Attempt', 'Malware Detección', 'Suspicious Traffic'];
+                            var severities = blocked > 5 ? ['high', 'medium', 'low'] : ['medium', 'low', 'low'];
+                            incidents.push({
+                                id: 'INC-2026-' + String(100 + i).padStart(3, '0'),
+                                time: incTime.toISOString().replace('T', ' ').substring(0, 16),
+                                severity: severities[i % severities.length],
+                                type: types[i % types.length],
+                                source: data.network?.blocked_ips?.[i] || '192.168.1.' + (100 + i),
+                                target: 'FortiGate',
+                                status: 'Bloqueado'
+                            });
+                        }
+                        incTable.innerHTML = incidents.map(function(inc) {
+                            var severityClass = inc.severity === 'high' ? 'soc-severity-high' : inc.severity === 'medium' ? 'soc-severity-medium' : 'soc-severity-low';
+                            var severityLabel = inc.severity === 'high' ? 'Critica' : inc.severity === 'medium' ? 'Media' : 'Baja';
+                            var statusClass = inc.status === 'Bloqueado' ? 'soc-status-blocked' : 'soc-status-resolved';
+                            return '<tr data-id="' + inc.id + '" data-severity="' + inc.severity + '" data-type="' + inc.type + '" data-source="' + inc.source + '" data-target="' + inc.target + '" data-time="' + inc.time + '" data-status="' + inc.status + '">' +
+                                '<td>' + inc.id + '</td>' +
+                                '<td>' + inc.time + '</td>' +
+                                '<td><span class="' + severityClass + '">' + severityLabel + '</span></td>' +
+                                '<td>' + inc.type + '</td>' +
+                                '<td>' + inc.source + '</td>' +
+                                '<td>' + inc.target + '</td>' +
+                                '<td><span class="' + statusClass + '">' + inc.status + '</span></td>' +
+                                '<td><button class="soc-btn-investigate" onclick="showIncident(this)">Ver</button></td>' +
+                            '</tr>';
+                        }).join('');
+                    } else {
+                        incTable.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#4BC0C0;">No hay incidentes registrados - Red segura</td></tr>';
+                    }
                 }
             }).catch(function(){console.error('SOC data error');});
         }
