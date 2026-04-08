@@ -340,7 +340,126 @@
             </div>
         </div>
         <div id="tab-soc" class="tab-content">
-            <div class="loading">SOC en construcción...</div>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value" id="socAlerts">24</div><div class="stat-label">Alertas Activas</div></div>
+                <div class="stat-card"><div class="stat-value" id="socCritical">3</div><div class="stat-label">Criticas</div></div>
+                <div class="stat-card"><div class="stat-value" id="socMedium">12</div><div class="stat-label">Medias</div></div>
+                <div class="stat-card"><div class="stat-value" id="socLow">9</div><div class="stat-label">Bajas</div></div>
+                <div class="stat-card"><div class="stat-value" id="socEvents">1,247</div><div class="stat-label">Eventos 24h</div></div>
+                <div class="stat-card"><div class="stat-value" id="socBlocked">89</div><div class="stat-label">Bloqueados</div></div>
+            </div>
+            <div class="dashboard-grid" style="margin-bottom:20px;">
+                <div class="card">
+                    <div class="card-title">Alertas por Severidad</div>
+                    <canvas id="socSeverityChart" height="240"></canvas>
+                </div>
+                <div class="card">
+                    <div class="card-title">Eventos por Hora</div>
+                    <canvas id="socEventsChart" height="240"></canvas>
+                </div>
+            </div>
+            <div class="dashboard-grid" style="margin-bottom:20px;">
+                <div class="card">
+                    <div class="card-title">Top Amenazas Detectadas</div>
+                    <canvas id="socThreatsChart" height="240"></canvas>
+                </div>
+                <div class="card">
+                    <div class="card-title">Estado de Seguridad</div>
+                    <div id="socSecurityStatus">
+                        <div class="sensor-card">
+                            <span class="sensor-name">Firewall</span>
+                            <span class="sensor-value" style="color:#4BC0C0;">Activo</span>
+                        </div>
+                        <div class="sensor-card">
+                            <span class="sensor-name">IDS/IPS</span>
+                            <span class="sensor-value" style="color:#4BC0C0;">Activo</span>
+                        </div>
+                        <div class="sensor-card">
+                            <span class="sensor-name">Antivirus</span>
+                            <span class="sensor-value" style="color:#FFCE56;">Advertencia</span>
+                        </div>
+                        <div class="sensor-card">
+                            <span class="sensor-name">VPN</span>
+                            <span class="sensor-value" style="color:#4BC0C0;">Activo</span>
+                        </div>
+                        <div class="sensor-card">
+                            <span class="sensor-name">Web Filter</span>
+                            <span class="sensor-value" style="color:#4BC0C0;">Activo</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Alertas Recientes</div>
+                <table class="clients-table">
+                    <thead><tr><th>Timestamp</th><th>Severidad</th><th>Tipo</th><th>Fuente</th><th>Destino</th><th>Accion</th></tr></thead>
+                    <tbody id="socAlertsTable">
+                        <tr><td>2026-04-08 14:32:15</td><td><span class="signal-badge" style="background:rgba(255,99,132,0.3);color:#FF6384;">Critica</span></td><td>Malware</td><td>192.168.1.45</td><td>8.8.8.8</td><td>Bloqueado</td></tr>
+                        <tr><td>2026-04-08 14:28:42</td><td><span class="signal-badge" style="background:rgba(255,206,86,0.3);color:#FFCE56;">Media</span></td><td>Intrusion</td><td>10.0.0.55</td><td>192.168.1.100</td><td>Alertado</td></tr>
+                        <tr><td>2026-04-08 14:15:33</td><td><span class="signal-badge" style="background:rgba(255,206,86,0.3);color:#FFCE56;">Media</span></td><td>Brute Force</td><td>203.0.113.25</td><td>192.168.1.1</td><td>Bloqueado</td></tr>
+                        <tr><td>2026-04-08 13:55:18</td><td><span class="signal-badge" style="background:rgba(75,192,192,0.3);color:#4BC0C0;">Baja</span></td><td>DNS Query</td><td>192.168.1.30</td><td>maligno.com</td><td>Bloqueado</td></tr>
+                        <tr><td>2026-04-08 13:42:07</td><td><span class="signal-badge" style="background:rgba(255,206,86,0.3);color:#FFCE56;">Media</span></td><td>Phishing</td><td>192.168.1.88</td><td>phishing-fake.com</td><td>Bloqueado</td></tr>
+                        <tr><td>2026-04-08 13:20:55</td><td><span class="signal-badge" style="background:rgba(255,99,132,0.3);color:#FF6384;">Critica</span></td><td>Exploit</td><td>45.33.32.156</td><td>192.168.1.25</td><td>Bloqueado</td></tr>
+                        <tr><td>2026-04-08 12:58:21</td><td><span class="signal-badge" style="background:rgba(75,192,192,0.3);color:#4BC0C0;">Baja</span></td><td>Port Scan</td><td>198.51.100.10</td><td>192.168.1.1</td><td>Alertado</td></tr>
+                        <tr><td>2026-04-08 12:35:44</td><td><span class="signal-badge" style="background:rgba(255,206,86,0.3);color:#FFCE56;">Media</span></td><td>Malware</td><td>192.168.1.67</td><td>C2.malware.com</td><td>Bloqueado</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <script>
+                (function() {
+                    var severityCtx = document.getElementById('socSeverityChart').getContext('2d');
+                    new Chart(severityCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Criticas', 'Medias', 'Bajas'],
+                            datasets: [{ data: [3, 12, 9], backgroundColor: ['#FF6384', '#FFCE56', '#4BC0C0'], borderWidth: 2, borderColor: '#fff' }]
+                        },
+                        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#fff' } } } }
+                    });
+
+                    var eventsCtx = document.getElementById('socEventsChart').getContext('2d');
+                    new Chart(eventsCtx, {
+                        type: 'line',
+                        data: {
+                            labels: ['00:00','02:00','04:00','06:00','08:00','10:00','12:00','14:00'],
+                            datasets: [{
+                                label: 'Eventos',
+                                data: [45, 23, 18, 35, 120, 185, 210, 195],
+                                borderColor: '#00d4ff',
+                                backgroundColor: 'rgba(0,212,255,0.2)',
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } },
+                                y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } }
+                            },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+
+                    var threatsCtx = document.getElementById('socThreatsChart').getContext('2d');
+                    new Chart(threatsCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Malware', 'Intrusion', 'Phishing', 'Brute Force', 'Exploit', 'Port Scan'],
+                            datasets: [{ data: [24, 18, 15, 12, 8, 6], backgroundColor: ['#FF6384', '#FFCE56', '#36A2EB', '#4BC0C0', '#9966FF', '#FF9F40'] }]
+                        },
+                        options: {
+                            responsive: true,
+                            indexAxis: 'y',
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } },
+                                y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } }
+                            }
+                        }
+                    });
+                })();
+            </script>
         </div>
 
         <div id="tab-fortivoice" class="tab-content">
