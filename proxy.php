@@ -150,7 +150,19 @@ switch ($action) {
 
     case 'sdwan':
         echo json_encode(['results' => [
-            ['summary' => ['zones' => 1, 'members' => 2, 'enabled_members' => 2, 'health_checks' => 2, 'services' => 1]]
+            [
+                'summary' => ['zones' => 2, 'members' => 4, 'enabled_members' => 4, 'health_checks' => 4, 'services' => 2],
+                'members' => [
+                    ['name' => 'wan1', 'zone' => 'wan', 'status' => 'enable', 'ip' => '192.169.100.2', 'gateway' => '192.169.100.1', 'type' => 'static'],
+                    ['name' => 'wan2', 'zone' => 'wan', 'status' => 'enable', 'ip' => '188.168.0.1', 'gateway' => '188.168.0.2', 'type' => 'static'],
+                    ['name' => 'dsl', 'zone' => 'backup', 'status' => 'disable', 'ip' => '0.0.0.0', 'gateway' => '0.0.0.0', 'type' => 'dsl'],
+                    ['name' => '4g', 'zone' => 'backup', 'status' => 'enable', 'ip' => '10.0.0.1', 'gateway' => '10.0.0.2', 'type' => '4g']
+                ],
+                'health_checks' => [
+                    ['name' => 'Google-DNS', 'server' => '8.8.8.8', 'protocol' => 'ping', 'interval' => 5, 'sla' => ['latency' => 10, 'jitter' => 5, 'loss' => 0]],
+                    ['name' => 'Cloudflare-DNS', 'server' => '1.1.1.1', 'protocol' => 'ping', 'interval' => 5, 'sla' => ['latency' => 12, 'jitter' => 3, 'loss' => 1]]
+                ]
+            ]
         ]]);
         break;
 
