@@ -104,7 +104,7 @@ $blockedSessions = 0;
 foreach ($sessionDetails as $s) {
     if (in_array($s['action'] ?? '', ['drop', 'blocked'])) $blockedSessions++;
 }
-saveJson($baseDir . '/data/sessions.json', ['timestamp' => $timestamp, 'total' => $totalSessions, 'blocked' => $blockedSessions]);
+saveJson($baseDir . '/data/sessions.json', ['timestamp' => $timestamp, 'total' => $totalSessions, 'blocked' => $blockedSessions, 'details' => $sessionDetails]);
 
 // Switches
 $switches = fgRequest('switch-controller/managed-switch');

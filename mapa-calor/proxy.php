@@ -68,7 +68,7 @@ switch ($action) {
         
     case 'sessions':
         $sessions = loadJson($baseDir . '/../data/sessions.json');
-        echo json_encode(['results' => ['details' => []]]);
+        echo json_encode(['results' => $sessions['details'] ?? []]);
         break;
         
     case 'switches':
