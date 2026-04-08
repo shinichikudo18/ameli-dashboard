@@ -674,11 +674,10 @@
                 function toggleLight() {
                     var entityId = window.haLightEntityId;
                     if (!entityId) return;
-                    var newState = window.haLightIsOn ? 'off' : 'on';
                     fetch('/dashboard/proxy.php?action=ha_service', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                        body: 'service=turn_' + newState + '&entity=' + entityId
+                        body: 'service=toggle&entity=' + entityId
                     }).then(function(r) { return r.json(); }).then(function(data) {
                         refreshHA();
                     }).catch(function(err) {
