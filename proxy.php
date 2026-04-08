@@ -136,6 +136,26 @@ switch ($action) {
         echo json_encode(['results' => ['members' => $vpn['data'] ?? [], 'status' => 'ok']]);
         break;
 
+    case 'red':
+    case 'wifi':
+        $wifi = loadJson($baseDir . '/data/wifi.json');
+        $dhcp = loadJson($baseDir . '/data/dhcp.json');
+        $sessions = loadJson($baseDir . '/data/sessions.json');
+        $interfaces = loadJson($baseDir . '/data/interfaces.json');
+        echo json_encode([
+            'results' => [
+                'wifi_clients' => $wifi['clients'] ?? 0,
+                'wifi_aps' => $wifi['aps'] ?? 0,
+                'dhcp_leases' => count($dhcp['data'] ?? []),
+                'dhcp_devices' => $dhcp['data'] ?? [],
+                'sessions_total' => $sessions['total'] ?? 0,
+                'sessions_blocked' => $sessions['blocked'] ?? 0,
+                'sessions_details' => array_slice($sessions['details'] ?? [], 0, 50),
+                'interfaces' => $interfaces['data'] ?? []
+            ]
+        ]);
+        break;
+
     case 'vpn':
         $vpn = loadJson($baseDir . '/data/vpn.json');
         if (empty($vpn['data'])) {
