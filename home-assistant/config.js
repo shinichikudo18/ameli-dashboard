@@ -11,7 +11,7 @@ const HA_CONFIG = {
         { entityId: 'sensor.oficinasala_de_subgerencia_humidity', name: 'Humedad Sala de Subgerencia', showInChart: true, kind: 'sensor' },
         { entityId: 'sensor.oficinasala_de_proyectos_temperature', name: 'Sala de Proyectos', showInChart: true, kind: 'sensor' },
         { entityId: 'sensor.oficinasala_de_proyectos_humidity', name: 'Humedad Sala de Proyectos', showInChart: true, kind: 'sensor' },
-        { entityId: 'switch.oficinasala_de_reuniones', name: 'Luz Sala de Reuniones', showInChart: false, kind: 'switch' },
+        { entityId: 'switch.oficinaluz_sala_de_reuniones_switch', name: 'Luz Sala de Reuniones', showInChart: false, kind: 'switch' },
         { entityId: 'sensor.sonoff_10020a4d4f_power', name: 'Consumo Rack Oficina', showInChart: false, kind: 'sensor' },
         { entityId: 'sensor.oficinarm_pro_temperature', name: 'Temperatura Rack', showInChart: false, kind: 'sensor' }
     ]

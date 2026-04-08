@@ -17,6 +17,26 @@ $haUrl = 'http://192.168.100.3:8123';
 $haToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI2NmMwNjBiMDg3YWI0MjhlYTliODg4N2Q5ZWY5ZDQ2NCIsImlhdCI6MTc3NDk4NDg3MSwiZXhwIjoyMDkwMzQ0ODcxfQ.x8K1uTtPvOde_oKXoBf-m70ilAXy-BVW5aAQeqcNeIc';
 
 switch ($action) {
+    case 'entities':
+        $domain = $_GET['domain'] ?? '';
+        if (empty($domain)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Domain required']);
+            exit;
+        }
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $haUrl . '/api/states');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $haToken]);
+        $resp = curl_exec($ch);
+        $states = json_decode($resp, true);
+        curl_close($ch);
+        $filtered = array_filter($states, function($s) use ($domain) {
+            return strpos($s['entity_id'], $domain . '.') === 0;
+        });
+        echo json_encode(array_values($filtered));
+        break;
+        
     case 'ha_entities':
         $entities = [
             'sensor.agnov_fg_wifi_clients_ssid1',
@@ -68,13 +88,13 @@ switch ($action) {
             exit;
         }
         $domain = explode('.', $entityId)[0];
-        $data = json_encode(['entity_id' => $entityId]);
+        $postData = json_encode(['entity_id' => $entityId]);
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $haUrl . '/api/services/' . $domain . '/' . $service);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $haToken, 'Content-Type: application/json']);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
         $resp = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
