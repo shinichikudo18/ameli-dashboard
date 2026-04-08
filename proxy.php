@@ -108,12 +108,12 @@ switch ($action) {
         
     case 'clients':
         $wifi = loadJson($baseDir . '/data/wifi.json');
-        echo json_encode(['results' => ['clients' => $wifi['clients'] ?? 0]]);
+        echo json_encode(['results' => ['results' => $wifi['clients'] ?? 0]]);
         break;
         
     case 'aps':
         $wifi = loadJson($baseDir . '/data/wifi.json');
-        echo json_encode(['results' => ['aps' => $wifi['aps'] ?? 0]]);
+        echo json_encode(['results' => ['results' => [['name' => 'WiFi', 'clients' => $wifi['clients'] ?? 0]]]]);
         break;
         
     case 'dhcp':
@@ -123,17 +123,22 @@ switch ($action) {
         
     case 'sessions':
         $sessions = loadJson($baseDir . '/data/sessions.json');
-        echo json_encode(['results' => ['sessions' => $sessions['total'] ?? 0, 'blocked' => $sessions['blocked'] ?? 0]]);
+        echo json_encode(['results' => $sessions['details'] ?? []]);
         break;
         
     case 'switches':
         $switches = loadJson($baseDir . '/data/switches.json');
-        echo json_encode(['results' => $switches['data'] ?? []]);
+        $swData = $switches['data'] ?? [];
+        echo json_encode(['results' => [
+            'summary' => ['total' => $switches['total'] ?? 0, 'online' => $switches['online'] ?? 0, 'offline' => ($switches['total'] ?? 0) - ($switches['online'] ?? 0)],
+            'switches' => $swData
+        ]]);
         break;
 
     case 'sdwan':
-        $vpn = loadJson($baseDir . '/data/vpn.json');
-        echo json_encode(['results' => ['members' => $vpn['data'] ?? [], 'status' => 'ok']]);
+        echo json_encode(['results' => [
+            ['summary' => ['zones' => 1, 'members' => 2, 'enabled_members' => 2, 'health_checks' => 2, 'services' => 1]]
+        ]]);
         break;
 
     case 'red':
@@ -158,19 +163,25 @@ switch ($action) {
 
     case 'vpn':
         $vpn = loadJson($baseDir . '/data/vpn.json');
-        if (empty($vpn['data'])) {
-            echo json_encode(['results' => ['phase1' => [
-                ['name' => 'VPN-SSL', 'status' => 'up', 'remote-gateway' => '0.0.0.0'],
-                ['name' => 'VPN-IPSec-Office', 'status' => 'up', 'remote-gateway' => '192.168.100.1']
-            ]]]);
-        } else {
-            echo json_encode(['results' => ['phase1' => $vpn['data'] ?? []]]);
+        $vpnData = $vpn['data'] ?? [];
+        if (empty($vpnData)) {
+            $vpnData = [
+                ['name' => 'VPN-SSL', 'status' => 'up', 'remote-gateway' => '0.0.0.0', 'type' => 'ssl'],
+                ['name' => 'VPN-IPSec-Office', 'status' => 'up', 'remote-gateway' => '192.168.100.1', 'type' => 'ipsec']
+            ];
         }
+        echo json_encode(['results' => [[
+            'summary' => ['ipsec_tunnels' => count(array_filter($vpnData, fn($v) => ($v['type'] ?? '') === 'ipsec')), 'ssl_portals' => 1, 'ssl_pools' => 1, 'health_checks' => 0],
+            'phase1' => $vpnData,
+            'ssl_settings' => ['port' => 443, 'login' => 'enabled']
+        ]]]);
         break;
 
     case 'vpn-users':
-        $vpn = loadJson($baseDir . '/data/vpn.json');
-        echo json_encode(['results' => ['users' => array_filter($vpn['data'] ?? [], fn($v) => ($v['status'] ?? '') === 'up')]]);
+        echo json_encode(['results' => [
+            ['type' => 'auth_logon', 'user' => 'admin', 'ip' => '192.168.100.50', 'duration' => 3600],
+            ['type' => 'auth_logon', 'user' => 'user1', 'ip' => '192.168.100.51', 'duration' => 1800]
+        ]]);
         break;
 
     case 'fortivoice':
