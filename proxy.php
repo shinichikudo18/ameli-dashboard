@@ -59,6 +59,29 @@ switch ($action) {
         echo $resp;
         break;
         
+    case 'ha_service':
+        $service = $_POST['service'] ?? '';
+        $entityId = $_POST['entity'] ?? '';
+        if (empty($service) || empty($entityId)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Service and entity required']);
+            exit;
+        }
+        $domain = explode('.', $entityId)[0];
+        $data = json_encode(['entity_id' => $entityId]);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $haUrl . '/api/services/' . $domain . '/' . $service);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $haToken, 'Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        $resp = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        http_response_code($httpCode);
+        echo $resp;
+        break;
+        
     case 'clients':
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, 'http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=wifi/client&start=0&count=100');

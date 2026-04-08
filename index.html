@@ -31,7 +31,9 @@
         .ha-card { background: rgba(0,0,0,0.18); border-radius: 14px; padding: 14px; min-height: 126px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; }
         .ha-card.on { border-color: rgba(75,192,192,0.5); }
         .ha-card.off { border-color: rgba(255,99,132,0.45); }
-        .ha-card .ha-icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 1.2rem; background: rgba(0,212,255,0.15); color: #00d4ff; flex-shrink: 0; }
+        .ha-card .ha-icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 1.2rem; background: rgba(0,212,255,0.15); color: #00d4ff; flex-shrink: 0; transition: all 0.3s; }
+        .ha-card.on .ha-icon { background: rgba(255,206,86,0.25); color: #FFCE56; }
+        .ha-card.off .ha-icon { background: rgba(255,99,132,0.15); color: #aaa; }
         .ha-label { color: #aaa; font-size: 0.72rem; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.04em; }
         .ha-value { font-size: 1.25rem; font-weight: 700; color: #fff; line-height: 1; }
         .ha-state { margin-top: 6px; color: #9fe7ff; font-size: 0.78rem; }
@@ -148,12 +150,16 @@
                     </div>
                     <div class="ha-icon">🌡️</div>
                 </div>
-                <div class="ha-card" id="haLightCard">
+                <div class="ha-card" id="haLightCard" onclick="toggleLight()" style="cursor:pointer;">
                     <div>
                         <div class="ha-label">Luz Sala de Reuniones</div>
                         <div class="ha-state" id="haLightState">Cargando...</div>
                     </div>
-                    <div class="ha-icon">💡</div>
+                    <div class="ha-icon" id="haLightIcon">
+                        <svg id="bulbIcon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/>
+                        </svg>
+                    </div>
                 </div>
                 <div class="ha-card" id="haRackCard">
                     <div>
@@ -653,9 +659,31 @@
                 function setLight(entity) {
                     var stateEl = document.getElementById('haLightState');
                     var cardEl = document.getElementById('haLightCard');
+                    var iconEl = document.getElementById('bulbIcon');
                     var isOn = entity.state === 'on' || entity.value === 1 || entity.value === '1';
                     if (stateEl) stateEl.textContent = entity.error ? 'Sin datos' : (isOn ? 'Encendida' : 'Apagada');
                     if (cardEl) cardEl.className = 'ha-card ' + (entity.error ? '' : (isOn ? 'on' : 'off'));
+                    if (iconEl) {
+                        iconEl.setAttribute('fill', isOn ? '#FFCE56' : 'none');
+                        iconEl.setAttribute('stroke', isOn ? '#FFCE56' : '#aaa');
+                    }
+                    window.haLightEntityId = entity.entityId;
+                    window.haLightIsOn = isOn;
+                }
+
+                function toggleLight() {
+                    var entityId = window.haLightEntityId;
+                    if (!entityId) return;
+                    var newState = window.haLightIsOn ? 'off' : 'on';
+                    fetch('/dashboard/proxy.php?action=ha_service', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: 'service=turn_' + newState + '&entity=' + entityId
+                    }).then(function(r) { return r.json(); }).then(function(data) {
+                        refreshHA();
+                    }).catch(function(err) {
+                        console.error('Error toggling light:', err);
+                    });
                 }
 
                 function byId(id) { return data.find(function(d) { return d.entityId === id; }) || {}; }
