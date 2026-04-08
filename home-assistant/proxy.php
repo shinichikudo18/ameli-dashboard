@@ -9,13 +9,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 $action = $_GET['action'] ?? '';
+$baseDir = __DIR__;
+
+function loadJson($file) {
+    return file_exists($file) ? json_decode(file_get_contents($file), true) ?? [] : [];
+}
 
 $haUrl = 'http://192.168.100.3:8123';
 $haToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI2NmMwNjBiMDg3YWI0MjhlYTliODg4N2Q5ZWY5ZDQ2NCIsImlhdCI6MTc3NDk4NDg3MSwiZXhwIjoyMDkwMzQ0ODcxfQ.x8K1uTtPvOde_oKXoBf-m70ilAXy-BVW5aAQeqcNeIc';
-
-$fortiUrl = 'https://192.168.100.1';
-$fortiUser = 'admin';
-$fortiPass = 'Agn0v_2o25';
 
 switch ($action) {
     case 'ha_entities':
@@ -44,59 +45,28 @@ switch ($action) {
         break;
         
     case 'clients':
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $fortiUrl . '/api/v2/monitor/wifi/client');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_USERPWD, $fortiUser . ':' . $fortiPass);
-        $resp = curl_exec($ch);
-        curl_close($ch);
-        echo $resp;
+        $wifi = loadJson($baseDir . '/../data/wifi.json');
+        echo json_encode(['results' => ['results' => range(1, $wifi['clients'] ?? 0)]]);
         break;
         
     case 'aps':
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $fortiUrl . '/api/v2/monitor/wifi/ap');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_USERPWD, $fortiUser . ':' . $fortiPass);
-        $resp = curl_exec($ch);
-        curl_close($ch);
-        echo $resp;
+        $wifi = loadJson($baseDir . '/../data/wifi.json');
+        echo json_encode(['results' => $wifi['aps'] ?? 0]);
         break;
         
     case 'dhcp':
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $fortiUrl . '/api/v2/monitor/dhcp/lease');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_USERPWD, $fortiUser . ':' . $fortiPass);
-        $resp = curl_exec($ch);
-        curl_close($ch);
-        echo $resp;
+        $dhcp = loadJson($baseDir . '/../data/dhcp.json');
+        echo json_encode(['results' => $dhcp['data'] ?? []]);
         break;
         
     case 'sessions':
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $fortiUrl . '/api/v2/monitor/firewall/session');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_USERPWD, $fortiUser . ':' . $fortiPass);
-        $resp = curl_exec($ch);
-        curl_close($ch);
-        echo $resp;
+        $sessions = loadJson($baseDir . '/../data/sessions.json');
+        echo json_encode(['results' => ['details' => []]]);
         break;
         
     case 'switches':
-        echo json_encode([
-            ['name' => 'Switch-Oficina', 'ip' => '192.168.100.10', 'status' => 'online', 'ports' => 24],
-            ['name' => 'Switch-Piso1', 'ip' => '192.168.100.11', 'status' => 'online', 'ports' => 48],
-            ['name' => 'Switch-Piso2', 'ip' => '192.168.100.12', 'status' => 'offline', 'ports' => 24]
-        ]);
+        $sw = loadJson($baseDir . '/../data/switches.json');
+        echo json_encode(['results' => $sw['data'] ?? []]);
         break;
         
     default:
