@@ -35,7 +35,25 @@ $monitorEndpoints = [
     'wireless-controller/managed-ap', 
     'switch-controller/vlan',
     'system/interface',
-    'wifi/managed_ap'
+    'wifi/managed_ap',
+    'system/status',
+    'system/resource',
+    'firewall/address',
+    'firewall/policy',
+    'ips/stats',
+    'webfilter/stats',
+    'antivirus/stats',
+    'application/list',
+    'vpn/ipsec/phase1-interface',
+    'vpn/ssl/stats',
+    'wireless-controller/ssid',
+    'wireless-controller/client',
+    'switch-controller/managed-switch',
+    'firewall/Service/custom',
+    'firewall/Service/group',
+    'firewall/schedule',
+    'system/time',
+    'system/firmware'
 ];
 
 function fetchFromDevice($device, $endpoint, $vdom) {

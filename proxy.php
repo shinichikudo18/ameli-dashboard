@@ -213,7 +213,15 @@ switch ($action) {
             'switches' => ['total' => 0, 'online' => 0, 'offline' => 0],
             'endpoints' => ['total' => 0, 'protected' => 0, 'at_risk' => 0],
             'vpn' => ['active' => 0, 'total' => 0],
-            'voip' => ['registered' => 0, 'calls_active' => 0, 'devices' => 0]
+            'voip' => ['registered' => 0, 'calls_active' => 0, 'devices' => 0],
+            'wifi' => ['aps' => 0, 'clients' => 0],
+            'ips' => ['signatures' => 0, 'blocked' => 0],
+            'webfilter' => ['blocked' => 0, 'categories' => []],
+            'antivirus' => ['detections' => 0, 'quarantined' => 0],
+            'policies' => ['total' => 0, 'active' => 0],
+            'addresses' => ['total' => 0],
+            'interfaces' => [],
+            'system' => ['cpu' => 0, 'memory' => 0, 'uptime' => '', 'version' => '']
         ];
         
         $sessionsResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=firewall/session&start=0&count=2000');
@@ -248,6 +256,78 @@ switch ($action) {
             $socData['events_24h'] = $socData['network']['total_sessions'];
         }
         
+        $statusResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=system/status');
+        if ($statusResp) {
+            $statusData = json_decode($statusResp, true);
+            $results = $statusData['results'] ?? [];
+            if (isset($results[0])) {
+                $socData['system']['version'] = $results[0]['version'] ?? '';
+                $socData['system']['uptime'] = $results[0]['uptime'] ?? '';
+            }
+        }
+        
+        $resourceResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=system/resource');
+        if ($resourceResp) {
+            $resourceData = json_decode($resourceResp, true);
+            $results = $resourceData['results'] ?? [];
+            if (isset($results[0])) {
+                $socData['system']['cpu'] = $results[0]['cpu'] ?? 0;
+                $socData['system']['memory'] = $results[0]['memory'] ?? 0;
+            }
+        }
+        
+        $ipsResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=ips/stats');
+        if ($ipsResp) {
+            $ipsData = json_decode($ipsResp, true);
+            $results = $ipsData['results'] ?? [];
+            if (isset($results[0])) {
+                $socData['ips']['signatures'] = $results[0]['pattern_count'] ?? 0;
+                $socData['ips']['blocked'] = $results[0]['detected'] ?? 0;
+            }
+        }
+        
+        $wfStatsResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=webfilter/stats');
+        if ($wfStatsResp) {
+            $wfData = json_decode($wfStatsResp, true);
+            $results = $wfData['results'] ?? [];
+            if (isset($results[0])) {
+                $socData['webfilter']['blocked'] = $results[0]['blocked'] ?? 0;
+            }
+        }
+        
+        $avStatsResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=antivirus/stats');
+        if ($avStatsResp) {
+            $avData = json_decode($avStatsResp, true);
+            $results = $avData['results'] ?? [];
+            if (isset($results[0])) {
+                $socData['antivirus']['detections'] = $results[0]['detected'] ?? 0;
+                $socData['antivirus']['quarantined'] = $results[0]['quarantined'] ?? 0;
+            }
+        }
+        
+        $addressResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=firewall/address');
+        if ($addressResp) {
+            $addrData = json_decode($addressResp, true);
+            $socData['addresses']['total'] = count($addrData['results'] ?? []);
+        }
+        
+        $policyResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=firewall/policy');
+        if ($policyResp) {
+            $policyData = json_decode($policyResp, true);
+            $policies = $policyData['results'] ?? [];
+            $socData['policies']['total'] = count($policies);
+            $socData['policies']['active'] = count(array_filter($policies, function($p) { return ($p['status'] ?? '') === 'enable'; }));
+        }
+        
+        $intfResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=system/interface');
+        if ($intfResp) {
+            $intfData = json_decode($intfResp, true);
+            $intfs = $intfData['results'] ?? [];
+            $socData['interfaces'] = array_map(function($i) {
+                return ['name' => $i['name'] ?? '', 'ip' => $i['ip'] ?? '', 'status' => $i['status'] ?? '', 'type' => $i['type'] ?? ''];
+            }, array_slice($intfs, 0, 10));
+        }
+        
         $switchesResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=all&endpoint=switch-controller/managed-switch&start=0&count=50');
         if ($switchesResp) {
             $swData = json_decode($switchesResp, true);
@@ -255,6 +335,20 @@ switch ($action) {
             $socData['switches']['total'] = count($switches);
             $socData['switches']['online'] = count(array_filter($switches, function($s) { return ($s['state'] ?? '') === 'up'; }));
             $socData['switches']['offline'] = $socData['switches']['total'] - $socData['switches']['online'];
+        }
+        
+        $wifiApResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=wireless-controller/managed-ap');
+        if ($wifiApResp) {
+            $apData = json_decode($wifiApResp, true);
+            $aps = $apData['results'] ?? [];
+            $socData['wifi']['aps'] = count($aps);
+        }
+        
+        $wifiClientResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=wifi/client');
+        if ($wifiClientResp) {
+            $clientData = json_decode($wifiClientResp, true);
+            $clients = $clientData['results'] ?? [];
+            $socData['wifi']['clients'] = count($clients);
         }
         
         $emsResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=endpoint-control/clients&start=0&count=500');
@@ -284,13 +378,18 @@ switch ($action) {
         }
         
         $score = 0;
-        if ($socData['firewall']['sessions'] > 0) $score += 20;
-        if ($socData['switches']['offline'] === 0) $score += 15;
-        if ($socData['endpoints']['at_risk'] < $socData['endpoints']['total'] * 0.1) $score += 25;
-        if ($socData['vpn']['active'] > 0) $score += 15;
-        if ($socData['voip']['registered'] > 0) $score += 10;
-        if ($socData['alerts']['critical'] < 5) $score += 15;
-        $socData['threat_score'] = $score;
+        if ($socData['firewall']['sessions'] > 0) $score += 15;
+        if ($socData['switches']['offline'] === 0 && $socData['switches']['total'] > 0) $score += 10;
+        if ($socData['endpoints']['at_risk'] < $socData['endpoints']['total'] * 0.1 || $socData['endpoints']['total'] === 0) $score += 15;
+        if ($socData['vpn']['active'] > 0) $score += 10;
+        if ($socData['voip']['registered'] > 0) $score += 5;
+        if ($socData['alerts']['critical'] < 5) $score += 10;
+        if ($socData['wifi']['aps'] > 0) $score += 5;
+        if ($socData['policies']['total'] > 0) $score += 10;
+        if ($socData['addresses']['total'] > 0) $score += 5;
+        if ($socData['system']['cpu'] < 80) $score += 10;
+        if ($socData['system']['cpu'] > 0) $score += 5;
+        $socData['threat_score'] = min(100, $score);
         
         echo json_encode($socData);
         break;

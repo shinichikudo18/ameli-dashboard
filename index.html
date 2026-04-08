@@ -382,6 +382,36 @@
                     <div class="soc-card-label">Disponibilidad</div>
                     <div class="soc-card-value" id="socUptime">--</div>
                 </div>
+                <div class="soc-card">
+                    <div class="soc-card-icon">📶</div>
+                    <div class="soc-card-label">WiFi APs</div>
+                    <div class="soc-card-value" id="socWifiAps">--</div>
+                </div>
+                <div class="soc-card">
+                    <div class="soc-card-icon">👥</div>
+                    <div class="soc-card-label">Clientes WiFi</div>
+                    <div class="soc-card-value" id="socWifiClients">--</div>
+                </div>
+                <div class="soc-card">
+                    <div class="soc-card-icon">🖥️</div>
+                    <div class="soc-card-label">Policies</div>
+                    <div class="soc-card-value" id="socPolicies">--</div>
+                </div>
+                <div class="soc-card">
+                    <div class="soc-card-icon">🌐</div>
+                    <div class="soc-card-label">Direcciones FW</div>
+                    <div class="soc-card-value" id="socAddresses">--</div>
+                </div>
+                <div class="soc-card">
+                    <div class="soc-card-icon">💻</div>
+                    <div class="soc-card-label">CPU</div>
+                    <div class="soc-card-value" id="socCpu">--%</div>
+                </div>
+                <div class="soc-card">
+                    <div class="soc-card-icon">💾</div>
+                    <div class="soc-card-label">Memoria</div>
+                    <div class="soc-card-value" id="socMemory">--%</div>
+                </div>
             </div>
             <div class="dashboard-grid" style="margin-bottom:20px;">
                 <div class="card">
@@ -658,6 +688,14 @@
                 document.getElementById('socVPNTotal').textContent = data.vpn?.total || 0;
                 document.getElementById('socVoipRegistered').textContent = data.voip?.registered || 0;
                 document.getElementById('socVoipDevices').textContent = data.voip?.devices || 0;
+                document.getElementById('socWifiAps').textContent = data.wifi?.aps || 0;
+                document.getElementById('socWifiClients').textContent = data.wifi?.clients || 0;
+                document.getElementById('socPolicies').textContent = data.policies?.total || 0;
+                document.getElementById('socAddresses').textContent = data.addresses?.total || 0;
+                document.getElementById('socCpu').textContent = data.system?.cpu || 0;
+                document.getElementById('socCpu').textContent += '%';
+                document.getElementById('socMemory').textContent = data.system?.memory || 0;
+                document.getElementById('socMemory').textContent += '%';
                 var severityData = [data.alerts?.critical || 0, data.alerts?.medium || 0, data.alerts?.low || 0, data.alerts?.info || 0];
                 var trafficData = [];
                 for(var i=0;i<12;i++) trafficData.push(Math.floor(Math.random()*(data.firewall?.blocked || 10)));
