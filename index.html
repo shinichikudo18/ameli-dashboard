@@ -346,124 +346,180 @@
             </div>
         </div>
         <div id="tab-soc" class="tab-content">
-            <div class="stats-grid">
-                <div class="stat-card"><div class="stat-value" id="socAlerts">24</div><div class="stat-label">Alertas Activas</div></div>
-                <div class="stat-card"><div class="stat-value" id="socCritical">3</div><div class="stat-label">Criticas</div></div>
-                <div class="stat-card"><div class="stat-value" id="socMedium">12</div><div class="stat-label">Medias</div></div>
-                <div class="stat-card"><div class="stat-value" id="socLow">9</div><div class="stat-label">Bajas</div></div>
-                <div class="stat-card"><div class="stat-value" id="socEvents">1,247</div><div class="stat-label">Eventos 24h</div></div>
-                <div class="stat-card"><div class="stat-value" id="socBlocked">89</div><div class="stat-label">Bloqueados</div></div>
+            <div class="soc-header">
+                <div class="soc-title">🛡️ SOC - Security Operations Center</div>
+                <div class="soc-status"><span class="soc-status-dot"></span>Monitoreo Activo</div>
+            </div>
+            <div class="soc-grid">
+                <div class="soc-card soc-threat-score">
+                    <div class="soc-card-label">Threat Score</div>
+                    <div class="soc-card-value soc-medium">67</div>
+                    <div class="soc-card-sub">Nivel: Medio</div>
+                    <div class="soc-gauge"><div class="soc-gauge-fill" style="width:67%"></div></div>
+                </div>
+                <div class="soc-card">
+                    <div class="soc-card-icon">🚨</div>
+                    <div class="soc-card-label">Alertas Activas</div>
+                    <div class="soc-card-value">24</div>
+                </div>
+                <div class="soc-card">
+                    <div class="soc-card-icon">⚠️</div>
+                    <div class="soc-card-label">Incidentes Abiertos</div>
+                    <div class="soc-card-value">3</div>
+                </div>
+                <div class="soc-card">
+                    <div class="soc-card-icon">🛡️</div>
+                    <div class="soc-card-label">Amenazas Bloqueadas</div>
+                    <div class="soc-card-value">1,247</div>
+                </div>
+                <div class="soc-card">
+                    <div class="soc-card-icon">📊</div>
+                    <div class="soc-card-label">Eventos 24h</div>
+                    <div class="soc-card-value">45,892</div>
+                </div>
+                <div class="soc-card">
+                    <div class="soc-card-icon">✅</div>
+                    <div class="soc-card-label">Disponibilidad</div>
+                    <div class="soc-card-value">99.9%</div>
+                </div>
             </div>
             <div class="dashboard-grid" style="margin-bottom:20px;">
                 <div class="card">
-                    <div class="card-title">Alertas por Severidad</div>
-                    <canvas id="socSeverityChart" height="240"></canvas>
+                    <div class="card-title">Distribución de Severidad</div>
+                    <canvas id="socSeverityChart" height="220"></canvas>
                 </div>
                 <div class="card">
-                    <div class="card-title">Eventos por Hora</div>
-                    <canvas id="socEventsChart" height="240"></canvas>
+                    <div class="card-title">Tráfico Sospechoso (MB/s)</div>
+                    <canvas id="socTrafficChart" height="220"></canvas>
                 </div>
             </div>
             <div class="dashboard-grid" style="margin-bottom:20px;">
                 <div class="card">
-                    <div class="card-title">Top Amenazas Detectadas</div>
-                    <canvas id="socThreatsChart" height="240"></canvas>
+                    <div class="card-title">Top 10 - IPs Atacantes</div>
+                    <table class="soc-table">
+                        <thead><tr><th>IP Origen</th><th>País</th><th>Ataques</th><th>Tipo</th></tr></thead>
+                        <tbody>
+                            <tr><td>192.99.178.45</td><td>🇨🇦 CA</td><td>2,341</td><td>Brute Force</td></tr>
+                            <tr><td>45.33.32.156</td><td>🇺🇸 US</td><td>1,892</td><td>Exploit</td></tr>
+                            <tr><td>103.25.43.88</td><td>🇨🇳 CN</td><td>1,456</td><td>Port Scan</td></tr>
+                            <tr><td>185.220.101.23</td><td>🇩🇪 DE</td><td>987</td><td>Malware</td></tr>
+                            <tr><td>91.92.109.43</td><td>🇷🇺 RU</td><td>756</td><td>DDoS</td></tr>
+                            <tr><td>137.184.56.12</td><td>🇺🇸 US</td><td>543</td><td>Phishing</td></tr>
+                            <tr><td>171.25.193.77</td><td>🇷🇺 RU</td><td>432</td><td>Intrusion</td></tr>
+                            <tr><td>198.51.100.24</td><td>🇺🇸 US</td><td>321</td><td>C2</td></tr>
+                        </tbody>
+                    </table>
                 </div>
                 <div class="card">
-                    <div class="card-title">Estado de Seguridad</div>
-                    <div id="socSecurityStatus">
-                        <div class="sensor-card">
-                            <span class="sensor-name">Firewall</span>
-                            <span class="sensor-value" style="color:#4BC0C0;">Activo</span>
-                        </div>
-                        <div class="sensor-card">
-                            <span class="sensor-name">IDS/IPS</span>
-                            <span class="sensor-value" style="color:#4BC0C0;">Activo</span>
-                        </div>
-                        <div class="sensor-card">
-                            <span class="sensor-name">Antivirus</span>
-                            <span class="sensor-value" style="color:#FFCE56;">Advertencia</span>
-                        </div>
-                        <div class="sensor-card">
-                            <span class="sensor-name">VPN</span>
-                            <span class="sensor-value" style="color:#4BC0C0;">Activo</span>
-                        </div>
-                        <div class="sensor-card">
-                            <span class="sensor-name">Web Filter</span>
-                            <span class="sensor-value" style="color:#4BC0C0;">Activo</span>
-                        </div>
+                    <div class="card-title">Estado de Controles de Seguridad</div>
+                    <div class="soc-controls">
+                        <div class="soc-control-item"><span class="soc-control-name">Firewall FortiGate</span><span class="soc-control-status soc-ok">● Activo</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">IDS/IPS</span><span class="soc-control-status soc-ok">● Activo</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">Antivirus</span><span class="soc-control-status soc-warn">● Actualización Requerida</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">EDR Agent</span><span class="soc-control-status soc-ok">● Protegido</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">Web Filter</span><span class="soc-control-status soc-ok">● Activo</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">Email Security</span><span class="soc-control-status soc-ok">● Activo</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">VPN Gateway</span><span class="soc-control-status soc-ok">● Activo</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">SIEM</span><span class="soc-control-status soc-ok">● Recolectando</span></div>
                     </div>
                 </div>
             </div>
+            <div class="dashboard-grid" style="margin-bottom:20px;">
+                <div class="card">
+                    <div class="card-title">Matriz MITRE ATT&CK - Técnicas Detectadas</div>
+                    <div class="soc-mitre">
+                        <div class="soc-mitre-cell soc-high" title="T1059 - Command & Scripting Interpreter">T1059</div>
+                        <div class="soc-mitre-cell soc-medium" title="T1048 - Exfiltration Over C2">T1048</div>
+                        <div class="soc-mitre-cell soc-high" title="T1566 - Phishing">T1566</div>
+                        <div class="soc-mitre-cell soc-low" title="T1082 - System Info Discovery">T1082</div>
+                        <div class="soc-mitre-cell soc-medium" title="T1110 - Brute Force">T1110</div>
+                        <div class="soc-mitre-cell soc-high" title="T1055 - Process Injection">T1055</div>
+                        <div class="soc-mitre-cell soc-low" title="T1083 - File Discovery">T1083</div>
+                        <div class="soc-mitre-cell soc-medium" title="T1071 - App Layer Protocol">T1071</div>
+                        <div class="soc-mitre-cell soc-high" title="T1486 - Data Encrypted">T1486</div>
+                        <div class="soc-mitre-cell soc-medium" title="T1021 - Remote Services">T1021</div>
+                        <div class="soc-mitre-cell soc-low" title="T1005 - Data from Local System">T1005</div>
+                        <div class="soc-mitre-cell soc-high" title="T1204 - User Execution">T1204</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">IOCs Recientes (Indicadores de Compromiso)</div>
+                    <table class="soc-table soc-ioc-table">
+                        <thead><tr><th>Tipo</th><th>Indicador</th><th>Severidad</th><th>Reputación</th></tr></thead>
+                        <tbody>
+                            <tr><td>🌐 IP</td><td>192.99.178.45</td><td><span class="soc-severity-high">Alta</span></td><td>Malicious</td></tr>
+                            <tr><td>🌐 IP</td><td>45.33.32.156</td><td><span class="soc-severity-high">Alta</span></td><td>C2 Server</td></tr>
+                            <tr><td>🌐 IP</td><td>185.220.101.23</td><td><span class="soc-severity-medium">Media</span></td><td>Suspicious</td></tr>
+                            <tr><td>📄 MD5</td><td>a1b2c3d4e5f6...</td><td><span class="soc-severity-high">Alta</span></td><td>Malware</td></tr>
+                            <tr><td>🌐 URL</td><td>malware-phish.xyz</td><td><span class="soc-severity-high">Alta</span></td><td>Phishing</td></tr>
+                            <tr><td>📄 SHA256</td><td>abc123def456...</td><td><span class="soc-severity-medium">Media</span></td><td>PUP</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
             <div class="card">
-                <div class="card-title">Alertas Recientes</div>
-                <table class="clients-table">
-                    <thead><tr><th>Timestamp</th><th>Severidad</th><th>Tipo</th><th>Fuente</th><th>Destino</th><th>Accion</th></tr></thead>
-                    <tbody id="socAlertsTable">
-                        <tr><td>2026-04-08 14:32:15</td><td><span class="signal-badge" style="background:rgba(255,99,132,0.3);color:#FF6384;">Critica</span></td><td>Malware</td><td>192.168.1.45</td><td>8.8.8.8</td><td>Bloqueado</td></tr>
-                        <tr><td>2026-04-08 14:28:42</td><td><span class="signal-badge" style="background:rgba(255,206,86,0.3);color:#FFCE56;">Media</span></td><td>Intrusion</td><td>10.0.0.55</td><td>192.168.1.100</td><td>Alertado</td></tr>
-                        <tr><td>2026-04-08 14:15:33</td><td><span class="signal-badge" style="background:rgba(255,206,86,0.3);color:#FFCE56;">Media</span></td><td>Brute Force</td><td>203.0.113.25</td><td>192.168.1.1</td><td>Bloqueado</td></tr>
-                        <tr><td>2026-04-08 13:55:18</td><td><span class="signal-badge" style="background:rgba(75,192,192,0.3);color:#4BC0C0;">Baja</span></td><td>DNS Query</td><td>192.168.1.30</td><td>maligno.com</td><td>Bloqueado</td></tr>
-                        <tr><td>2026-04-08 13:42:07</td><td><span class="signal-badge" style="background:rgba(255,206,86,0.3);color:#FFCE56;">Media</span></td><td>Phishing</td><td>192.168.1.88</td><td>phishing-fake.com</td><td>Bloqueado</td></tr>
-                        <tr><td>2026-04-08 13:20:55</td><td><span class="signal-badge" style="background:rgba(255,99,132,0.3);color:#FF6384;">Critica</span></td><td>Exploit</td><td>45.33.32.156</td><td>192.168.1.25</td><td>Bloqueado</td></tr>
-                        <tr><td>2026-04-08 12:58:21</td><td><span class="signal-badge" style="background:rgba(75,192,192,0.3);color:#4BC0C0;">Baja</span></td><td>Port Scan</td><td>198.51.100.10</td><td>192.168.1.1</td><td>Alertado</td></tr>
-                        <tr><td>2026-04-08 12:35:44</td><td><span class="signal-badge" style="background:rgba(255,206,86,0.3);color:#FFCE56;">Media</span></td><td>Malware</td><td>192.168.1.67</td><td>C2.malware.com</td><td>Bloqueado</td></tr>
+                <div class="card-title">Últimos Incidentes de Seguridad</div>
+                <table class="soc-table">
+                    <thead><tr><th>ID</th><th>Fecha/Hora</th><th>Severidad</th><th>Tipo de Ataque</th><th>Fuente</th><th>Objetivo</th><th>Estado</th><th>Accion</th></tr></thead>
+                    <tbody>
+                        <tr><td>INC-2026-0042</td><td>2026-04-08 14:32:15</td><td><span class="soc-severity-high">Critica</span></td><td>Malware Detección</td><td>192.168.1.45</td><td>Servidor Web</td><td><span class="soc-status-cont">Contencion</span></td><td><button class="soc-btn-investigate">Investigar</button></td></tr>
+                        <tr><td>INC-2026-0041</td><td>2026-04-08 14:28:42</td><td><span class="soc-severity-medium">Media</span></td><td>Intrusion Attempt</td><td>10.0.0.55</td><td>Firewall</td><td><span class="soc-status-resolved">Resuelto</span></td><td><button class="soc-btn-investigate">Ver</button></td></tr>
+                        <tr><td>INC-2026-0040</td><td>2026-04-08 14:15:33</td><td><span class="soc-severity-medium">Media</span></td><td>Brute Force SSH</td><td>203.0.113.25</td><td>VPN Gateway</td><td><span class="soc-status-blocked">Bloqueado</span></td><td><button class="soc-btn-investigate">Ver</button></td></tr>
+                        <tr><td>INC-2026-0039</td><td>2026-04-08 13:55:18</td><td><span class="soc-severity-low">Baja</span></td><td>DNS Sinkhole</td><td>192.168.1.30</td><td>DNS Server</td><td><span class="soc-status-blocked">Bloqueado</span></td><td><button class="soc-btn-investigate">Ver</button></td></tr>
+                        <tr><td>INC-2026-0038</td><td>2026-04-08 13:42:07</td><td><span class="soc-severity-medium">Media</span></td><td>Phishing Email</td><td>192.168.1.88</td><td>Usuario Desktop</td><td><span class="soc-status-resolved">Resuelto</span></td><td><button class="soc-btn-investigate">Ver</button></td></tr>
+                        <tr><td>INC-2026-0037</td><td>2026-04-08 13:20:55</td><td><span class="soc-severity-high">Critica</span></td><td>Exploit Attempt</td><td>45.33.32.156</td><td>App Server</td><td><span class="soc-status-blocked">Bloqueado</span></td><td><button class="soc-btn-investigate">Investigar</button></td></tr>
                     </tbody>
                 </table>
             </div>
+            <style>
+                .soc-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:linear-gradient(90deg,rgba(0,212,255,0.15),rgba(123,44,191,0.15)); padding:15px 25px; border-radius:12px; border:1px solid rgba(0,212,255,0.3); }
+                .soc-title { font-size:1.4rem; font-weight:700; color:#00d4ff; }
+                .soc-status { display:flex; align-items:center; gap:8px; color:#4BC0C0; font-weight:600; }
+                .soc-status-dot { width:10px; height:10px; background:#4BC0C0; border-radius:50%; animation:pulse 2s infinite; }
+                @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+                .soc-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:15px; margin-bottom:20px; }
+                .soc-card { background:rgba(0,0,0,0.4); border-radius:12px; padding:15px; text-align:center; border:1px solid rgba(255,255,255,0.08); transition:all 0.3s; }
+                .soc-card:hover { border-color:rgba(0,212,255,0.4); transform:translateY(-2px); }
+                .soc-card-label { color:#8899aa; font-size:0.75rem; text-transform:uppercase; margin-bottom:8px; }
+                .soc-card-icon { font-size:1.5rem; margin-bottom:5px; }
+                .soc-card-value { font-size:1.8rem; font-weight:700; color:#fff; }
+                .soc-card-sub { color:#FFCE56; font-size:0.7rem; margin-top:4px; }
+                .soc-threat-score { grid-column:span 1; }
+                .soc-gauge { height:6px; background:#333; border-radius:3px; margin-top:8px; overflow:hidden; }
+                .soc-gauge-fill { height:100%; background:linear-gradient(90deg,#4BC0C0,#FFCE56,#FF6384); border-radius:3px; transition:width 0.5s; }
+                .soc-medium { color:#FFCE56 !important; }
+                .soc-high { color:#FF6384 !important; }
+                .soc-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+                .soc-table th { background:rgba(0,0,0,0.5); padding:10px 8px; text-align:left; color:#00d4ff; font-weight:600; border-bottom:1px solid rgba(255,255,255,0.1); }
+                .soc-table td { padding:10px 8px; border-bottom:1px solid rgba(255,255,255,0.05); color:#ccc; }
+                .soc-table tr:hover { background:rgba(0,212,255,0.08); }
+                .soc-controls { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+                .soc-control-item { display:flex; justify-content:space-between; padding:10px; background:rgba(0,0,0,0.3); border-radius:8px; }
+                .soc-control-name { color:#aaa; font-size:0.9rem; }
+                .soc-control-status { font-size:0.8rem; font-weight:600; }
+                .soc-ok { color:#4BC0C0; }
+                .soc-warn { color:#FFCE56; }
+                .soc-mitre { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+                .soc-mitre-cell { padding:12px 8px; text-align:center; border-radius:6px; font-size:0.75rem; font-weight:700; cursor:help; }
+                .soc-mitre-cell.soc-high { background:rgba(255,99,132,0.25); color:#FF6384; border:1px solid rgba(255,99,132,0.5); }
+                .soc-mitre-cell.soc-medium { background:rgba(255,206,86,0.25); color:#FFCE56; border:1px solid rgba(255,206,86,0.5); }
+                .soc-mitre-cell.soc-low { background:rgba(75,192,192,0.25); color:#4BC0C0; border:1px solid rgba(75,192,192,0.5); }
+                .soc-severity-high { color:#FF6384; font-weight:700; }
+                .soc-severity-medium { color:#FFCE56; font-weight:700; }
+                .soc-severity-low { color:#4BC0C0; font-weight:700; }
+                .soc-status-cont { color:#FFCE56; font-weight:600; }
+                .soc-status-resolved { color:#4BC0C0; font-weight:600; }
+                .soc-status-blocked { color:#FF6384; font-weight:600; }
+                .soc-btn-investigate { background:rgba(0,212,255,0.2); border:1px solid #00d4ff; color:#00d4ff; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:0.75rem; transition:all 0.2s; }
+                .soc-btn-investigate:hover { background:#00d4ff; color:#000; }
+                .soc-ioc-table td:first-child { font-weight:600; }
+                @media(max-width:1200px){.soc-grid{grid-template-columns:repeat(3,1fr);} .soc-controls{grid-template-columns:1fr;}}
+                @media(max-width:768px){.soc-grid{grid-template-columns:1fr 1fr;} .soc-header{flex-direction:column;gap:10px;}}
+            </style>
             <script>
-                (function() {
-                    var severityCtx = document.getElementById('socSeverityChart').getContext('2d');
-                    new Chart(severityCtx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: ['Criticas', 'Medias', 'Bajas'],
-                            datasets: [{ data: [3, 12, 9], backgroundColor: ['#FF6384', '#FFCE56', '#4BC0C0'], borderWidth: 2, borderColor: '#fff' }]
-                        },
-                        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#fff' } } } }
-                    });
-
-                    var eventsCtx = document.getElementById('socEventsChart').getContext('2d');
-                    new Chart(eventsCtx, {
-                        type: 'line',
-                        data: {
-                            labels: ['00:00','02:00','04:00','06:00','08:00','10:00','12:00','14:00'],
-                            datasets: [{
-                                label: 'Eventos',
-                                data: [45, 23, 18, 35, 120, 185, 210, 195],
-                                borderColor: '#00d4ff',
-                                backgroundColor: 'rgba(0,212,255,0.2)',
-                                fill: true,
-                                tension: 0.4
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            scales: {
-                                x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } },
-                                y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } }
-                            },
-                            plugins: { legend: { display: false } }
-                        }
-                    });
-
-                    var threatsCtx = document.getElementById('socThreatsChart').getContext('2d');
-                    new Chart(threatsCtx, {
-                        type: 'bar',
-                        data: {
-                            labels: ['Malware', 'Intrusion', 'Phishing', 'Brute Force', 'Exploit', 'Port Scan'],
-                            datasets: [{ data: [24, 18, 15, 12, 8, 6], backgroundColor: ['#FF6384', '#FFCE56', '#36A2EB', '#4BC0C0', '#9966FF', '#FF9F40'] }]
-                        },
-                        options: {
-                            responsive: true,
-                            indexAxis: 'y',
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } },
-                                y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } }
-                            }
-                        }
-                    });
+                (function(){
+                    new Chart(document.getElementById('socSeverityChart').getContext('2d'),{type:'doughnut',data:{labels:['Criticas','Medias','Bajas','Info'],datasets:[{data:[3,12,9,15],backgroundColor:['#FF6384','#FFCE56','#4BC0C0','#36A2EB'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#fff'}}}}});
+                    new Chart(document.getElementById('socTrafficChart').getContext('2d'),{type:'line',data:{labels:['00:00','02:00','04:00','06:00','08:00','10:00','12:00','14:00','16:00','18:00','20:00','22:00'],datasets:[{label:'Tráfico Malicioso',data:[12,8,5,15,45,78,95,82,65,48,32,18],borderColor:'#FF6384',backgroundColor:'rgba(255,99,132,0.15)',fill:true,tension:0.4},{label:'Tráfico Normal',data:[120,95,88,145,280,350,380,340,290,220,180,140],borderColor:'#4BC0C0',backgroundColor:'rgba(75,192,192,0.1)',fill:true,tension:0.4}]},options:{responsive:true,scales:{x:{ticks:{color:'#aaa'},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#aaa'},grid:{color:'rgba(255,255,255,0.05)'}}},plugins:{legend:{labels:{color:'#fff'}}}}});
                 })();
             </script>
         </div>
