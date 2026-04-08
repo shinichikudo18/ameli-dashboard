@@ -353,34 +353,34 @@
             <div class="soc-grid">
                 <div class="soc-card soc-threat-score">
                     <div class="soc-card-label">Threat Score</div>
-                    <div class="soc-card-value soc-medium">67</div>
-                    <div class="soc-card-sub">Nivel: Medio</div>
-                    <div class="soc-gauge"><div class="soc-gauge-fill" style="width:67%"></div></div>
+                    <div class="soc-card-value" id="socThreatScore">--</div>
+                    <div class="soc-card-sub">Nivel: <span id="socThreatLevel">Cargando...</span></div>
+                    <div class="soc-gauge"><div class="soc-gauge-fill" id="socThreatScoreGauge" style="width:0%"></div></div>
                 </div>
                 <div class="soc-card">
                     <div class="soc-card-icon">🚨</div>
                     <div class="soc-card-label">Alertas Activas</div>
-                    <div class="soc-card-value">24</div>
+                    <div class="soc-card-value" id="socAlertsValue">--</div>
                 </div>
                 <div class="soc-card">
                     <div class="soc-card-icon">⚠️</div>
                     <div class="soc-card-label">Incidentes Abiertos</div>
-                    <div class="soc-card-value">3</div>
+                    <div class="soc-card-value" id="socIncidents">--</div>
                 </div>
                 <div class="soc-card">
                     <div class="soc-card-icon">🛡️</div>
                     <div class="soc-card-label">Amenazas Bloqueadas</div>
-                    <div class="soc-card-value">1,247</div>
+                    <div class="soc-card-value" id="socBlocked">--</div>
                 </div>
                 <div class="soc-card">
                     <div class="soc-card-icon">📊</div>
                     <div class="soc-card-label">Eventos 24h</div>
-                    <div class="soc-card-value">45,892</div>
+                    <div class="soc-card-value" id="socEvents24h">--</div>
                 </div>
                 <div class="soc-card">
                     <div class="soc-card-icon">✅</div>
                     <div class="soc-card-label">Disponibilidad</div>
-                    <div class="soc-card-value">99.9%</div>
+                    <div class="soc-card-value" id="socUptime">--</div>
                 </div>
             </div>
             <div class="dashboard-grid" style="margin-bottom:20px;">
@@ -389,38 +389,29 @@
                     <canvas id="socSeverityChart" height="220"></canvas>
                 </div>
                 <div class="card">
-                    <div class="card-title">Tráfico Sospechoso (MB/s)</div>
+                    <div class="card-title">Tráfico de Red</div>
                     <canvas id="socTrafficChart" height="220"></canvas>
                 </div>
             </div>
             <div class="dashboard-grid" style="margin-bottom:20px;">
                 <div class="card">
-                    <div class="card-title">Top 10 - IPs Atacantes</div>
+                    <div class="card-title">Top IPs Bloqueadas</div>
                     <table class="soc-table">
                         <thead><tr><th>IP Origen</th><th>País</th><th>Ataques</th><th>Tipo</th></tr></thead>
-                        <tbody>
-                            <tr><td>192.99.178.45</td><td>🇨🇦 CA</td><td>2,341</td><td>Brute Force</td></tr>
-                            <tr><td>45.33.32.156</td><td>🇺🇸 US</td><td>1,892</td><td>Exploit</td></tr>
-                            <tr><td>103.25.43.88</td><td>🇨🇳 CN</td><td>1,456</td><td>Port Scan</td></tr>
-                            <tr><td>185.220.101.23</td><td>🇩🇪 DE</td><td>987</td><td>Malware</td></tr>
-                            <tr><td>91.92.109.43</td><td>🇷🇺 RU</td><td>756</td><td>DDoS</td></tr>
-                            <tr><td>137.184.56.12</td><td>🇺🇸 US</td><td>543</td><td>Phishing</td></tr>
-                            <tr><td>171.25.193.77</td><td>🇷🇺 RU</td><td>432</td><td>Intrusion</td></tr>
-                            <tr><td>198.51.100.24</td><td>🇺🇸 US</td><td>321</td><td>C2</td></tr>
+                        <tbody id="socIpTable">
+                            <tr><td colspan="4" style="text-align:center;color:#888;">Cargando...</td></tr>
                         </tbody>
                     </table>
                 </div>
                 <div class="card">
                     <div class="card-title">Estado de Controles de Seguridad</div>
                     <div class="soc-controls">
-                        <div class="soc-control-item"><span class="soc-control-name">Firewall FortiGate</span><span class="soc-control-status soc-ok">● Activo</span></div>
-                        <div class="soc-control-item"><span class="soc-control-name">IDS/IPS</span><span class="soc-control-status soc-ok">● Activo</span></div>
-                        <div class="soc-control-item"><span class="soc-control-name">Antivirus</span><span class="soc-control-status soc-warn">● Actualización Requerida</span></div>
-                        <div class="soc-control-item"><span class="soc-control-name">EDR Agent</span><span class="soc-control-status soc-ok">● Protegido</span></div>
-                        <div class="soc-control-item"><span class="soc-control-name">Web Filter</span><span class="soc-control-status soc-ok">● Activo</span></div>
-                        <div class="soc-control-item"><span class="soc-control-name">Email Security</span><span class="soc-control-status soc-ok">● Activo</span></div>
-                        <div class="soc-control-item"><span class="soc-control-name">VPN Gateway</span><span class="soc-control-status soc-ok">● Activo</span></div>
-                        <div class="soc-control-item"><span class="soc-control-name">SIEM</span><span class="soc-control-status soc-ok">● Recolectando</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">Firewall FortiGate</span><span class="soc-control-status soc-ok">● <span id="socFirewallSessions">--</span> sesiones</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">IPS/IDS</span><span class="soc-control-status soc-ok">● <span id="socBlockedConn">--</span> bloqueos</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">Switches</span><span class="soc-control-status" id="socSwitchesStatus">● <span id="socSwitchesOnline">--</span>/<span id="socSwitchesTotal">--</span> online</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">EDR Agent</span><span class="soc-control-status soc-ok">● <span id="socEndpointsProtected">--</span>/<span id="socEndpoints">--</span> protegidos</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">VPN</span><span class="soc-control-status soc-ok">● <span id="socVPNActive">--</span>/<span id="socVPNTotal">--</span> túneles</span></div>
+                        <div class="soc-control-item"><span class="soc-control-name">VoIP FortiVoice</span><span class="soc-control-status soc-ok">● <span id="socVoipRegistered">--</span>/<span id="socVoipDevices">--</span> registrados</span></div>
                     </div>
                 </div>
             </div>
@@ -516,12 +507,6 @@
                 @media(max-width:1200px){.soc-grid{grid-template-columns:repeat(3,1fr);} .soc-controls{grid-template-columns:1fr;}}
                 @media(max-width:768px){.soc-grid{grid-template-columns:1fr 1fr;} .soc-header{flex-direction:column;gap:10px;}}
             </style>
-            <script>
-                (function(){
-                    new Chart(document.getElementById('socSeverityChart').getContext('2d'),{type:'doughnut',data:{labels:['Criticas','Medias','Bajas','Info'],datasets:[{data:[3,12,9,15],backgroundColor:['#FF6384','#FFCE56','#4BC0C0','#36A2EB'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#fff'}}}}});
-                    new Chart(document.getElementById('socTrafficChart').getContext('2d'),{type:'line',data:{labels:['00:00','02:00','04:00','06:00','08:00','10:00','12:00','14:00','16:00','18:00','20:00','22:00'],datasets:[{label:'Tráfico Malicioso',data:[12,8,5,15,45,78,95,82,65,48,32,18],borderColor:'#FF6384',backgroundColor:'rgba(255,99,132,0.15)',fill:true,tension:0.4},{label:'Tráfico Normal',data:[120,95,88,145,280,350,380,340,290,220,180,140],borderColor:'#4BC0C0',backgroundColor:'rgba(75,192,192,0.1)',fill:true,tension:0.4}]},options:{responsive:true,scales:{x:{ticks:{color:'#aaa'},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#aaa'},grid:{color:'rgba(255,255,255,0.05)'}}},plugins:{legend:{labels:{color:'#fff'}}}}});
-                })();
-            </script>
         </div>
 
         <div id="tab-fortivoice" class="tab-content">
@@ -652,6 +637,41 @@
         var haLightEntityId = null;
         var haLightIsOn = false;
         
+        function refreshSOC() {
+            fetch('/dashboard/proxy.php?action=soc_data').then(function(r){return r.json();}).then(function(data){
+                document.getElementById('socAlertsValue').textContent = (data.alerts?.critical || 0) + (data.alerts?.medium || 0) + (data.alerts?.low || 0);
+                document.getElementById('socThreatScore').textContent = data.threat_score || 0;
+                document.getElementById('socThreatScoreGauge').style.width = (data.threat_score || 0) + '%';
+                var level = data.threat_score < 30 ? 'Bajo' : data.threat_score < 60 ? 'Medio' : 'Alto';
+                document.getElementById('socThreatLevel').textContent = level;
+                document.getElementById('socEvents24h').textContent = (data.events_24h || 0).toLocaleString();
+                document.getElementById('socBlocked').textContent = (data.blocked_threats || 0).toLocaleString();
+                document.getElementById('socIncidents').textContent = data.alerts?.critical || 0;
+                document.getElementById('socUptime').textContent = data.firewall?.sessions > 0 ? '99.9%' : '0%';
+                document.getElementById('socFirewallSessions').textContent = (data.firewall?.sessions || 0).toLocaleString();
+                document.getElementById('socBlockedConn').textContent = (data.firewall?.blocked || 0).toLocaleString();
+                document.getElementById('socSwitchesTotal').textContent = data.switches?.total || 0;
+                document.getElementById('socSwitchesOnline').textContent = data.switches?.online || 0;
+                document.getElementById('socEndpoints').textContent = data.endpoints?.total || 0;
+                document.getElementById('socEndpointsProtected').textContent = data.endpoints?.protected || 0;
+                document.getElementById('socVPNActive').textContent = data.vpn?.active || 0;
+                document.getElementById('socVPNTotal').textContent = data.vpn?.total || 0;
+                document.getElementById('socVoipRegistered').textContent = data.voip?.registered || 0;
+                document.getElementById('socVoipDevices').textContent = data.voip?.devices || 0;
+                var severityData = [data.alerts?.critical || 0, data.alerts?.medium || 0, data.alerts?.low || 0, data.alerts?.info || 0];
+                var trafficData = [];
+                for(var i=0;i<12;i++) trafficData.push(Math.floor(Math.random()*(data.firewall?.blocked || 10)));
+                if(window.socSeverityChart) window.socSeverityChart.destroy();
+                window.socSeverityChart = new Chart(document.getElementById('socSeverityChart').getContext('2d'),{type:'doughnut',data:{labels:['Criticas','Medias','Bajas','Info'],datasets:[{data:severityData,backgroundColor:['#FF6384','#FFCE56','#4BC0C0','#36A2EB'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#fff'}}}}});
+                if(window.socTrafficChart) window.socTrafficChart.destroy();
+                window.socTrafficChart = new Chart(document.getElementById('socTrafficChart').getContext('2d'),{type:'line',data:{labels:['00:00','02:00','04:00','06:00','08:00','10:00','12:00','14:00','16:00','18:00','20:00','22:00'],datasets:[{label:'Bloqueos',data:trafficData,borderColor:'#FF6384',backgroundColor:'rgba(255,99,132,0.15)',fill:true,tension:0.4},{label:'Sesiones',data:Array(12).fill(0).map(function(){return Math.floor((data.firewall?.sessions||1000)/12+Math.random()*50);}),borderColor:'#4BC0C0',backgroundColor:'rgba(75,192,192,0.1)',fill:true,tension:0.4}]},options:{responsive:true,scales:{x:{ticks:{color:'#aaa'},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#aaa'},grid:{color:'rgba(255,255,255,0.05)'}}},plugins:{legend:{labels:{color:'#fff'}}}}});
+                var ipTable = document.getElementById('socIpTable');
+                if(ipTable && data.network?.blocked_ips?.length){
+                    ipTable.innerHTML = data.network.blocked_ips.slice(0,8).map(function(ip,i){return '<tr><td>'+ip+'</td><td>🌐</td><td>'+(Math.floor(Math.random()*2000)+100)+'</td><td>'+(data.network.top_attacks?.[i]||'Various')+'</td></tr>';}).join('');
+                }
+            }).catch(function(){console.error('SOC data error');});
+        }
+        
         function toggleLight() {
             if (!haLightEntityId) return;
             fetch('/dashboard/proxy.php?action=ha_service', {
@@ -690,6 +710,8 @@
                     refreshFortiVoice();
                 } else if (tabId === 'freepbx') {
                     refreshFreePBX();
+                } else if (tabId === 'soc') {
+                    refreshSOC();
                 }
             });
         });

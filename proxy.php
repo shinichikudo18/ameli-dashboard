@@ -200,6 +200,100 @@ switch ($action) {
         curl_close($ch);
         echo $resp;
         break;
+        
+    case 'soc_data':
+        $socData = [
+            'timestamp' => date('Y-m-d H:i:s'),
+            'threat_score' => 0,
+            'alerts' => ['critical' => 0, 'medium' => 0, 'low' => 0, 'info' => 0],
+            'events_24h' => 0,
+            'blocked_threats' => 0,
+            'firewall' => ['status' => 'unknown', 'sessions' => 0, 'blocked' => 0],
+            'network' => ['total_sessions' => 0, 'blocked_ips' => [], 'top_attacks' => []],
+            'switches' => ['total' => 0, 'online' => 0, 'offline' => 0],
+            'endpoints' => ['total' => 0, 'protected' => 0, 'at_risk' => 0],
+            'vpn' => ['active' => 0, 'total' => 0],
+            'voip' => ['registered' => 0, 'calls_active' => 0, 'devices' => 0]
+        ];
+        
+        $sessionsResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=firewall/session&start=0&count=2000');
+        if ($sessionsResp) {
+            $sessionsData = json_decode($sessionsResp, true);
+            $sessions = $sessionsData['results']['details'] ?? [];
+            $socData['firewall']['sessions'] = count($sessions);
+            $socData['network']['total_sessions'] = count($sessions);
+            
+            $blockedCount = 0;
+            $srcIps = [];
+            $attacks = [];
+            foreach ($sessions as $sess) {
+                if (isset($sess['action']) && in_array($sess['action'], ['drop', 'blocked'])) {
+                    $blockedCount++;
+                    if (!empty($sess['srcaddr'])) $srcIps[$sess['srcaddr']] = ($srcIps[$sess['srcaddr']] ?? 0) + 1;
+                }
+                if (!empty($sess['app'])) $attacks[$sess['app']] = ($attacks[$sess['app']] ?? 0) + 1;
+            }
+            $socData['firewall']['blocked'] = $blockedCount;
+            $socData['blocked_threats'] = $blockedCount;
+            arsort($srcIps);
+            arsort($attacks);
+            $socData['network']['blocked_ips'] = array_slice(array_keys($srcIps), 0, 10);
+            $socData['network']['top_attacks'] = array_slice($attacks, 0, 10);
+            
+            $blockedToday = $blockedCount;
+            $socData['alerts']['critical'] = min(3, floor($blockedToday / 10));
+            $socData['alerts']['medium'] = min(15, floor($blockedToday / 3));
+            $socData['alerts']['low'] = min(20, $blockedToday);
+            $socData['alerts']['info'] = $socData['network']['total_sessions'];
+            $socData['events_24h'] = $socData['network']['total_sessions'];
+        }
+        
+        $switchesResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=all&endpoint=switch-controller/managed-switch&start=0&count=50');
+        if ($switchesResp) {
+            $swData = json_decode($switchesResp, true);
+            $switches = $swData['results'] ?? [];
+            $socData['switches']['total'] = count($switches);
+            $socData['switches']['online'] = count(array_filter($switches, function($s) { return ($s['state'] ?? '') === 'up'; }));
+            $socData['switches']['offline'] = $socData['switches']['total'] - $socData['switches']['online'];
+        }
+        
+        $emsResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=endpoint-control/clients&start=0&count=500');
+        if ($emsResp) {
+            $emsData = json_decode($emsResp, true);
+            $endpoints = $emsData['results'] ?? [];
+            $socData['endpoints']['total'] = count($endpoints);
+            $socData['endpoints']['protected'] = count(array_filter($endpoints, function($e) { return ($e['registration_state'] ?? '') === 'registered'; }));
+            $socData['endpoints']['at_risk'] = count(array_filter($endpoints, function($e) { return ($e['registration_state'] ?? '') !== 'registered'; }));
+        }
+        
+        $vpnResp = @file_get_contents('http://localhost/dashboard/fortigate.php?device=fg-oficina&endpoint=vpn');
+        if ($vpnResp) {
+            $vpnData = json_decode($vpnResp, true);
+            $vpnResults = $vpnData['results'] ?? [];
+            $phase1 = $vpnResults[0]['phase1'] ?? [];
+            $socData['vpn']['total'] = count($phase1);
+            $socData['vpn']['active'] = count(array_filter($phase1, function($p) { return ($p['status'] ?? '') === 'up'; }));
+        }
+        
+        $fvResp = @file_get_contents('http://localhost/dashboard/FortiVoice.php?action=sip_phones');
+        if ($fvResp) {
+            $fvData = json_decode($fvResp, true);
+            $phones = $fvData['results'] ?? [];
+            $socData['voip']['devices'] = count($phones);
+            $socData['voip']['registered'] = count(array_filter($phones, function($p) { return ($p['registration_state'] ?? '') === 'Registered'; }));
+        }
+        
+        $score = 0;
+        if ($socData['firewall']['sessions'] > 0) $score += 20;
+        if ($socData['switches']['offline'] === 0) $score += 15;
+        if ($socData['endpoints']['at_risk'] < $socData['endpoints']['total'] * 0.1) $score += 25;
+        if ($socData['vpn']['active'] > 0) $score += 15;
+        if ($socData['voip']['registered'] > 0) $score += 10;
+        if ($socData['alerts']['critical'] < 5) $score += 15;
+        $socData['threat_score'] = $score;
+        
+        echo json_encode($socData);
+        break;
 
     default:
         http_response_code(400);
