@@ -14,7 +14,7 @@ function loadJson($file) {
 }
 
 // Configuración FortiGate
-$fgIp = '192.168.100.1';
+$fgIp = '1.2.3.4';
 $fgToken = 'q7N88NNwff4n0d0hs0769Gd03j9gcq';
 
 function fgRequest($endpoint, $params = '') {
