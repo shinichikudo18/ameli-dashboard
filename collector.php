@@ -14,7 +14,7 @@ function loadJson($file) {
 
 // Configuración de múltiples FortiGates
 $fortigates = [
-    'fg-oficina' => ['ip' => '192.168.100.1', 'token' => 'q7N88NNwff4n0d0hs0769Gd03j9gcq', 'name' => 'FG Oficina'],
+    'fg-oficina' => ['ip' => '1.2.3.4', 'token' => 'q7N88NNwff4n0d0hs0769Gd03j9gcq', 'name' => 'FG Oficina'],
     'fg-data' => ['ip' => '1.2.3.5', 'token' => 'rzyhGgcHtsst87nr9jtQ3k0rtrcrfn', 'name' => 'FG Data']
 ];
 
