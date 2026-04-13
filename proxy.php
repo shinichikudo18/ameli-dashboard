@@ -108,12 +108,7 @@ switch ($action) {
         
     case 'clients':
         $wifi = loadJson($baseDir . '/data/wifi.json');
-        $clientCount = $wifi['clients'] ?? 0;
-        $clientsArray = [];
-        for ($i = 0; $i < $clientCount; $i++) {
-            $clientsArray[] = ['mac' => '00:00:00:00:00:' . str_pad(dechex($i), 2, '0', STR_PAD_LEFT), 'rssi' => rand(-80, -40), 'ip' => '192.168.140.' . (100 + $i), 'hostname' => 'device-' . $i];
-        }
-        echo json_encode(['results' => $clientsArray]);
+        echo json_encode(['results' => $wifi['clients'] ?? []]);
         break;
         
     case 'aps':
