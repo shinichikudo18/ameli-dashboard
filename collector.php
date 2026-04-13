@@ -81,9 +81,24 @@ $clients = count($wifiClients['results'] ?? []);
 $aps = count($wifiAps['results'] ?? []);
 saveJson($baseDir . '/data/wifi.json', ['timestamp' => $timestamp, 'aps' => $aps, 'clients' => $clients]);
 
-// VPN - usar cmdb en lugar de monitor
-$vpn = fgRequestCmdb('vpn.ipsec/phase1-interface');
-$vpnData = $vpn['results'] ?? [];
+// VPN - usar cmdb para configuración y monitor para estado
+$vpnCmdb = fgRequestCmdb('vpn.ipsec/phase1-interface');
+$vpnMonitor = fgRequest('vpn/ipsec/phase1-interface');
+$vpnData = $vpnCmdb['results'] ?? [];
+$monitorData = [];
+if (isset($vpnMonitor['results'])) {
+    foreach ($vpnMonitor['results'] as $m) {
+        $monitorData[$m['name'] ?? ''] = $m;
+    }
+}
+foreach ($vpnData as &$vpn) {
+    $name = $vpn['name'] ?? '';
+    if (isset($monitorData[$name])) {
+        $vpn['status'] = $monitorData[$name]['status'] ?? 'unknown';
+    } else {
+        $vpn['status'] = 'unknown';
+    }
+}
 saveJson($baseDir . '/data/vpn.json', ['timestamp' => $timestamp, 'data' => $vpnData]);
 
 // Policies
