@@ -104,6 +104,21 @@
         .fw-stat-sub { color: #aaa; font-size: 0.8rem; margin-top: 5px; }
         .fw-progress { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 10px; overflow: hidden; }
         .fw-progress-bar { height: 100%; border-radius: 3px; transition: width 0.5s; }
+        .app-icon { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 4px; margin-right: 8px; font-size: 12px; }
+        .app-icon.web { background: rgba(100,181,246,0.3); color: #64B5F6; }
+        .app-icon.email { background: rgba(244,143,177,0.3); color: #F48FB1; }
+        .app-icon.social { background: rgba(206,147,216,0.3); color: #CE93D8; }
+        .app-icon.video { background: rgba(255,138,128,0.3); color: #FF8A65; }
+        .app-icon.messaging { background: rgba(128,203,196,0.3); color: #80CBC4; }
+        .app-icon.network { background: rgba(159,168,218,0.3); color: #9FA8DA; }
+        .app-icon.database { background: rgba(255,213,79,0.3); color: #FFD54F; }
+        .app-icon.remote { background: rgba(144,202,249,0.3); color: #90CAF9; }
+        .app-icon.security { background: rgba(76,175,80,0.3); color: #4CAF50; }
+        .app-icon.iot { background: rgba(255,183,77,0.3); color: #FFB74D; }
+        .app-icon.file { background: rgba(255,138,101,0.3); color: #FF8A65; }
+        .app-icon.voip { background: rgba(171,71,188,0.3); color: #AB47BC; }
+        .app-icon.default { background: rgba(158,158,158,0.3); color: #9E9E9E; }
+        .app-name { display: inline-flex; align-items: center; }
         @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } .clients-table { font-size: 0.8rem; } }
     </style>
 </head>
@@ -1577,7 +1592,9 @@
                         
                         var html = '<table class="clients-table"><thead><tr><th>Origen</th><th>Destino</th><th>Proto/App</th><th>Pais</th><th>Usuario</th><th>Firewall</th></tr></thead><tbody>';
                         filtered.slice(0, 100).forEach(function(sess) {
-                            var appDisplay = sess.app_name || (sess.proto + '/' + (sess.dport || '-'));
+                            var appName = sess.app_name || (sess.proto + '/' + (sess.dport || '-'));
+                            var appIcon = getAppIconHtml(appName, sess.app_category || '');
+                            var appDisplay = '<span class="app-name">' + appIcon + appName + '</span>';
                             var flag = getFlag(sess.country_id);
                             var hostname = ipToHostname[sess.saddr] || '-';
                             var origenHtml = (hostname !== '-') ? (sess.saddr + '<br><span style="color:#888;font-size:0.8em;">' + hostname + '</span>') : (sess.saddr || '-');
@@ -1594,6 +1611,40 @@
                         html += '</tbody></table>';
                         if (filtered.length > 100) html += '<div style="color:#888;margin-top:10px;">Mostrando 100 de ' + filtered.length + '</div>';
                         document.getElementById('sessionsTable').innerHTML = html;
+                    };
+                    
+                    window.getAppIconHtml = function(appName, category) {
+                        var icons = {
+                            'DNS': '🌐', 'HTTP': '🌐', 'HTTPS': '🔒', 'SSH': '💻', 'FTP': '📁',
+                            'SMTP': '📧', 'IMAP': '📧', 'NTP': '⏰', 'SNMP': '📊', 'RDP': '🖥️',
+                            'MySQL': '🗄️', 'PostgreSQL': '🗄️', 'MongoDB': '🗄️', 'SMB': '📂',
+                            'SIP': '📞', 'SIPS': '📞', 'LDAP': '📋', 'MQTT': '📡',
+                            'HomeAssistant': '🏠', 'VNC': '🖥️', 'OpenVPN': '🔐', 'WireGuard': '🔐',
+                            'Redis': '⚡', 'Elasticsearch': '🔍', 'Gmail': '📧',
+                            'Slack': '💬', 'Teams': '👥', 'Microsoft.Teams': '👥',
+                            'Zoom': '📹', 'Telegram': '✈️', 'WhatsApp': '📱',
+                            'Instagram': '📷', 'Facebook': '👤', 'Twitter': '🐦',
+                            'YouTube': '▶️', 'Netflix': '📺', 'Spotify': '🎵',
+                            'Dropbox': '☁️', 'Google': '🔍', 'Google.Drive': '💾', 'Google.Play': '▶️',
+                            'Apple': '🍎', 'Apple.iCloud': '☁️', 'Microsoft': '🪟',
+                            'Microsoft.Office365': '📄', 'Microsoft.Portal': '🌐',
+                            'Windows.Notification': '🔔', 'GitHub': '🐙', 'SSL': '🔐',
+                            'SSL.TLS': '🔐', 'FaceTime': '📹', 'XMPP': '💬',
+                            'HTTP.Proxy': '🌐', 'NTP': '⏰', 'ICMP': '📶',
+                            'Google.Drive': '💾', 'Google': '🔍', 'Google.Play': '▶️'
+                        };
+                        var icon = icons[appName] || '📡';
+                        
+                        var categoryIcons = {
+                            'Web': '🌐', 'Email': '📧', 'Social.Media': '📷', 'Video': '📹',
+                            'Messaging': '💬', 'Network': '🌐', 'Database': '🗄️',
+                            'Remote': '🖥️', 'Security': '🔐', 'IoT': '📡',
+                            'File': '📁', 'VoIP': '📞', 'Cloud': '☁️',
+                            'Collaboration': '👥', 'Media': '▶️'
+                        };
+                        var catIcon = categoryIcons[category] || '📡';
+                        
+                        return '<span class="app-icon" title="' + (category || 'Network') + '">' + icon + '</span>';
                     };
                     
                     renderSessionsTable();
