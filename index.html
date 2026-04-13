@@ -410,6 +410,108 @@
                 <div class="card-title">Estado de Firewalls</div>
                 <div id="socFirewallsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:15px;margin-top:15px;"></div>
             </div>
+
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">Wazuh SIEM</div>
+                <div class="soc-grid" style="margin-top:15px;">
+                    <div class="soc-card">
+                        <div class="soc-card-icon">🟢</div>
+                        <div class="soc-card-label">API</div>
+                        <div class="soc-card-value" id="socWazuhApi">--</div>
+                    </div>
+                    <div class="soc-card">
+                        <div class="soc-card-icon">🧩</div>
+                        <div class="soc-card-label">Agentes</div>
+                        <div class="soc-card-value" id="socWazuhAgents">--</div>
+                    </div>
+                    <div class="soc-card">
+                        <div class="soc-card-icon">✅</div>
+                        <div class="soc-card-label">Activos</div>
+                        <div class="soc-card-value" id="socWazuhActive">--</div>
+                    </div>
+                    <div class="soc-card">
+                        <div class="soc-card-icon">⚠️</div>
+                        <div class="soc-card-label">Desconectados</div>
+                        <div class="soc-card-value" id="socWazuhDisconnected">--</div>
+                    </div>
+                </div>
+                <div class="soc-grid" style="margin-top:15px;">
+                    <div class="soc-card">
+                        <div class="soc-card-icon">🔄</div>
+                        <div class="soc-card-label">Config Sync</div>
+                        <div class="soc-card-value"><span id="socWazuhSynced">--</span>/<span id="socWazuhNotSynced">--</span></div>
+                    </div>
+                    <div class="soc-card">
+                        <div class="soc-card-icon">🖥️</div>
+                        <div class="soc-card-label">OS</div>
+                        <div class="soc-card-value" id="socWazuhOSCount">--</div>
+                    </div>
+                    <div class="soc-card">
+                        <div class="soc-card-icon">🚩</div>
+                        <div class="soc-card-label">Outdated</div>
+                        <div class="soc-card-value" id="socWazuhOutdated">--</div>
+                    </div>
+                    <div class="soc-card">
+                        <div class="soc-card-icon">🧪</div>
+                        <div class="soc-card-label">Log Errors</div>
+                        <div class="soc-card-value" id="socWazuhErrors">--</div>
+                    </div>
+                </div>
+                <div id="socWazuhCluster" style="margin-top:12px;color:#888;font-size:0.9rem;"></div>
+                <div style="margin-top:15px;overflow:auto;">
+                    <table class="soc-table">
+                        <thead><tr><th>Agente</th><th>ID</th><th>Estado</th><th>IP</th><th>SO</th><th>Último Keepalive</th></tr></thead>
+                        <tbody id="socWazuhAgentsTable"><tr><td colspan="6" style="text-align:center;color:#888;">Cargando...</td></tr></tbody>
+                    </table>
+                </div>
+                <div class="dashboard-grid" style="margin-top:15px;">
+                    <div class="card">
+                        <div class="card-title">Distribución OS de Agentes</div>
+                        <table class="soc-table">
+                            <thead><tr><th>OS</th><th>Cantidad</th></tr></thead>
+                            <tbody id="socWazuhOsTable"><tr><td colspan="2" style="text-align:center;color:#888;">Cargando...</td></tr></tbody>
+                        </table>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Módulos con más errores</div>
+                        <table class="soc-table">
+                            <thead><tr><th>Módulo</th><th>Warnings</th><th>Errors</th></tr></thead>
+                            <tbody id="socWazuhLogsTable"><tr><td colspan="3" style="text-align:center;color:#888;">Cargando...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card" style="margin-top:15px;">
+                    <div class="card-title">Agentes Outdated</div>
+                    <table class="soc-table">
+                        <thead><tr><th>Agente</th><th>ID</th><th>IP</th><th>Versión</th></tr></thead>
+                        <tbody id="socWazuhOutdatedTable"><tr><td colspan="4" style="text-align:center;color:#888;">Cargando...</td></tr></tbody>
+                    </table>
+                </div>
+                <div class="dashboard-grid" style="margin-top:15px;">
+                    <div class="card">
+                        <div class="card-title">Vulnerabilidades Wazuh</div>
+                        <div class="soc-grid" style="margin-top:12px;">
+                            <div class="soc-card"><div class="soc-card-label">Scanner Events</div><div class="soc-card-value" id="socWazuhVulnScanner">--</div></div>
+                            <div class="soc-card"><div class="soc-card-label">Feed Errors</div><div class="soc-card-value" id="socWazuhVulnFeedErrors">--</div></div>
+                            <div class="soc-card"><div class="soc-card-label">Info Logs</div><div class="soc-card-value" id="socWazuhVulnInfo">--</div></div>
+                        </div>
+                        <div style="margin-top:12px;overflow:auto;">
+                            <table class="soc-table">
+                                <thead><tr><th>Fecha</th><th>Tag</th><th>Nivel</th><th>Descripción</th></tr></thead>
+                                <tbody id="socWazuhVulnTable"><tr><td colspan="4" style="text-align:center;color:#888;">Cargando...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Riesgo de Exposición</div>
+                        <div style="font-size:0.95rem;color:#ddd;line-height:1.6;">
+                            <div>• Módulo de vulnerabilidades: <b id="socWazuhVulnModule">--</b></div>
+                            <div>• Agentes activos con riesgo: <b id="socWazuhRiskAgents">--</b></div>
+                            <div>• OS predominante: <b id="socWazuhTopOs">--</b></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
             <!-- Top Aplicaciones -->
             <div class="dashboard-grid" style="margin-bottom:20px;">
@@ -831,6 +933,89 @@
                 document.getElementById('socAddresses').textContent = data.addresses?.total || 0;
                 document.getElementById('socEndpoints').textContent = data.endpoints?.total || 0;
                 document.getElementById('socEndpointsProtected').textContent = data.endpoints?.protected || 0;
+
+                // Wazuh SIEM
+                document.getElementById('socWazuhApi').textContent = data.wazuh?.connected ? 'Conectada' : 'Sin conexión';
+                document.getElementById('socWazuhAgents').textContent = (data.wazuh_agents?.total || 0).toLocaleString();
+                document.getElementById('socWazuhActive').textContent = (data.wazuh_agents?.active || 0).toLocaleString();
+                document.getElementById('socWazuhDisconnected').textContent = (data.wazuh_agents?.disconnected || 0).toLocaleString();
+                document.getElementById('socWazuhSynced').textContent = (data.wazuh_agents?.synced || 0).toLocaleString();
+                document.getElementById('socWazuhNotSynced').textContent = (data.wazuh_agents?.not_synced || 0).toLocaleString();
+                document.getElementById('socWazuhOutdated').textContent = (data.wazuh_outdated || 0).toLocaleString();
+                document.getElementById('socWazuhErrors').textContent = (data.wazuh_log_errors || 0).toLocaleString();
+                document.getElementById('socWazuhVulnScanner').textContent = (data.wazuh_vuln?.scanner_events || 0).toLocaleString();
+                document.getElementById('socWazuhVulnFeedErrors').textContent = (data.wazuh_vuln?.feed_errors || 0).toLocaleString();
+                document.getElementById('socWazuhVulnInfo').textContent = (data.wazuh_vuln?.info || 0).toLocaleString();
+                var wazuhCluster = data.wazuh?.cluster_running ? 'Cluster activo' : 'Cluster inactivo';
+                if (data.wazuh?.cluster_name) wazuhCluster += ' - ' + data.wazuh.cluster_name;
+                document.getElementById('socWazuhCluster').textContent = wazuhCluster;
+                document.getElementById('socWazuhOSCount').textContent = (data.wazuh_os?.length || 0).toLocaleString();
+
+                var wazuhAgentsTable = document.getElementById('socWazuhAgentsTable');
+                if (wazuhAgentsTable) {
+                    var wazuhAgents = data.wazuh_agents?.items || [];
+                    wazuhAgentsTable.innerHTML = wazuhAgents.length ? wazuhAgents.map(function(a) {
+                        var state = (a.status || '').toLowerCase();
+                        var stateLabel = state === 'active' ? 'Activo' : state === 'disconnected' ? 'Desconectado' : 'Pendiente';
+                        var stateColor = state === 'active' ? '#4BC0C0' : state === 'disconnected' ? '#FF6384' : '#FFCE56';
+                        return '<tr>' +
+                            '<td>' + (a.name || '-') + '</td>' +
+                            '<td>' + (a.id || '-') + '</td>' +
+                            '<td><span style="color:' + stateColor + ';font-weight:bold;">' + stateLabel + '</span></td>' +
+                            '<td>' + (a.ip || '-') + '</td>' +
+                            '<td>' + (a.os || '-') + '</td>' +
+                            '<td>' + (a.last_keepalive || '-') + '</td>' +
+                        '</tr>';
+                    }).join('') : '<tr><td colspan="6" style="text-align:center;color:#888;">Sin agentes</td></tr>';
+                }
+
+                var wazuhOsTable = document.getElementById('socWazuhOsTable');
+                if (wazuhOsTable) {
+                    var osCounts = data.wazuh_os_counts || {};
+                    var osRows = Object.keys(osCounts).sort(function(a, b) { return (osCounts[b] || 0) - (osCounts[a] || 0); }).map(function(os) {
+                        return '<tr><td>' + os + '</td><td>' + osCounts[os] + '</td></tr>';
+                    }).join('');
+                    wazuhOsTable.innerHTML = osRows || '<tr><td colspan="2" style="text-align:center;color:#888;">Sin datos</td></tr>';
+                }
+
+                var wazuhOutdatedTable = document.getElementById('socWazuhOutdatedTable');
+                if (wazuhOutdatedTable) {
+                    var outdated = data.wazuh_outdated_agents || [];
+                    wazuhOutdatedTable.innerHTML = outdated.length ? outdated.map(function(a) {
+                        return '<tr><td>' + (a.name || '-') + '</td><td>' + (a.id || '-') + '</td><td>' + (a.ip || '-') + '</td><td>' + (a.version || '-') + '</td></tr>';
+                    }).join('') : '<tr><td colspan="4" style="text-align:center;color:#4BC0C0;">Ninguno</td></tr>';
+                }
+
+                var wazuhLogsTable = document.getElementById('socWazuhLogsTable');
+                if (wazuhLogsTable) {
+                    var logs = data.wazuh_logs_summary || [];
+                    var rows = [];
+                    logs.forEach(function(item) {
+                        var moduleName = Object.keys(item)[0];
+                        var stats = item[moduleName] || {};
+                        var errors = stats.error || 0;
+                        var warnings = stats.warning || 0;
+                        if (errors > 0 || warnings > 0) {
+                            rows.push('<tr><td>' + moduleName + '</td><td>' + warnings + '</td><td>' + errors + '</td></tr>');
+                        }
+                    });
+                    wazuhLogsTable.innerHTML = rows.length ? rows.slice(0, 8).join('') : '<tr><td colspan="3" style="text-align:center;color:#888;">Sin errores relevantes</td></tr>';
+                }
+
+                var wazuhVulnTable = document.getElementById('socWazuhVulnTable');
+                if (wazuhVulnTable) {
+                    var vuln = data.wazuh_vuln?.recent || [];
+                    wazuhVulnTable.innerHTML = vuln.length ? vuln.map(function(v) {
+                        var lvl = (v.level || '').toLowerCase();
+                        var lvlColor = lvl === 'error' ? '#FF6384' : lvl === 'warning' ? '#FFCE56' : '#4BC0C0';
+                        return '<tr><td>' + (v.timestamp || '-') + '</td><td>' + (v.tag || '-') + '</td><td><span style="color:' + lvlColor + ';font-weight:bold;">' + (v.level || '-') + '</span></td><td>' + (v.description || '-') + '</td></tr>';
+                    }).join('') : '<tr><td colspan="4" style="text-align:center;color:#4BC0C0;">Sin logs de vulnerabilidades</td></tr>';
+                }
+
+                document.getElementById('socWazuhVulnModule').textContent = (data.wazuh_vuln?.scanner_events || 0) > 0 ? 'Activo' : 'Sin actividad';
+                document.getElementById('socWazuhRiskAgents').textContent = (data.wazuh_agents?.disconnected || 0).toLocaleString();
+                var topOs = Object.keys(data.wazuh_os_counts || {}).sort(function(a, b){ return (data.wazuh_os_counts[b] || 0) - (data.wazuh_os_counts[a] || 0); })[0] || '-';
+                document.getElementById('socWazuhTopOs').textContent = topOs;
                 
                 // Renderizar firewalls
                 var fwColors = { 'FG Oficina': '#FF6384', 'FG Data': '#36A2EB', 'FG-GTD': '#4BC0C0' };

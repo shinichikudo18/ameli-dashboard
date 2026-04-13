@@ -17,6 +17,65 @@ function loadJson($file) {
     return file_exists($file) ? json_decode(file_get_contents($file), true) ?? [] : [];
 }
 
+function httpJsonRequest($url, $headers = [], $method = 'GET', $body = null, $timeout = 20) {
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    if ($method !== 'GET') {
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        if ($body !== null) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        }
+    }
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    return [$code, $resp ? json_decode($resp, true) : null, $resp];
+}
+
+function wazuhAuthToken() {
+    static $token = null;
+    static $tokenAt = 0;
+    if ($token && (time() - $tokenAt) < 840) {
+        return $token;
+    }
+
+    $wazuhUrl = 'https://192.168.140.9:55000';
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $wazuhUrl . '/security/user/authenticate');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_USERPWD, 'wazuh:wazuh');
+    curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($code === 200 && $resp) {
+        $data = json_decode($resp, true);
+        $token = $data['data']['token'] ?? null;
+        $tokenAt = time();
+        return $token;
+    }
+
+    return null;
+}
+
+function wazuhRequest($path, $token) {
+    $wazuhUrl = 'https://192.168.140.9:55000';
+    if (empty($token)) {
+        return [null, null];
+    }
+    return httpJsonRequest($wazuhUrl . $path, ['Authorization: Bearer ' . $token], 'GET', null, 20);
+}
+
 $haUrl = 'http://192.168.100.3:8123';
 $haToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI2NmMwNjBiMDg3YWI0MjhlYTliODg4N2Q5ZWY5ZDQ2NCIsImlhdCI6MTc3NDk4NDg3MSwiZXhwIjoyMDkwMzQ0ODcxfQ.x8K1uTtPvOde_oKXoBf-m70ilAXy-BVW5aAQeqcNeIc';
 
@@ -529,6 +588,127 @@ switch ($action) {
         $dhcp = loadJson($baseDir . '/data/dhcp.json');
         $sessions = loadJson($baseDir . '/data/sessions.json');
         $apps = loadJson($baseDir . '/data/apps.json');
+        $wazuhToken = wazuhAuthToken();
+        $wazuhAgents = [];
+        $wazuhAgentsTotal = 0;
+        $wazuhAgentsActive = 0;
+        $wazuhAgentsDisconnected = 0;
+        $wazuhAgentsPending = 0;
+        $wazuhAgentsSynced = 0;
+        $wazuhAgentsNotSynced = 0;
+        $wazuhAgentOS = [];
+        $wazuhAgentOSCounts = [];
+        $wazuhOutdatedAgents = [];
+        $wazuhLogsSummary = [];
+        $wazuhLogErrors = 0;
+        $wazuhVulnLogs = [];
+        $wazuhVulnScannerEvents = 0;
+        $wazuhVulnFeedErrors = 0;
+        $wazuhVulnInfo = 0;
+        $wazuhApiOk = false;
+        $wazuhClusterRunning = false;
+        $wazuhClusterName = '';
+        $wazuhManager = [];
+        $wazuhRemoted = [];
+        $wazuhAnalysisd = [];
+        $wazuhSecurity = [];
+
+        if ($wazuhToken) {
+            $wazuhApiOk = true;
+            list($agentsCode, $agentsResp) = wazuhRequest('/agents?limit=500&offset=0&q=id!=000', $wazuhToken);
+            if ($agentsCode === 200 && isset($agentsResp['data']['affected_items'])) {
+                $wazuhAgents = $agentsResp['data']['affected_items'];
+                $wazuhAgentsTotal = intval($agentsResp['data']['total_affected_items'] ?? count($wazuhAgents));
+                foreach ($wazuhAgents as $agent) {
+                    $status = strtolower($agent['status'] ?? '');
+                    if ($status === 'active') $wazuhAgentsActive++;
+                    elseif ($status === 'disconnected') $wazuhAgentsDisconnected++;
+                    else $wazuhAgentsPending++;
+
+                    $agentOs = strtolower(trim($agent['os']['name'] ?? $agent['os'] ?? 'unknown'));
+                    if ($agentOs === '') $agentOs = 'unknown';
+                    if (!isset($wazuhAgentOSCounts[$agentOs])) {
+                        $wazuhAgentOSCounts[$agentOs] = 0;
+                    }
+                    $wazuhAgentOSCounts[$agentOs]++;
+                }
+            }
+
+            list($agentsSummaryCode, $agentsSummaryResp) = wazuhRequest('/agents/summary/status', $wazuhToken);
+            if ($agentsSummaryCode === 200 && isset($agentsSummaryResp['data']['connection'])) {
+                $wazuhAgentsActive = intval($agentsSummaryResp['data']['connection']['active'] ?? $wazuhAgentsActive);
+                $wazuhAgentsDisconnected = intval($agentsSummaryResp['data']['connection']['disconnected'] ?? $wazuhAgentsDisconnected);
+                $wazuhAgentsPending = intval($agentsSummaryResp['data']['connection']['pending'] ?? $wazuhAgentsPending);
+                $wazuhAgentsTotal = intval($agentsSummaryResp['data']['connection']['total'] ?? $wazuhAgentsTotal);
+                $wazuhAgentsSynced = intval($agentsSummaryResp['data']['configuration']['synced'] ?? 0);
+                $wazuhAgentsNotSynced = intval($agentsSummaryResp['data']['configuration']['not_synced'] ?? 0);
+            }
+
+            list($agentsOsCode, $agentsOsResp) = wazuhRequest('/agents/summary/os', $wazuhToken);
+            if ($agentsOsCode === 200 && isset($agentsOsResp['data']['affected_items'])) {
+                $wazuhAgentOS = $agentsOsResp['data']['affected_items'];
+            }
+
+            list($outdatedCode, $outdatedResp) = wazuhRequest('/agents/outdated?limit=20', $wazuhToken);
+            if ($outdatedCode === 200 && isset($outdatedResp['data']['affected_items'])) {
+                $wazuhOutdatedAgents = $outdatedResp['data']['affected_items'];
+            }
+
+            list($logsSummaryCode, $logsSummaryResp) = wazuhRequest('/manager/logs/summary', $wazuhToken);
+            if ($logsSummaryCode === 200 && isset($logsSummaryResp['data']['affected_items'])) {
+                $wazuhLogsSummary = $logsSummaryResp['data']['affected_items'];
+                foreach ($wazuhLogsSummary as $item) {
+                    $module = array_keys($item)[0] ?? '';
+                    $stats = $module ? ($item[$module] ?? []) : [];
+                    $wazuhLogErrors += intval($stats['error'] ?? 0);
+                }
+            }
+
+            list($vulnCode, $vulnResp) = wazuhRequest('/manager/logs?search=vulnerability&limit=25&sort=-timestamp', $wazuhToken);
+            if ($vulnCode === 200 && isset($vulnResp['data']['affected_items'])) {
+                $wazuhVulnLogs = $vulnResp['data']['affected_items'];
+                foreach ($wazuhVulnLogs as $log) {
+                    $tag = strtolower($log['tag'] ?? '');
+                    $level = strtolower($log['level'] ?? '');
+                    if (strpos($tag, 'vulnerability-scanner') !== false) {
+                        $wazuhVulnScannerEvents++;
+                    }
+                    if (strpos($tag, 'content-updater') !== false && $level === 'error') {
+                        $wazuhVulnFeedErrors++;
+                    }
+                    if ($level === 'info') {
+                        $wazuhVulnInfo++;
+                    }
+                }
+            }
+
+            list($clusterCode, $clusterResp) = wazuhRequest('/cluster/status', $wazuhToken);
+            if ($clusterCode === 200 && isset($clusterResp['data'])) {
+                $clusterData = $clusterResp['data'];
+                $wazuhClusterRunning = !empty($clusterData['running']) || !empty($clusterData['enabled']) || !empty($clusterData['status']);
+                $wazuhClusterName = $clusterData['name'] ?? ($clusterData['cluster_name'] ?? '');
+            }
+
+            list($managerCode, $managerResp) = wazuhRequest('/manager/stats', $wazuhToken);
+            if ($managerCode === 200 && is_array($managerResp)) {
+                $wazuhManager = $managerResp;
+            }
+
+            list($remotedCode, $remotedResp) = wazuhRequest('/manager/stats/remoted', $wazuhToken);
+            if ($remotedCode === 200 && is_array($remotedResp)) {
+                $wazuhRemoted = $remotedResp;
+            }
+
+            list($analysisdCode, $analysisdResp) = wazuhRequest('/manager/stats/analysisd', $wazuhToken);
+            if ($analysisdCode === 200 && is_array($analysisdResp)) {
+                $wazuhAnalysisd = $analysisdResp;
+            }
+
+            list($securityCode, $securityResp) = wazuhRequest('/security/users/me', $wazuhToken);
+            if ($securityCode === 200 && is_array($securityResp)) {
+                $wazuhSecurity = $securityResp;
+            }
+        }
         
         $registeredPhones = array_filter($voip['phones'] ?? [], fn($p) => $p['status'] === 'registered');
         
@@ -623,6 +803,61 @@ switch ($action) {
             ],
             'events_24h' => $metrics['events_24h'] ?? 0,
             'blocked_threats' => $metrics['blocked_threats'] ?? 0,
+            'wazuh' => [
+                'connected' => $wazuhApiOk,
+                'cluster_running' => $wazuhClusterRunning,
+                'cluster_name' => $wazuhClusterName,
+                'manager' => $wazuhManager,
+                'remoted' => $wazuhRemoted,
+                'analysisd' => $wazuhAnalysisd,
+                'security' => $wazuhSecurity,
+            ],
+            'wazuh_agents' => [
+                'total' => $wazuhAgentsTotal,
+                'active' => $wazuhAgentsActive,
+                'disconnected' => $wazuhAgentsDisconnected,
+                'pending' => $wazuhAgentsPending,
+                'synced' => $wazuhAgentsSynced,
+                'not_synced' => $wazuhAgentsNotSynced,
+                'items' => array_slice(array_map(function($a) {
+                    return [
+                        'id' => $a['id'] ?? '',
+                        'name' => $a['name'] ?? '',
+                        'status' => strtolower($a['status'] ?? ''),
+                        'ip' => $a['ip'] ?? '',
+                        'last_keepalive' => $a['lastKeepAlive'] ?? ($a['last_keep_alive'] ?? ''),
+                        'version' => $a['version'] ?? '',
+                        'os' => $a['os']['name'] ?? ($a['os'] ?? '')
+                    ];
+                }, $wazuhAgents), 0, 20)
+            ],
+            'wazuh_os' => $wazuhAgentOS,
+            'wazuh_os_counts' => $wazuhAgentOSCounts,
+            'wazuh_outdated' => count($wazuhOutdatedAgents),
+            'wazuh_outdated_agents' => array_slice(array_map(function($a) {
+                return [
+                    'id' => $a['id'] ?? '',
+                    'name' => $a['name'] ?? '',
+                    'ip' => $a['ip'] ?? '',
+                    'manager' => $a['manager'] ?? '',
+                    'version' => $a['os']['version'] ?? ''
+                ];
+            }, $wazuhOutdatedAgents), 0, 10),
+            'wazuh_log_errors' => $wazuhLogErrors,
+            'wazuh_logs_summary' => $wazuhLogsSummary,
+            'wazuh_vuln' => [
+                'scanner_events' => $wazuhVulnScannerEvents,
+                'feed_errors' => $wazuhVulnFeedErrors,
+                'info' => $wazuhVulnInfo,
+                'recent' => array_slice(array_map(function($l) {
+                    return [
+                        'timestamp' => $l['timestamp'] ?? '',
+                        'tag' => $l['tag'] ?? '',
+                        'level' => $l['level'] ?? '',
+                        'description' => $l['description'] ?? ''
+                    ];
+                }, $wazuhVulnLogs), 0, 10)
+            ],
             'firewalls' => $firewallStats,
             'firewall' => [
                 'status' => 'unknown',
