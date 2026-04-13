@@ -837,6 +837,11 @@
                 .red-card .label { color:#9aa3b2; font-size:0.75rem; text-transform:uppercase; margin-bottom:6px; }
                 .red-card .value { color:#fff; font-size:1.8rem; font-weight:800; }
                 .red-note { color:#00d4ff; font-size:0.9rem; }
+                .red-header { background:linear-gradient(135deg, rgba(120,20,20,0.28), rgba(0,212,255,0.10)); border:1px solid rgba(255,99,132,0.22); border-radius:14px; padding:16px; margin-bottom:16px; }
+                .red-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; }
+                .red-pill { display:inline-flex; align-items:center; gap:8px; padding:7px 12px; border-radius:999px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.08); color:#d8e6f2; font-size:0.8rem; }
+                .red-pill .dot { width:8px; height:8px; border-radius:50%; background:#FF6384; box-shadow:0 0 12px #FF6384; }
+                .red-mono { font-family: Consolas, 'Courier New', monospace; letter-spacing:0.02em; }
             </style>
         </div>
 
@@ -847,6 +852,30 @@
                     Vista segura para reportes importados de actividades autorizadas. No ejecuta herramientas ni automatiza enumeración.
                 </div>
                 <div id="redTeamNote" style="margin-top:10px;color:#00d4ff;font-size:0.9rem;"></div>
+                <div class="red-header" style="margin-top:14px;">
+                    <div class="red-grid">
+                        <div class="red-card">
+                            <div class="label">Último reporte</div>
+                            <div class="value red-mono" id="rtGeneratedAt">--</div>
+                        </div>
+                        <div class="red-card">
+                            <div class="label">Tiempo transcurrido</div>
+                            <div class="value red-mono" id="rtAge">--</div>
+                        </div>
+                        <div class="red-card">
+                            <div class="label">Próxima hora</div>
+                            <div class="value red-mono" id="rtNextRefresh">--</div>
+                        </div>
+                        <div class="red-card">
+                            <div class="label">Reportes</div>
+                            <div class="value red-mono" id="rtReportsCount">0</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+                        <span class="red-pill"><span class="dot"></span> Importación por hora</span>
+                        <span class="red-pill"><span class="dot" style="background:#4BC0C0;box-shadow:0 0 12px #4BC0C0;"></span> Últimos 5 JSON</span>
+                    </div>
+                </div>
                 <div style="margin-top:14px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;">
                     <div>
                         <label style="display:block;color:#9aa3b2;font-size:0.75rem;margin-bottom:6px;">Reporte guardado</label>
@@ -1032,6 +1061,8 @@
         var haLightEntityId = null;
         var haLightIsOn = false;
         var currentSocSubTab = 'wazuh';
+        var redTeamCurrentGeneratedAt = null;
+        var redTeamCurrentReportFile = '';
 
         function switchSocSubTab(tabId) {
             currentSocSubTab = tabId;
@@ -1393,6 +1424,9 @@
             if (reportFile) url += '&report=' + encodeURIComponent(reportFile);
             fetch(url).then(function(r){return r.json();}).then(function(data){
                 document.getElementById('redTeamNote').textContent = data.note || 'Vista de reporte importado.';
+                redTeamCurrentGeneratedAt = data.generated_at || null;
+                redTeamCurrentReportFile = reportFile || '';
+                document.getElementById('rtGeneratedAt').textContent = redTeamCurrentGeneratedAt || '--';
                 document.getElementById('rtTargets').textContent = data.summary?.targets || 0;
                 document.getElementById('rtHostsUp').textContent = data.summary?.hosts_up || 0;
                 document.getElementById('rtDnsQueries').textContent = data.summary?.dns_queries || 0;
@@ -1427,6 +1461,7 @@
                     return '<tr><td><span style="color:' + color + ';font-weight:bold;">' + (f.severity || '-') + '</span></td><td>' + (f.target || '-') + '</td><td>' + (f.type || '-') + '</td><td>' + (f.description || '-') + '</td><td>' + (f.evidence || '-') + '</td></tr>';
                 }).join('');
                 document.getElementById('rtFindingsTable').innerHTML = findingRows || '<tr><td colspan="5" style="text-align:center;color:#888;">Sin findings importados</td></tr>';
+                updateRedTeamTimers();
             }).catch(function(err) {
                 document.getElementById('redTeamNote').textContent = 'Error cargando datos: ' + err.message;
             });
@@ -1439,11 +1474,14 @@
                 var reports = data.results || [];
                 var html = '<option value="">Reporte actual</option>';
                 reports.forEach(function(r) {
-                    html += '<option value="' + escapeHtml(r.file) + '">' + escapeHtml(r.modified) + ' - ' + escapeHtml(r.file) + '</option>';
+                    var label = (r.generated_at || r.modified) + ' - ' + r.file;
+                    html += '<option value="' + escapeHtml(r.file) + '">' + escapeHtml(label) + '</option>';
                 });
                 sel.innerHTML = html;
+                document.getElementById('rtReportsCount').textContent = reports.length;
                 if (!sel.value && reports.length > 0) {
                     sel.value = reports[0].file;
+                    refreshRedTeam(reports[0].file);
                 }
             });
         }
@@ -1475,6 +1513,43 @@
                 Object.keys(extra).forEach(function(k) { payload[k] = extra[k]; });
             }
             return payload;
+        }
+
+        function formatDuration(seconds) {
+            seconds = Math.max(0, Math.floor(seconds));
+            var h = Math.floor(seconds / 3600);
+            var m = Math.floor((seconds % 3600) / 60);
+            var s = seconds % 60;
+            return [h, m, s].map(function(v) { return String(v).padStart(2, '0'); }).join(':');
+        }
+
+        function updateRedTeamTimers() {
+            var ageEl = document.getElementById('rtAge');
+            var nextEl = document.getElementById('rtNextRefresh');
+            if (!ageEl || !nextEl) return;
+            if (!redTeamCurrentGeneratedAt) {
+                ageEl.textContent = '--';
+                nextEl.textContent = '--';
+                return;
+            }
+            var generated = new Date(redTeamCurrentGeneratedAt);
+            if (isNaN(generated.getTime())) {
+                ageEl.textContent = '--';
+                nextEl.textContent = '--';
+                return;
+            }
+            var now = new Date();
+            var ageSeconds = Math.max(0, Math.floor((now.getTime() - generated.getTime()) / 1000));
+            var nextHour = new Date(generated.getTime());
+            nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+            if (nextHour.getTime() < now.getTime()) {
+                nextHour = new Date(now.getTime());
+                nextHour.setMinutes(0, 0, 0);
+                nextHour.setHours(nextHour.getHours() + 1);
+            }
+            var remaining = Math.max(0, Math.floor((nextHour.getTime() - now.getTime()) / 1000));
+            ageEl.textContent = formatDuration(ageSeconds);
+            nextEl.textContent = formatDuration(remaining);
         }
 
         function importRedTeamJson() {
@@ -2951,6 +3026,7 @@
             refreshFortiVoice();
             refreshFreePBX();
             refreshRedTeamReports();
+            setInterval(updateRedTeamTimers, 1000);
         }
 
         document.addEventListener('DOMContentLoaded', initDashboard);

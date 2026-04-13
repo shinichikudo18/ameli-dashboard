@@ -1085,9 +1085,11 @@ switch ($action) {
         $reports = [];
         if (is_dir($dir)) {
             foreach (glob($dir . '/*.json') as $file) {
+                $data = loadJson($file);
                 $reports[] = [
                     'file' => basename($file),
                     'modified' => date('Y-m-d H:i:s', filemtime($file)),
+                    'generated_at' => $data['generated_at'] ?? null,
                     'size' => filesize($file)
                 ];
             }
