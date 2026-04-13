@@ -1040,15 +1040,18 @@ switch ($action) {
     case 'redteam_data':
         $report = loadJson($baseDir . '/data/redteam.json');
         $summary = $report['summary'] ?? [];
+        $targets = $report['targets'] ?? [];
         $hosts = $report['hosts'] ?? [];
         $dns = $report['dns'] ?? [];
         $findings = $report['findings'] ?? [];
         $services = $report['services'] ?? [];
 
+        $targetCount = count($targets);
+
         echo json_encode([
             'generated_at' => $report['generated_at'] ?? date('Y-m-d H:i:s'),
             'summary' => [
-                'targets' => intval($summary['targets'] ?? 0),
+                'targets' => intval($summary['targets'] ?? $targetCount),
                 'hosts_up' => intval($summary['hosts_up'] ?? 0),
                 'hosts_down' => intval($summary['hosts_down'] ?? 0),
                 'dns_queries' => intval($summary['dns_queries'] ?? 0),
@@ -1059,12 +1062,44 @@ switch ($action) {
                 'medium' => intval($summary['medium'] ?? 0),
                 'low' => intval($summary['low'] ?? 0)
             ],
+            'targets' => array_slice($targets, 0, 100),
             'hosts' => array_slice($hosts, 0, 50),
             'dns' => array_slice($dns, 0, 50),
             'findings' => array_slice($findings, 0, 50),
             'services' => array_slice($services, 0, 20),
             'note' => $report['note'] ?? 'Carga un reporte JSON en /data/redteam.json para poblar esta vista.'
         ]);
+        break;
+
+    case 'redteam_save':
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['error' => 'POST required']);
+            break;
+        }
+        $raw = file_get_contents('php://input');
+        $payload = json_decode($raw, true);
+        if (!is_array($payload)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid JSON']);
+            break;
+        }
+        $file = $baseDir . '/data/redteam.json';
+        $dir = dirname($file);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        $existing = loadJson($file);
+        $payload['generated_at'] = $payload['generated_at'] ?? date('Y-m-d H:i:s');
+        if (empty($payload['summary']) && !empty($payload['targets'])) {
+            $payload['summary'] = ['targets' => count($payload['targets'])];
+        }
+        $payload['updated_at'] = date('Y-m-d H:i:s');
+        if (!empty($existing['targets']) && empty($payload['targets'])) {
+            $payload['targets'] = $existing['targets'];
+        }
+        file_put_contents($file, json_encode($payload, JSON_PRETTY_PRINT));
+        echo json_encode(['status' => 'ok', 'saved' => true, 'path' => 'data/redteam.json']);
         break;
 
     case 'soc_history':
