@@ -306,8 +306,12 @@
                 <div class="card"><div class="card-title">Health Check Realtime</div><div id="sdwanRealtime"><div class="loading">Cargando...</div></div></div>
             </div>
             <div class="card" style="margin-bottom:20px;">
-                <div class="card-title">Miembros</div>
-                <div id="sdwanMembersContent"><div class="loading">Cargando...</div></div>
+                <div class="card-title">Servicios</div>
+                <div id="sdwanServicesContent"><div class="loading">Cargando...</div></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Top Aplicaciones</div>
+                <div class="chart-container" style="height:250px;"><canvas id="sdwanAppChart"></canvas></div>
             </div>
             <div class="card" style="margin-bottom:20px;">
                 <div class="card-title">Health Checks</div>
@@ -1493,17 +1497,21 @@
         
         function refreshSDWAN() {
             document.getElementById('sdwanSummary').innerHTML = '<div class="loading">Cargando SD-WAN...</div>';
-            if (window.sdwanMembersChart && typeof window.sdwanMembersChart.destroy === 'function') {
-                window.sdwanMembersChart.destroy();
-            }
-            if (window.sdwanHealthChart && typeof window.sdwanHealthChart.destroy === 'function') {
-                window.sdwanHealthChart.destroy();
-            }
+            if (window.sdwanMembersChart && typeof window.sdwanMembersChart.destroy === 'function') window.sdwanMembersChart.destroy();
+            if (window.sdwanHealthChart && typeof window.sdwanHealthChart.destroy === 'function') window.sdwanHealthChart.destroy();
+            if (window.sdwanAppChart && typeof window.sdwanAppChart.destroy === 'function') window.sdwanAppChart.destroy();
             window.sdwanMembersChart = null;
             window.sdwanHealthChart = null;
-            fetch(apiBase + 'sdwan')
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
+            window.sdwanAppChart = null;
+            
+            Promise.all([
+                fetch(apiBase + 'sdwan').then(function(r) { return r.json(); }),
+                fetch(apiBase + 'sessions').then(function(r) { return r.json(); })
+            ])
+                .then(function(results) {
+                    var data = results[0];
+                    var sessionData = results[1];
+                    
                     if (data.error) {
                         document.getElementById('sdwanSummary').innerHTML = '<div class="error-msg">Error: ' + data.error + '</div>';
                         return;
@@ -1629,6 +1637,39 @@
                     document.getElementById('sdwanMembersContent').innerHTML = membersHtml;
                     document.getElementById('sdwanHealthContent').innerHTML = healthHtml;
                     document.getElementById('sdwanServicesContent').innerHTML = servicesHtml;
+                    
+                    // Grafico de aplicaciones
+                    var sessions = sessionData.results || [];
+                    var appCount = {};
+                    sessions.forEach(function(s) {
+                        var app = s.app_name || 'Other';
+                        appCount[app] = (appCount[app] || 0) + 1;
+                    });
+                    var sortedApps = Object.keys(appCount).sort(function(a, b) { return appCount[b] - appCount[a]; }).slice(0, 12);
+                    var appLabels = sortedApps;
+                    var appData = sortedApps.map(function(a) { return appCount[a]; });
+                    
+                    var appCanvas = document.getElementById('sdwanAppChart');
+                    if (appCanvas && appCanvas.getContext) {
+                        var colors = ['#FF6384', '#36A2EB', '#4BC0C0', '#FFCE56', '#9966FF', '#FF9F40', '#7b2cbf', '#00d4ff', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4'];
+                        window.sdwanAppChart = new Chart(appCanvas.getContext('2d'), {
+                            type: 'bar',
+                            data: {
+                                labels: appLabels,
+                                datasets: [{ label: 'Sesiones', data: appData, backgroundColor: colors }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                indexAxis: 'y',
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } },
+                                    y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                                }
+                            }
+                        });
+                    }
                 })
                 .catch(function(err) {
                     document.getElementById('sdwanSummary').innerHTML = '<div class="error-msg">Error: ' + err.message + '</div>';
