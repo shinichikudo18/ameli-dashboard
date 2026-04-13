@@ -102,25 +102,11 @@ saveJson($baseDir . '/data/addresses.json', ['timestamp' => $timestamp, 'data' =
 
 // Sessions - pedir en bloques de 1000 para obtener mas datos
 $sessionDetails = [];
-$sessionDetailsOld = loadJson($baseDir . '/data/sessions.json');
-$existingMacs = [];
-if (!empty($sessionDetailsOld['details'])) {
-    foreach ($sessionDetailsOld['details'] as $s) {
-        $existingMacs[$s['source-ip'] . $s['destination-ip'] . ($s['protocol'] ?? '')] = true;
-    }
-}
 for ($start = 0; $start <= 5000; $start += 1000) {
     $sessions = fgRequest('firewall/session', '&count=1000&start=' . $start);
     $newSessions = $sessions['results']['details'] ?? [];
-    $added = 0;
-    foreach ($newSessions as $s) {
-        $key = ($s['source-ip'] ?? '') . ($s['destination-ip'] ?? '') . ($s['protocol'] ?? '');
-        if (!isset($existingMacs[$key])) {
-            $sessionDetails[] = $s;
-            $existingMacs[$key] = true;
-            $added++;
-        }
-    }
+    if (empty($newSessions)) break;
+    $sessionDetails = array_merge($sessionDetails, $newSessions);
     if (count($newSessions) < 1000) break;
 }
 $totalSessions = count($sessionDetails);
@@ -128,7 +114,7 @@ $blockedSessions = 0;
 foreach ($sessionDetails as $s) {
     if (in_array($s['action'] ?? '', ['drop', 'blocked'])) $blockedSessions++;
 }
-saveJson($baseDir . '/data/sessions.json', ['timestamp' => $timestamp, 'total' => $totalSessions, 'blocked' => $blockedSessions, 'details' => array_slice($sessionDetails, 0, 5000)]);
+saveJson($baseDir . '/data/sessions.json', ['timestamp' => $timestamp, 'total' => $totalSessions, 'blocked' => $blockedSessions, 'details' => $sessionDetails]);
 
 // Switches - usar cmdb en lugar de monitor
 $switches = fgRequestCmdb('switch-controller/managed-switch');
