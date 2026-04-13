@@ -96,6 +96,14 @@
         .port-status { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
         .port-status.up { background: rgba(75,192,192,0.3); color: #4BC0C0; }
         .port-status.down { background: rgba(255,99,132,0.3); color: #FF6384; }
+        .fw-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .fw-stat-card { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 20px; text-align: center; }
+        .fw-stat-card.total { background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(123,44,191,0.2)); border: 2px solid rgba(0,212,255,0.3); }
+        .fw-stat-label { color: #888; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 8px; }
+        .fw-stat-value { font-size: 2rem; font-weight: bold; color: #fff; }
+        .fw-stat-sub { color: #aaa; font-size: 0.8rem; margin-top: 5px; }
+        .fw-progress { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+        .fw-progress-bar { height: 100%; border-radius: 3px; transition: width 0.5s; }
         @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } .clients-table { font-size: 0.8rem; } }
     </style>
 </head>
@@ -217,9 +225,15 @@
         <div id="tab-network" class="tab-content">
             <div class="stats-grid">
                 <div class="stat-card"><div class="stat-value" id="dhcpCount">-</div><div class="stat-label">IPs DHCP</div></div>
-                <div class="stat-card"><div class="stat-value" id="sessionCount">-</div><div class="stat-label">Sesiones</div></div>
+                <div class="stat-card"><div class="stat-value" id="sessionCount">-</div><div class="stat-label">Sesiones Totales</div></div>
                 <div class="stat-card"><div class="stat-value" id="fgOficinaCount">-</div><div class="stat-label">FG Oficina</div></div>
                 <div class="stat-card"><div class="stat-value" id="fgDataCount">-</div><div class="stat-label">FG Data</div></div>
+            </div>
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-title">Sesiones por Firewall</div>
+                    <div id="fwStatsContent"><div class="loading">Cargando...</div></div>
+                </div>
             </div>
             <div class="tabs" style="margin-bottom:15px;">
                 <button class="tab-btn active" onclick="switchNetworkTab('dhcp')" id="tab-btn-dhcp" data-tab="dhcp">DHCP</button>
@@ -1297,6 +1311,27 @@
                     document.getElementById('fgDataCount').textContent = fgData;
                     document.getElementById('tcpCount').textContent = tcpCount;
                     document.getElementById('udpCount').textContent = udpCount;
+                    
+                    // Estadisticas por Firewall
+                    var fwStatsHtml = '<div class="fw-stats-grid">';
+                    fwStatsHtml += '<div class="fw-stat-card total"><div class="fw-stat-label">TOTAL</div><div class="fw-stat-value">' + totalSessions + '</div><div class="fw-stat-sub">' + (sessionData.by_firewall ? Object.keys(sessionData.by_firewall).length : 0) + ' firewalls</div></div>';
+                    if (sessionData.by_firewall) {
+                        var colors = ['#FF6384', '#36A2EB', '#4BC0C0', '#FFCE56'];
+                        var i = 0;
+                        Object.keys(sessionData.by_firewall).forEach(function(fwKey) {
+                            var fw = sessionData.by_firewall[fwKey];
+                            var pct = totalSessions > 0 ? Math.round((fw.total / totalSessions) * 100) : 0;
+                            fwStatsHtml += '<div class="fw-stat-card" style="border-left: 4px solid ' + colors[i % colors.length] + ';">';
+                            fwStatsHtml += '<div class="fw-stat-label">' + fw.name + '</div>';
+                            fwStatsHtml += '<div class="fw-stat-value" style="color:' + colors[i % colors.length] + ';">' + fw.total + '</div>';
+                            fwStatsHtml += '<div class="fw-stat-sub">' + pct + '% del total</div>';
+                            fwStatsHtml += '<div class="fw-progress"><div class="fw-progress-bar" style="width:' + pct + '%;background:' + colors[i % colors.length] + ';"></div></div>';
+                            fwStatsHtml += '</div>';
+                            i++;
+                        });
+                    }
+                    fwStatsHtml += '</div>';
+                    document.getElementById('fwStatsContent').innerHTML = fwStatsHtml;
                     
                     // DHCP Content
                     var dhcpHtml = '';
