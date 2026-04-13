@@ -511,6 +511,36 @@
                         </div>
                     </div>
                 </div>
+                <div class="dashboard-grid" style="margin-top:15px;">
+                    <div class="card">
+                        <div class="card-title">File Integrity Monitoring</div>
+                        <div class="soc-grid" style="margin-top:12px;">
+                            <div class="soc-card"><div class="soc-card-label">Eventos</div><div class="soc-card-value" id="socWazuhFimEvents">--</div></div>
+                            <div class="soc-card"><div class="soc-card-label">Warnings</div><div class="soc-card-value" id="socWazuhFimWarnings">--</div></div>
+                            <div class="soc-card"><div class="soc-card-label">Errors</div><div class="soc-card-value" id="socWazuhFimErrors">--</div></div>
+                        </div>
+                        <div style="margin-top:12px;overflow:auto;">
+                            <table class="soc-table">
+                                <thead><tr><th>Fecha</th><th>Tag</th><th>Nivel</th><th>Descripción</th></tr></thead>
+                                <tbody id="socWazuhFimTable"><tr><td colspan="4" style="text-align:center;color:#888;">Cargando...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Usuarios en Riesgo</div>
+                        <div class="soc-grid" style="margin-top:12px;">
+                            <div class="soc-card"><div class="soc-card-label">Total</div><div class="soc-card-value" id="socWazuhUsersTotal">--</div></div>
+                            <div class="soc-card"><div class="soc-card-label">Privilegiados</div><div class="soc-card-value" id="socWazuhUsersPrivileged">--</div></div>
+                            <div class="soc-card"><div class="soc-card-label">Bloqueados</div><div class="soc-card-value" id="socWazuhUsersLocked">--</div></div>
+                        </div>
+                        <div style="margin-top:12px;overflow:auto;">
+                            <table class="soc-table">
+                                <thead><tr><th>Agente</th><th>Usuario</th><th>UID</th><th>Estado</th><th>Shell</th></tr></thead>
+                                <tbody id="socWazuhUsersTable"><tr><td colspan="5" style="text-align:center;color:#888;">Cargando...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- Top Aplicaciones -->
@@ -946,6 +976,12 @@
                 document.getElementById('socWazuhVulnScanner').textContent = (data.wazuh_vuln?.scanner_events || 0).toLocaleString();
                 document.getElementById('socWazuhVulnFeedErrors').textContent = (data.wazuh_vuln?.feed_errors || 0).toLocaleString();
                 document.getElementById('socWazuhVulnInfo').textContent = (data.wazuh_vuln?.info || 0).toLocaleString();
+                document.getElementById('socWazuhFimEvents').textContent = (data.wazuh_fim?.events || 0).toLocaleString();
+                document.getElementById('socWazuhFimWarnings').textContent = (data.wazuh_fim?.warnings || 0).toLocaleString();
+                document.getElementById('socWazuhFimErrors').textContent = (data.wazuh_fim?.errors || 0).toLocaleString();
+                document.getElementById('socWazuhUsersTotal').textContent = (data.wazuh_user_risk?.total || 0).toLocaleString();
+                document.getElementById('socWazuhUsersPrivileged').textContent = (data.wazuh_user_risk?.privileged || 0).toLocaleString();
+                document.getElementById('socWazuhUsersLocked').textContent = (data.wazuh_user_risk?.locked || 0).toLocaleString();
                 var wazuhCluster = data.wazuh?.cluster_running ? 'Cluster activo' : 'Cluster inactivo';
                 if (data.wazuh?.cluster_name) wazuhCluster += ' - ' + data.wazuh.cluster_name;
                 document.getElementById('socWazuhCluster').textContent = wazuhCluster;
@@ -1010,6 +1046,25 @@
                         var lvlColor = lvl === 'error' ? '#FF6384' : lvl === 'warning' ? '#FFCE56' : '#4BC0C0';
                         return '<tr><td>' + (v.timestamp || '-') + '</td><td>' + (v.tag || '-') + '</td><td><span style="color:' + lvlColor + ';font-weight:bold;">' + (v.level || '-') + '</span></td><td>' + (v.description || '-') + '</td></tr>';
                     }).join('') : '<tr><td colspan="4" style="text-align:center;color:#4BC0C0;">Sin logs de vulnerabilidades</td></tr>';
+                }
+
+                var wazuhFimTable = document.getElementById('socWazuhFimTable');
+                if (wazuhFimTable) {
+                    var fim = data.wazuh_fim?.recent || [];
+                    wazuhFimTable.innerHTML = fim.length ? fim.map(function(v) {
+                        var lvl = (v.level || '').toLowerCase();
+                        var lvlColor = lvl === 'error' ? '#FF6384' : lvl === 'warning' ? '#FFCE56' : '#4BC0C0';
+                        return '<tr><td>' + (v.timestamp || '-') + '</td><td>' + (v.tag || '-') + '</td><td><span style="color:' + lvlColor + ';font-weight:bold;">' + (v.level || '-') + '</span></td><td>' + (v.description || '-') + '</td></tr>';
+                    }).join('') : '<tr><td colspan="4" style="text-align:center;color:#4BC0C0;">Sin eventos FIM</td></tr>';
+                }
+
+                var wazuhUsersTable = document.getElementById('socWazuhUsersTable');
+                if (wazuhUsersTable) {
+                    var users = data.wazuh_user_risk?.items || [];
+                    wazuhUsersTable.innerHTML = users.length ? users.map(function(u) {
+                        var stateColor = u.status === 'locked' ? '#FF6384' : '#4BC0C0';
+                        return '<tr><td>' + (u.agent || '-') + '</td><td>' + (u.user || '-') + '</td><td>' + (u.uid || '-') + '</td><td><span style="color:' + stateColor + ';font-weight:bold;">' + (u.status || '-') + '</span></td><td>' + (u.shell || '-') + '</td></tr>';
+                    }).join('') : '<tr><td colspan="5" style="text-align:center;color:#4BC0C0;">Sin usuarios en riesgo</td></tr>';
                 }
 
                 document.getElementById('socWazuhVulnModule').textContent = (data.wazuh_vuln?.scanner_events || 0) > 0 ? 'Activo' : 'Sin actividad';

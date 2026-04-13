@@ -605,6 +605,14 @@ switch ($action) {
         $wazuhVulnScannerEvents = 0;
         $wazuhVulnFeedErrors = 0;
         $wazuhVulnInfo = 0;
+        $wazuhFimEvents = 0;
+        $wazuhFimWarnings = 0;
+        $wazuhFimErrors = 0;
+        $wazuhFimRecent = [];
+        $wazuhUserRiskTotal = 0;
+        $wazuhUserRiskPrivileged = 0;
+        $wazuhUserRiskLocked = 0;
+        $wazuhUserRiskItems = [];
         $wazuhApiOk = false;
         $wazuhClusterRunning = false;
         $wazuhClusterName = '';
@@ -678,6 +686,60 @@ switch ($action) {
                     }
                     if ($level === 'info') {
                         $wazuhVulnInfo++;
+                    }
+                }
+            }
+
+            list($fimCode, $fimResp) = wazuhRequest('/manager/logs?search=syscheck&limit=50&sort=-timestamp', $wazuhToken);
+            if ($fimCode === 200 && isset($fimResp['data']['affected_items'])) {
+                $fimLogs = $fimResp['data']['affected_items'];
+                foreach ($fimLogs as $log) {
+                    $level = strtolower($log['level'] ?? 'info');
+                    $tag = strtolower($log['tag'] ?? '');
+                    $desc = $log['description'] ?? '';
+                    if ($level === 'warning') $wazuhFimWarnings++;
+                    elseif ($level === 'error' || $level === 'critical') $wazuhFimErrors++;
+                    else $wazuhFimEvents++;
+                    if (count($wazuhFimRecent) < 10) {
+                        $wazuhFimRecent[] = [
+                            'timestamp' => $log['timestamp'] ?? '',
+                            'tag' => $log['tag'] ?? '',
+                            'level' => $log['level'] ?? '',
+                            'description' => $desc
+                        ];
+                    }
+                }
+            }
+
+            if (!empty($wazuhAgents)) {
+                foreach ($wazuhAgents as $agent) {
+                    $agentId = $agent['id'] ?? '';
+                    if (!$agentId || $agentId === '000') continue;
+                    list($usersCode, $usersResp) = wazuhRequest('/syscollector/' . $agentId . '/users?limit=100', $wazuhToken);
+                    if ($usersCode !== 200 || !isset($usersResp['data']['affected_items'])) continue;
+                    $agentName = $agent['name'] ?? $agentId;
+                    foreach ($usersResp['data']['affected_items'] as $userRow) {
+                        $u = $userRow['user'] ?? [];
+                        $uname = $u['name'] ?? '';
+                        if ($uname === '') continue;
+                        $uid = intval($u['id'] ?? -1);
+                        $locked = strtolower($u['password_status'] ?? '') === 'locked';
+                        $privileged = in_array($uid, [0, 500, 1000], true) || in_array(strtolower($uname), ['root', 'administrator', 'administrador', 'admin'], true) || strpos(strtolower($u['groups'] ?? ''), 'administr') !== false;
+                        $wazuhUserRiskTotal++;
+                        if ($privileged) $wazuhUserRiskPrivileged++;
+                        if ($locked) $wazuhUserRiskLocked++;
+                        if (count($wazuhUserRiskItems) < 15 && ($privileged || $locked)) {
+                            $wazuhUserRiskItems[] = [
+                                'agent' => $agentName,
+                                'id' => $agentId,
+                                'user' => $uname,
+                                'uid' => $uid,
+                                'shell' => $u['shell'] ?? '',
+                                'status' => $locked ? 'locked' : 'active',
+                                'groups' => $u['groups'] ?? '',
+                                'password_status' => $u['password_status'] ?? ''
+                            ];
+                        }
                     }
                 }
             }
@@ -857,6 +919,18 @@ switch ($action) {
                         'description' => $l['description'] ?? ''
                     ];
                 }, $wazuhVulnLogs), 0, 10)
+            ],
+            'wazuh_fim' => [
+                'events' => $wazuhFimEvents,
+                'warnings' => $wazuhFimWarnings,
+                'errors' => $wazuhFimErrors,
+                'recent' => $wazuhFimRecent
+            ],
+            'wazuh_user_risk' => [
+                'total' => $wazuhUserRiskTotal,
+                'privileged' => $wazuhUserRiskPrivileged,
+                'locked' => $wazuhUserRiskLocked,
+                'items' => $wazuhUserRiskItems
             ],
             'firewalls' => $firewallStats,
             'firewall' => [
