@@ -344,38 +344,55 @@ switch ($action) {
             $ports = $sw['ports'] ?? [];
             $upPorts = 0;
             $poePorts = 0;
+            $rj45Ports = 0;
+            $sfpPorts = 0;
             $portsData = [];
+            
             foreach ($ports as $p) {
                 $portStatus = $p['status'] ?? 'down';
+                $mediaType = $p['media-type'] ?? 'RJ45';
                 if ($portStatus === 'up') $upPorts++;
                 if (($p['poe-status'] ?? '') === 'enable') $poePorts++;
+                if ($mediaType === 'RJ45') $rj45Ports++;
+                if ($mediaType === 'SFP' || $mediaType === 'SFP+') $sfpPorts++;
                 $portsData[] = [
                     'name' => $p['port-name'] ?? '',
                     'status' => $portStatus,
                     'speed' => $p['speed'] ?? 'auto',
                     'poe' => $p['poe-status'] ?? 'disable',
+                    'media' => $mediaType,
                     'vlan' => $p['vlan'] ?? '',
                     'description' => $p['description'] ?? ''
                 ];
             }
+            
             $isOnline = ($sw['dynamically-discovered'] ?? 0) === 1 || ($sw['fsw-wan1-peer'] ?? '') === 'fortilink' || ($sw['fsw-wan1-admin'] ?? '') === 'enable';
             $fwKey = $sw['firewall_key'] ?? '';
             $fwName = $sw['firewall'] ?? 'Unknown';
+            
+            $portCount = count($ports);
+            $model = 'FortiSwitch';
+            if ($portCount >= 48) $model = 'FortiSwitch 248E';
+            elseif ($portCount >= 24) $model = 'FortiSwitch 424';
+            elseif ($portCount >= 16) $model = 'FortiSwitch 116';
+            elseif ($portCount >= 8) $model = 'FortiSwitch 108';
             
             $formatted[] = [
                 'name' => $sw['name'] ?: $sw['switch-id'] ?: 'Unknown',
                 'switch-id' => $sw['switch-id'] ?? '',
                 'ip' => $sw['ip'] ?? '',
                 'status' => $isOnline ? 'up' : 'down',
-                'ports' => count($ports),
+                'ports' => $portCount,
                 'ports_up' => $upPorts,
                 'ports_poe' => $poePorts,
+                'ports_rj45' => $rj45Ports,
+                'ports_sfp' => $sfpPorts,
                 'ports_data' => $portsData,
                 'dynamically-discovered' => $sw['dynamically-discovered'] ?? 0,
                 'firewall' => $fwName,
                 'firewall_key' => $fwKey,
                 'serial' => $sw['sn'] ?? $sw['serial'] ?? '',
-                'model' => $sw['type'] ?? ''
+                'model' => $model
             ];
             
             if (!isset($byFirewallDetailed[$fwKey])) {

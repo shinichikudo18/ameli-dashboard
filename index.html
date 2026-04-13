@@ -103,6 +103,10 @@
         .port-status.down { background: rgba(255,99,132,0.3); color: #FF6384; }
         .port-speed { color: #888; font-size: 0.75rem; }
         .port-poe { color: #FFCE56; font-size: 0.75rem; }
+        .port-box { transition: all 0.2s; }
+        .port-box:hover { transform: scale(1.1); box-shadow: 0 0 10px rgba(0,212,255,0.3); z-index: 10; }
+        .port-up { animation: portPulse 2s infinite; }
+        @keyframes portPulse { 0%, 100% { box-shadow: none; } 50% { box-shadow: 0 0 8px rgba(75,192,192,0.3); } }
         .fw-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .fw-stat-card { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 20px; text-align: center; }
         .fw-stat-card.total { background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(123,44,191,0.2)); border: 2px solid rgba(0,212,255,0.3); }
@@ -2194,9 +2198,12 @@
                             var portsUp = sw['ports_up'] || 0;
                             var portsTotal = sw.ports || 0;
                             var poePorts = sw['ports_poe'] || 0;
+                            var rj45Ports = sw['ports_rj45'] || 0;
+                            var sfpPorts = sw['ports_sfp'] || 0;
                             var swId = sw['switch-id'];
                             var swStatusColor = status ? '#4BC0C0' : '#FF6384';
                             var swDisplayName = sw.name || sw.serial || sw['switch-id'] || 'Switch';
+                            var swPorts = sw.ports_data || [];
                             
                             // Layout tipo rack del switch
                             html += '<div class="switch-detail-card" style="background:rgba(0,0,0,0.25);border-radius:12px;padding:20px;margin-bottom:15px;border:1px solid rgba(255,255,255,0.1);">';
@@ -2221,81 +2228,107 @@
                             html += '<div class="sw-metric"><div class="sw-metric-label">Serial</div><div class="sw-metric-value">' + (sw.serial || '-') + '</div></div>';
                             html += '<div class="sw-metric"><div class="sw-metric-label">IP</div><div class="sw-metric-value">' + (sw.ip || '-') + '</div></div>';
                             html += '<div class="sw-metric"><div class="sw-metric-label">Modelo</div><div class="sw-metric-value">' + (sw.model || 'FortiSwitch') + '</div></div>';
-                            html += '<div class="sw-metric"><div class="sw-metric-label">Tipo</div><div class="sw-metric-value">' + (sw.type || 'Physical') + '</div></div>';
                             html += '</div>';
                             
                             // Stats de puertos
-                            html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:15px;">';
-                            var poeEnabled = portsTotal > 0 ? Math.round((poePorts / portsTotal) * 100) : 0;
+                            html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:15px;">';
                             var upPct = portsTotal > 0 ? Math.round((portsUp / portsTotal) * 100) : 0;
+                            var poePct = portsTotal > 0 ? Math.round((poePorts / portsTotal) * 100) : 0;
                             html += '<div style="background:rgba(75,192,192,0.15);padding:12px;border-radius:8px;text-align:center;">';
                             html += '<div style="font-size:1.5rem;font-weight:bold;color:#4BC0C0;">' + portsUp + '/' + portsTotal + '</div>';
-                            html += '<div style="font-size:0.75rem;color:#888;">Puertos Up</div>';
-                            html += '<div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:8px;"><div style="height:100%;width:' + upPct + '%;background:#4BC0C0;border-radius:2px;"></div></div>';
+                            html += '<div style="font-size:0.75rem;color:#888;">Activos</div>';
                             html += '</div>';
                             html += '<div style="background:rgba(255,206,86,0.15);padding:12px;border-radius:8px;text-align:center;">';
                             html += '<div style="font-size:1.5rem;font-weight:bold;color:#FFCE56;">' + poePorts + '</div>';
-                            html += '<div style="font-size:0.75rem;color:#888;">Puertos PoE</div>';
-                            html += '<div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:8px;"><div style="height:100%;width:' + poeEnabled + '%;background:#FFCE56;border-radius:2px;"></div></div>';
+                            html += '<div style="font-size:0.75rem;color:#888;">PoE</div>';
                             html += '</div>';
                             html += '<div style="background:rgba(54,162,235,0.15);padding:12px;border-radius:8px;text-align:center;">';
-                            html += '<div style="font-size:1.5rem;font-weight:bold;color:#36A2EB;">' + (portsTotal - portsUp) + '</div>';
-                            html += '<div style="font-size:0.75rem;color:#888;">Puertos Down</div>';
+                            html += '<div style="font-size:1.5rem;font-weight:bold;color:#36A2EB;">' + rj45Ports + '</div>';
+                            html += '<div style="font-size:0.75rem;color:#888;">RJ45</div>';
+                            html += '</div>';
+                            html += '<div style="background:rgba(186,85,211,0.15);padding:12px;border-radius:8px;text-align:center;">';
+                            html += '<div style="font-size:1.5rem;font-weight:bold;color:#BA55D3;">' + sfpPorts + '</div>';
+                            html += '<div style="font-size:0.75rem;color:#888;">SFP</div>';
                             html += '</div>';
                             html += '</div>';
                             
-                            // Mini visualizacion de puertos (primeros 12)
-                            var portsToShow = Math.min(12, portsTotal);
-                            if (portsToShow > 0) {
-                                var swPorts = (sw.ports_data || []).slice(0, 12);
+                            // Visualizacion completa de puertos (todos los puertos del switch)
+                            if (swPorts.length > 0) {
                                 html += '<div style="margin-bottom:15px;">';
-                                html += '<div style="font-size:0.8rem;color:#888;margin-bottom:8px;">Vista previa de puertos</div>';
-                                html += '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;">';
-                                for (var p = 0; p < portsToShow; p++) {
-                                    var portInfo = swPorts[p] || { status: 'down' };
-                                    var portUp = portInfo.status === 'up';
-                                    var portColor = portUp ? '#4BC0C0' : '#444';
-                                    html += '<div style="height:30px;background:' + portColor + '44;border:1px solid ' + portColor + ';border-radius:4px;display:grid;place-items:center;font-size:0.65rem;color:' + (portUp ? '#4BC0C0' : '#666') + ';">' + (p + 1) + '</div>';
+                                html += '<div style="font-size:0.85rem;color:#888;margin-bottom:12px;">Todos los puertos (' + swPorts.length + ')</div>';
+                                
+                                // Puerto 1 a 24 (o menos)
+                                var rj45ToShow = Math.min(rj45Ports, 24);
+                                if (rj45ToShow > 0) {
+                                    html += '<div style="margin-bottom:15px;">';
+                                    html += '<div style="font-size:0.7rem;color:#FFCE56;margin-bottom:8px;">◈ Puertos RJ45 (1-' + rj45ToShow + ')</div>';
+                                    html += '<div style="display:grid;grid-template-columns:repeat(' + Math.min(rj45ToShow, 12) + ',1fr);gap:4px;">';
+                                    for (var p = 0; p < rj45ToShow; p++) {
+                                        var portInfo = swPorts[p] || {};
+                                        var portUp = portInfo.status === 'up';
+                                        var portPoe = portInfo.poe === 'enable';
+                                        var portDesc = portInfo.description || '';
+                                        var portColor = portUp ? '#4BC0C0' : '#444';
+                                        var poeIndicator = portPoe && portUp ? '⚡' : '';
+                                        var title = portDesc ? portDesc : (portInfo.speed || 'auto');
+                                        html += '<div class="port-box ' + (portUp ? 'port-up' : 'port-down') + '" title="' + title + '" style="height:35px;background:' + portColor + '22;border:1px solid ' + portColor + ';border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:0.65rem;cursor:pointer;position:relative;">';
+                                        html += '<span style="color:' + portColor + ';font-weight:bold;">' + (p + 1) + '</span>';
+                                        html += '<span style="color:' + (portPoe ? '#FFCE56' : '#555') + ';font-size:0.6rem;">' + poeIndicator + '</span>';
+                                        html += '</div>';
+                                    }
+                                    html += '</div></div>';
                                 }
-                                html += '</div></div>';
+                                
+                                // Puerto 25 a 48 (o menos)
+                                if (rj45Ports > 24) {
+                                    var rj45Remaining = Math.min(rj45Ports - 24, 24);
+                                    html += '<div style="margin-bottom:15px;">';
+                                    html += '<div style="font-size:0.7rem;color:#FFCE56;margin-bottom:8px;">◈ Puertos RJ45 (25-' + (24 + rj45Remaining) + ')</div>';
+                                    html += '<div style="display:grid;grid-template-columns:repeat(' + Math.min(rj45Remaining, 12) + ',1fr);gap:4px;">';
+                                    for (var p2 = 24; p2 < 24 + rj45Remaining; p2++) {
+                                        var portInfo2 = swPorts[p2] || {};
+                                        var portUp2 = portInfo2.status === 'up';
+                                        var portPoe2 = portInfo2.poe === 'enable';
+                                        var portDesc2 = portInfo2.description || '';
+                                        var portColor2 = portUp2 ? '#4BC0C0' : '#444';
+                                        var poeIndicator2 = portPoe2 && portUp2 ? '⚡' : '';
+                                        var title2 = portDesc2 ? portDesc2 : (portInfo2.speed || 'auto');
+                                        html += '<div class="port-box ' + (portUp2 ? 'port-up' : 'port-down') + '" title="' + title2 + '" style="height:35px;background:' + portColor2 + '22;border:1px solid ' + portColor2 + ';border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:0.65rem;cursor:pointer;position:relative;">';
+                                        html += '<span style="color:' + portColor2 + ';font-weight:bold;">' + (p2 + 1) + '</span>';
+                                        html += '<span style="color:' + (portPoe2 ? '#FFCE56' : '#555') + ';font-size:0.6rem;">' + poeIndicator2 + '</span>';
+                                        html += '</div>';
+                                    }
+                                    html += '</div></div>';
+                                }
+                                
+                                // Puertos SFP
+                                if (sfpPorts > 0) {
+                                    var sfpStartIdx = rj45Ports;
+                                    html += '<div style="margin-bottom:15px;">';
+                                    html += '<div style="font-size:0.7rem;color:#BA55D3;margin-bottom:8px;">◈ Puertos SFP (' + (sfpStartIdx + 1) + '-' + swPorts.length + ')</div>';
+                                    html += '<div style="display:grid;grid-template-columns:repeat(' + sfpPorts + ',1fr);gap:4px;max-width:300px;">';
+                                    for (var s = 0; s < sfpPorts; s++) {
+                                        var portInfoS = swPorts[sfpStartIdx + s] || {};
+                                        var portUpS = portInfoS.status === 'up';
+                                        var mediaType = portInfoS.media || 'SFP';
+                                        var portColorS = portUpS ? '#BA55D3' : '#444';
+                                        html += '<div class="port-box ' + (portUpS ? 'port-up' : 'port-down') + '" title="' + mediaType + '" style="height:35px;background:' + portColorS + '22;border:1px solid ' + portColorS + ';border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:0.65rem;">';
+                                        html += '<span style="color:' + portColorS + ';font-weight:bold;">SFP' + (s + 1) + '</span>';
+                                        html += '<span style="color:#888;font-size:0.55rem;">' + mediaType.replace('SFP+', '+') + '</span>';
+                                        html += '</div>';
+                                    }
+                                    html += '</div></div>';
+                                }
+                                
+                                html += '</div>';
                             }
                             
-                            // Boton para ver todos los puertos
-                            html += '<button class="ports-toggle" id="btn-' + swId + '" onclick="toggleSwitchPorts(\'' + swId + '\')">Ver todos los puertos (' + portsTotal + ')</button>';
+                            // Boton para ver tabla detallada
+                            html += '<button class="ports-toggle" id="btn-' + swId + '" onclick="toggleSwitchPorts(\'' + swId + '\')">Ver tabla detallada (' + portsTotal + ' puertos)</button>';
                             html += '<div class="ports-table" id="ports-' + swId + '"></div>';
                             html += '</div>';
                         });
                         html += '</div>';
-                    });
-                    
-                    // Si hay firewalls no ordenados, agregarlos al final
-                    Object.keys(groups).sort().forEach(function(fw) {
-                        if (fwOrder.indexOf(fw) >= 0) return;
-                        var items = groups[fw];
-                        var fwColor = '#FFCE56';
-                        html += '<div class="card" style="margin-bottom:20px;">';
-                        html += '<div class="card-title">' + fw + ' (' + items.length + ' switches)</div>';
-                        html += '<div class="switches-grid">';
-                        items.forEach(function(sw) {
-                            var status = sw.status === 'up';
-                            var portsUp = sw['ports_up'] || 0;
-                            var portsTotal = sw.ports || 0;
-                            var poePorts = sw['ports_poe'] || 0;
-                            var swId = sw['switch-id'];
-                            html += '<div class="switch-card ' + (status ? 'online' : 'offline') + '">';
-                            html += '<div class="switch-name">' + (sw.name || sw.serial || sw['switch-id'] || 'Switch') + '</div>';
-                            html += '<div class="switch-status ' + (status ? 'online' : 'offline') + '">' + (status ? '✓ Online' : '✗ Offline') + '</div>';
-                            html += '<div class="switch-info">';
-                            html += '<div><strong>Serial:</strong> ' + (sw.serial || '-') + '</div>';
-                            html += '<div><strong>IP:</strong> ' + (sw.ip || '-') + '</div>';
-                            html += '<div><strong>Puertos:</strong> ' + portsUp + '/' + portsTotal + '</div>';
-                            html += '<div><strong>PoE:</strong> ' + poePorts + ' puertos</div>';
-                            html += '</div>';
-                            html += '<button class="ports-toggle" id="btn-' + swId + '" onclick="toggleSwitchPorts(\'' + swId + '\')">Ver puertos (' + portsTotal + ')</button>';
-                            html += '<div class="ports-table" id="ports-' + swId + '"></div>';
-                            html += '</div>';
-                        });
-                        html += '</div></div>';
                     });
                     
                     document.getElementById('switchesContent').innerHTML = html;
