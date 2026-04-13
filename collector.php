@@ -148,7 +148,7 @@ saveJson($baseDir . '/data/sessions.json', ['timestamp' => $timestamp, 'total' =
 $appDb = [];
 $appNameMap = [
     34527 => ['name' => 'Instagram', 'category' => 'Social.Media', 'risk' => 'medium'],
-    47013 => ['name' => 'SSL/TLS', 'category' => 'Security', 'risk' => 'low'],
+    47013 => ['name' => 'SSL.TLS', 'category' => 'Security', 'risk' => 'low'],
     41469 => ['name' => 'Microsoft.Portal', 'category' => 'Collaboration', 'risk' => 'low'],
     41468 => ['name' => 'Microsoft.Office365', 'category' => 'Collaboration', 'risk' => 'low'],
     43541 => ['name' => 'Microsoft.Teams', 'category' => 'Collaboration', 'risk' => 'low'],
@@ -169,7 +169,33 @@ $appNameMap = [
     40169 => ['name' => 'HTTP.Proxy', 'category' => 'Proxy', 'risk' => 'medium'],
     41475 => ['name' => 'Microsoft.Authentication', 'category' => 'Authentication', 'risk' => 'low'],
     15832 => ['name' => 'Facebook', 'category' => 'Social.Media', 'risk' => 'medium'],
-    99999 => ['name' => 'Unknown', 'category' => 'Uncategorized', 'risk' => 'high']
+    16190 => ['name' => 'Spotify', 'category' => 'Media', 'risk' => 'medium'],
+    56688 => ['name' => 'SSH', 'category' => 'Remote.Access', 'risk' => 'medium'],
+    47816 => ['name' => 'RDP', 'category' => 'Remote.Access', 'risk' => 'medium'],
+    33053 => ['name' => 'SMB', 'category' => 'File.Sharing', 'risk' => 'medium'],
+    15816 => ['name' => 'Google.Drive', 'category' => 'Cloud', 'risk' => 'low'],
+    42662 => ['name' => 'Dropbox', 'category' => 'Cloud', 'risk' => 'medium'],
+    55465 => ['name' => 'Slack', 'category' => 'Collaboration', 'risk' => 'low'],
+    23382 => ['name' => 'Zoom', 'category' => 'Video.Conf', 'risk' => 'medium'],
+    39164 => ['name' => 'Telegram', 'category' => 'Messaging', 'risk' => 'medium'],
+    54419 => ['name' => 'Twitter', 'category' => 'Social.Media', 'risk' => 'medium'],
+    54381 => ['name' => 'LinkedIn', 'category' => 'Social.Media', 'risk' => 'medium'],
+    42537 => ['name' => 'Office365', 'category' => 'Collaboration', 'risk' => 'low'],
+    16573 => ['name' => 'Gmail', 'category' => 'Email', 'risk' => 'low'],
+    54418 => ['name' => 'OneDrive', 'category' => 'Cloud', 'risk' => 'low'],
+    54507 => ['name' => 'Teams', 'category' => 'Collaboration', 'risk' => 'low'],
+    39243 => ['name' => 'Salesforce', 'category' => 'Business', 'risk' => 'low'],
+    41540 => ['name' => 'AWS', 'category' => 'Cloud', 'risk' => 'medium'],
+    43714 => ['name' => 'Azure', 'category' => 'Cloud', 'risk' => 'medium'],
+    38900 => ['name' => 'GitHub', 'category' => 'Development', 'risk' => 'low'],
+    16035 => ['name' => 'VPN.IPSec', 'category' => 'VPN', 'risk' => 'low'],
+    52685 => ['name' => 'FortiClient', 'category' => 'Security', 'risk' => 'low'],
+    38131 => ['name' => 'Windows.Update', 'category' => 'Update', 'risk' => 'low'],
+    42768 => ['name' => 'Adobe', 'category' => 'Software', 'risk' => 'medium'],
+    38924 => ['name' => 'Teamspeak', 'category' => 'VoIP', 'risk' => 'medium'],
+    40568 => ['name' => 'WinRM', 'category' => 'Remote.Management', 'risk' => 'high'],
+    34640 => ['name' => 'PostgreSQL', 'category' => 'Database', 'risk' => 'high'],
+    34789 => ['name' => 'MySQL', 'category' => 'Database', 'risk' => 'high'],
 ];
 foreach ($allSessions as $s) {
     if (!empty($s['apps'])) {
