@@ -267,6 +267,10 @@
                     <div id="fwStatsContent"><div class="loading">Cargando...</div></div>
                 </div>
                 <div class="card">
+                    <div class="card-title">Top Aplicaciones</div>
+                    <div class="chart-container" style="height:200px;"><canvas id="appSessionsChart"></canvas></div>
+                </div>
+                <div class="card">
                     <div class="card-title">Lista de Sesiones</div>
                     <div id="sessionsContent"><div class="loading">Cargando...</div></div>
                 </div>
@@ -1317,6 +1321,40 @@
                     }
                     fwStatsHtml += '</div>';
                     document.getElementById('fwStatsContent').innerHTML = fwStatsHtml;
+                    
+                    // Grafico de aplicaciones
+                    var appCount = {};
+                    sessions.forEach(function(s) {
+                        var app = s.app_name || 'Other';
+                        appCount[app] = (appCount[app] || 0) + 1;
+                    });
+                    var sortedApps = Object.keys(appCount).sort(function(a, b) { return appCount[b] - appCount[a]; }).slice(0, 15);
+                    var appLabels = sortedApps;
+                    var appData = sortedApps.map(function(a) { return appCount[a]; });
+                    
+                    if (window.appSessionsChart) window.appSessionsChart.destroy();
+                    var ctx = document.getElementById('appSessionsChart').getContext('2d');
+                    var colors = ['#FF6384', '#36A2EB', '#4BC0C0', '#FFCE56', '#9966FF', '#FF9F40', '#7b2cbf', '#00d4ff', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#a29bfe'];
+                    window.appSessionsChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: appLabels,
+                            datasets: [{
+                                label: 'Sesiones',
+                                data: appData,
+                                backgroundColor: colors.slice(0, appLabels.length)
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { ticks: { color: '#fff', maxRotation: 45, minRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                                y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } }
+                            }
+                        }
+                    });
                     
                     // DHCP Content
                     var dhcpHtml = '';
