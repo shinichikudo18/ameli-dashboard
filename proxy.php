@@ -1038,7 +1038,16 @@ switch ($action) {
         break;
 
     case 'redteam_data':
-        $report = loadJson($baseDir . '/data/redteam.json');
+        $reportFile = $_GET['report'] ?? '';
+        $reportPath = $baseDir . '/data/redteam.json';
+        if ($reportFile) {
+            $safe = basename($reportFile);
+            $candidate = $baseDir . '/data/redteam-reports/' . $safe;
+            if (file_exists($candidate)) {
+                $reportPath = $candidate;
+            }
+        }
+        $report = loadJson($reportPath);
         $summary = $report['summary'] ?? [];
         $targets = $report['targets'] ?? [];
         $hosts = $report['hosts'] ?? [];
@@ -1071,6 +1080,22 @@ switch ($action) {
         ]);
         break;
 
+    case 'redteam_list':
+        $dir = $baseDir . '/data/redteam-reports';
+        $reports = [];
+        if (is_dir($dir)) {
+            foreach (glob($dir . '/*.json') as $file) {
+                $reports[] = [
+                    'file' => basename($file),
+                    'modified' => date('Y-m-d H:i:s', filemtime($file)),
+                    'size' => filesize($file)
+                ];
+            }
+        }
+        usort($reports, function($a, $b) { return strcmp($b['modified'], $a['modified']); });
+        echo json_encode(['results' => array_slice($reports, 0, 5)]);
+        break;
+
     case 'redteam_save':
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             http_response_code(405);
@@ -1084,22 +1109,28 @@ switch ($action) {
             echo json_encode(['error' => 'Invalid JSON']);
             break;
         }
-        $file = $baseDir . '/data/redteam.json';
-        $dir = dirname($file);
+        $dir = $baseDir . '/data/redteam-reports';
         if (!is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
-        $existing = loadJson($file);
+        $stamp = date('Ymd-His');
+        $file = $dir . '/redteam-' . $stamp . '.json';
         $payload['generated_at'] = $payload['generated_at'] ?? date('Y-m-d H:i:s');
         if (empty($payload['summary']) && !empty($payload['targets'])) {
             $payload['summary'] = ['targets' => count($payload['targets'])];
         }
         $payload['updated_at'] = date('Y-m-d H:i:s');
-        if (!empty($existing['targets']) && empty($payload['targets'])) {
-            $payload['targets'] = $existing['targets'];
-        }
         file_put_contents($file, json_encode($payload, JSON_PRETTY_PRINT));
-        echo json_encode(['status' => 'ok', 'saved' => true, 'path' => 'data/redteam.json']);
+        $latest = $baseDir . '/data/redteam.json';
+        file_put_contents($latest, json_encode($payload, JSON_PRETTY_PRINT));
+
+        $files = glob($dir . '/redteam-*.json');
+        usort($files, function($a, $b) { return filemtime($b) <=> filemtime($a); });
+        foreach (array_slice($files, 5) as $old) {
+            @unlink($old);
+        }
+
+        echo json_encode(['status' => 'ok', 'saved' => true, 'path' => 'data/redteam-reports/' . basename($file)]);
         break;
 
     case 'soc_history':

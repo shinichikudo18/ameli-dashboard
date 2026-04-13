@@ -847,6 +847,13 @@
                     Vista segura para reportes importados de actividades autorizadas. No ejecuta herramientas ni automatiza enumeración.
                 </div>
                 <div id="redTeamNote" style="margin-top:10px;color:#00d4ff;font-size:0.9rem;"></div>
+                <div style="margin-top:14px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;">
+                    <div>
+                        <label style="display:block;color:#9aa3b2;font-size:0.75rem;margin-bottom:6px;">Reporte guardado</label>
+                        <select id="rtReportSelect" onchange="loadSelectedRedTeamReport()" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.25);color:#fff;"></select>
+                    </div>
+                    <button onclick="refreshRedTeamReports()" style="padding:12px 16px;border:none;border-radius:10px;background:rgba(0,212,255,0.18);color:#00d4ff;font-weight:800;cursor:pointer;">Actualizar lista</button>
+                </div>
             </div>
             <div class="card" style="margin-bottom:20px;">
                 <div class="card-title">Nuevo Objetivo</div>
@@ -1429,8 +1436,10 @@
             }).catch(function(err){ console.error('SOC data error:', err); });
         }
 
-        function refreshRedTeam() {
-            fetch('/dashboard/proxy.php?action=redteam_data').then(function(r){return r.json();}).then(function(data){
+        function refreshRedTeam(reportFile) {
+            var url = '/dashboard/proxy.php?action=redteam_data';
+            if (reportFile) url += '&report=' + encodeURIComponent(reportFile);
+            fetch(url).then(function(r){return r.json();}).then(function(data){
                 var stored = JSON.parse(localStorage.getItem('redTeamTargets') || '[]');
                 var serverTargets = data.targets || [];
                 var mergedTargets = stored.slice();
@@ -1483,6 +1492,28 @@
             }).catch(function(err) {
                 document.getElementById('redTeamNote').textContent = 'Error cargando datos: ' + err.message;
             });
+        }
+
+        function refreshRedTeamReports() {
+            fetch('/dashboard/proxy.php?action=redteam_list').then(function(r){return r.json();}).then(function(data){
+                var sel = document.getElementById('rtReportSelect');
+                if (!sel) return;
+                var reports = data.results || [];
+                var html = '<option value="">Reporte actual</option>';
+                reports.forEach(function(r) {
+                    html += '<option value="' + escapeHtml(r.file) + '">' + escapeHtml(r.modified) + ' - ' + escapeHtml(r.file) + '</option>';
+                });
+                sel.innerHTML = html;
+                if (!sel.value && reports.length > 0) {
+                    sel.value = reports[0].file;
+                }
+            });
+        }
+
+        function loadSelectedRedTeamReport() {
+            var sel = document.getElementById('rtReportSelect');
+            if (!sel) return;
+            refreshRedTeam(sel.value || '');
         }
 
         function addRedTeamTarget() {
@@ -1612,6 +1643,7 @@
                 } else if (tabId === 'soc') {
                     refreshSOC();
                 } else if (tabId === 'redteam') {
+                    refreshRedTeamReports();
                     refreshRedTeam();
                 }
             });
@@ -3022,6 +3054,7 @@
             refreshEMS();
             refreshFortiVoice();
             refreshFreePBX();
+            refreshRedTeamReports();
         }
 
         document.addEventListener('DOMContentLoaded', initDashboard);
