@@ -118,11 +118,12 @@ switch ($action) {
         
     case 'aps':
         $wifi = loadJson($baseDir . '/data/wifi.json');
-        $clientCount = $wifi['clients'] ?? 0;
-        echo json_encode(['results' => [
-            ['name' => 'AMELI Wifi', 'clients' => $clientCount, 'rssi' => -50],
-            ['name' => 'Agnov Wifi', 'clients' => 0, 'rssi' => -60]
-        ]]);
+        echo json_encode(['results' => $wifi['aps'] ?? []]);
+        break;
+        
+    case 'wifi':
+        $wifi = loadJson($baseDir . '/data/wifi.json');
+        echo json_encode(['results' => $wifi['clients'] ?? [], 'by_firewall' => $wifi['by_firewall'] ?? []]);
         break;
         
     case 'dhcp':

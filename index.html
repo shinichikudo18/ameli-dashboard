@@ -117,7 +117,7 @@
         </header>
         <div class="tabs">
             <button class="tab-btn active" data-tab="ha">Home Assistant</button>
-            <button class="tab-btn" data-tab="forti">Cliente Wifi</button>
+            <button class="tab-btn" data-tab="forti">WiFi</button>
             <button class="tab-btn" data-tab="heatmap">Mapa de Calor</button>
             <button class="tab-btn" data-tab="network">Red</button>
             <button class="tab-btn" data-tab="switches">Switches</button>
@@ -195,13 +195,20 @@
         
         <div id="tab-forti" class="tab-content">
             <div class="stats-grid">
-                <div class="stat-card"><div class="stat-value" id="totalClients">-</div><div class="stat-label">Total</div></div>
-                <div class="stat-card"><div class="stat-value" id="signalGood">-</div><div class="stat-label">Buena Señal</div></div>
-                <div class="stat-card"><div class="stat-value" id="signalFair">-</div><div class="stat-label">Regular</div></div>
-                <div class="stat-card"><div class="stat-value" id="signalPoor">-</div><div class="stat-label">Mala Señal</div></div>
+                <div class="stat-card"><div class="stat-value" id="wifiApsTotal">-</div><div class="stat-label">Total APs</div></div>
+                <div class="stat-card"><div class="stat-value" id="wifiClientsTotal">-</div><div class="stat-label">Clientes</div></div>
+                <div class="stat-card"><div class="stat-value" id="wifiFgOficina">-</div><div class="stat-label">FG Oficina</div></div>
+                <div class="stat-card"><div class="stat-value" id="wifiFgData">-</div><div class="stat-label">FG Data</div></div>
             </div>
             <div class="dashboard-grid" style="margin-bottom:20px;">
-                <div class="card"><div class="card-title">Calidad de Señal</div><div class="chart-container"><canvas id="signalQualityChart"></canvas></div></div>
+                <div class="card">
+                    <div class="card-title">Access Points por Firewall</div>
+                    <div id="wifiApStats"><div class="loading">Cargando...</div></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Clientes por AP</div>
+                    <div id="wifiApClients"><div class="loading">Cargando...</div></div>
+                </div>
             </div>
             <div class="card">
                 <div class="card-title">Clientes Conectados</div>
@@ -1038,69 +1045,96 @@
         }
         
         function refreshForti() {
-            document.getElementById('clientsContent').innerHTML = '<div class="loading">Cargando clientes...</div>';
-            fetch(apiBase + 'clients')
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data.error) {
-                        document.getElementById('clientsContent').innerHTML = '<div class="error-msg">Error: ' + data.error + '</div>';
-                        return;
-                    }
-                    var clients = data.results || [];
-                    document.getElementById('totalClients').textContent = clients.length || 0;
-
-                    var good = 0, fair = 0, poor = 0;
-                    clients.forEach(function(c) {
-                        var sig = c.rssi || c.signal || -50;
-                        if (sig > -50) good++;
-                        else if (sig > -70) fair++;
-                        else poor++;
+            document.getElementById('clientsContent').innerHTML = '<div class="loading">Cargando...</div>';
+            Promise.all([
+                fetch(apiBase + 'clients').then(function(r) { return r.json(); }),
+                fetch(apiBase + 'aps').then(function(r) { return r.json(); })
+            ])
+                .then(function(results) {
+                    var clientsData = results[0];
+                    var apsData = results[1];
+                    
+                    var clients = clientsData.results || [];
+                    var aps = apsData.results || [];
+                    
+                    // Contar APs por firewall
+                    var apsByFw = {};
+                    aps.forEach(function(ap) {
+                        var fw = ap.firewall || ap.device_short || 'Unknown';
+                        if (!apsByFw[fw]) apsByFw[fw] = 0;
+                        apsByFw[fw]++;
                     });
-
-                    document.getElementById('signalGood').textContent = good;
-                    document.getElementById('signalFair').textContent = fair;
-                    document.getElementById('signalPoor').textContent = poor;
-
-                    if (window.signalQualityChart && typeof window.signalQualityChart.destroy === 'function') window.signalQualityChart.destroy();
-                    var sqCanvas = document.getElementById('signalQualityChart');
-                    if (sqCanvas) {
-                        var sqCtx = sqCanvas.getContext('2d');
-                        window.signalQualityChart = new Chart(sqCtx, {
-                            type: 'bar',
-                            data: {
-                                labels: ['Buena Señal', 'Regular', 'Mala Señal'],
-                                datasets: [{
-                                    label: 'Clientes',
-                                    data: [good, fair, poor],
-                                    backgroundColor: ['#00c853', '#ffb300', '#f44336']
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                plugins: { legend: { display: false } },
-                                scales: {
-                                    x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } },
-                                    y: { ticks: { color: '#fff', precision: 0 }, grid: { color: 'rgba(255,255,255,0.08)' } }
-                                }
-                            }
-                        });
-                    }
-
+                    
+                    // Contar clientes por firewall
+                    var clientsByFw = {};
+                    clients.forEach(function(c) {
+                        var fw = c.firewall || c.device_short || 'Unknown';
+                        if (!clientsByFw[fw]) clientsByFw[fw] = 0;
+                        clientsByFw[fw]++;
+                    });
+                    
+                    // Clientes por AP
+                    var clientsByAp = {};
+                    clients.forEach(function(c) {
+                        var apName = c.wtp_name || c.wtp_id || c.ap_name || 'Unknown';
+                        if (!clientsByAp[apName]) clientsByAp[apName] = 0;
+                        clientsByAp[apName]++;
+                    });
+                    
+                    // Actualizar stats
+                    document.getElementById('wifiApsTotal').textContent = aps.length;
+                    document.getElementById('wifiClientsTotal').textContent = clients.length;
+                    document.getElementById('wifiFgOficina').textContent = clientsByFw['FG Oficina'] || 0;
+                    document.getElementById('wifiFgData').textContent = clientsByFw['FG Data'] || 0;
+                    
+                    // APs por Firewall
+                    var apStatsHtml = '<div class="fw-stats-grid">';
+                    var colors = ['#FF6384', '#36A2EB', '#4BC0C0'];
+                    var i = 0;
+                    Object.keys(apsByFw).forEach(function(fw) {
+                        apStatsHtml += '<div class="fw-stat-card" style="border-left: 4px solid ' + colors[i % colors.length] + ';">';
+                        apStatsHtml += '<div class="fw-stat-label">' + fw + '</div>';
+                        apStatsHtml += '<div class="fw-stat-value" style="color:' + colors[i % colors.length] + ';">' + apsByFw[fw] + ' APs</div>';
+                        apStatsHtml += '<div class="fw-stat-sub">' + (clientsByFw[fw] || 0) + ' clientes</div>';
+                        apStatsHtml += '</div>';
+                        i++;
+                    });
+                    apStatsHtml += '</div>';
+                    document.getElementById('wifiApStats').innerHTML = apStatsHtml;
+                    
+                    // Clientes por AP
+                    var apClientsHtml = '<div class="ap-clients-list">';
+                    var sortedAps = Object.keys(clientsByAp).sort(function(a, b) { return clientsByAp[b] - clientsByAp[a]; });
+                    sortedAps.forEach(function(apName) {
+                        var count = clientsByAp[apName];
+                        var pct = clients.length > 0 ? Math.round((count / clients.length) * 100) : 0;
+                        apClientsHtml += '<div style="margin-bottom:10px;">';
+                        apClientsHtml += '<div style="display:flex;justify-content:space-between;color:#aaa;font-size:0.85rem;margin-bottom:4px;">';
+                        apClientsHtml += '<span>' + apName + '</span><span>' + count + ' (' + pct + '%)</span>';
+                        apClientsHtml += '</div>';
+                        apClientsHtml += '<div style="height:8px;background:rgba(255,255,255,0.1);border-radius:4px;"><div style="height:100%;width:' + pct + '%;background:#4BC0C0;border-radius:4px;"></div></div>';
+                        apClientsHtml += '</div>';
+                    });
+                    apClientsHtml += '</div>';
+                    document.getElementById('wifiApClients').innerHTML = apClientsHtml || '<div class="loading">Sin datos</div>';
+                    
+                    // Tabla de clientes
                     if (clients.length === 0) {
                         document.getElementById('clientsContent').innerHTML = '<div class="loading">No hay clientes conectados</div>';
                         return;
                     }
-
-                    var html = '<table class="clients-table"><thead><tr><th>Usuario</th><th>IP</th><th>MAC</th><th>SSID</th><th>AP</th><th>Señal</th></tr></thead><tbody>';
+                    
+                    var html = '<table class="clients-table"><thead><tr><th>Usuario</th><th>IP</th><th>SSID</th><th>AP</th><th>Firewall</th><th>Señal</th></tr></thead><tbody>';
                     clients.forEach(function(c) {
                         var sig = c.rssi || c.signal || -50;
                         var sigClass = sig > -50 ? 'signal-good' : (sig > -70 ? 'signal-fair' : 'signal-poor');
+                        var fw = c.firewall || c.device_short || '-';
                         html += '<tr>';
-                        html += '<td>' + (c.user || c.mac.substring(0,8)) + '</td>';
-                        html += '<td>' + c.ip + '</td>';
-                        html += '<td>' + c.mac + '</td>';
-                        html += '<td>' + c.ssid + '</td>';
-                        html += '<td>' + c.wtp_name + '</td>';
+                        html += '<td>' + (c.user || c.hostname || c.mac.substring(0,8)) + '</td>';
+                        html += '<td>' + (c.ip || c.ip_address || '-') + '</td>';
+                        html += '<td>' + (c.ssid || '-') + '</td>';
+                        html += '<td>' + (c.wtp_name || c.ap_name || '-') + '</td>';
+                        html += '<td>' + fw + '</td>';
                         html += '<td><span class="signal-badge ' + sigClass + '">' + sig + ' dBm</span></td>';
                         html += '</tr>';
                     });

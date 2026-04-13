@@ -85,7 +85,23 @@ $wifiClients = fgRequest($fgMain, 'wifi/client');
 $wifiAps = fgRequest($fgMain, 'wireless-controller/managed-ap');
 $clients = count($wifiClients['results'] ?? []);
 $aps = count($wifiAps['results'] ?? []);
-saveJson($baseDir . '/data/wifi.json', ['timestamp' => $timestamp, 'aps' => $aps, 'clients' => $clients]);
+
+// Recolectar WiFi de ambos firewalls
+$allWifiClients = [];
+$allWifiAps = [];
+$wifiByFirewall = [];
+foreach ($fortigates as $fgKey => $fg) {
+    $fgClients = fgRequest($fgKey, 'wifi/client');
+    $fgAps = fgRequest($fgKey, 'wireless-controller/managed-ap');
+    $clientList = $fgClients['results'] ?? [];
+    $apList = $fgAps['results'] ?? [];
+    foreach ($clientList as &$c) { $c['firewall'] = $fg['name']; $c['firewall_key'] = $fgKey; }
+    foreach ($apList as &$a) { $a['firewall'] = $fg['name']; $a['firewall_key'] = $fgKey; }
+    $allWifiClients = array_merge($allWifiClients, $clientList);
+    $allWifiAps = array_merge($allWifiAps, $apList);
+    $wifiByFirewall[$fgKey] = ['name' => $fg['name'], 'clients' => count($clientList), 'aps' => count($apList)];
+}
+saveJson($baseDir . '/data/wifi.json', ['timestamp' => $timestamp, 'clients' => $allWifiClients, 'aps' => $allWifiAps, 'by_firewall' => $wifiByFirewall]);
 
 // VPN - usar cmdb (monitor endpoint no disponible en este FortiGate)
 $vpnCmdb = fgRequestCmdb($fgMain, 'vpn.ipsec/phase1-interface');
