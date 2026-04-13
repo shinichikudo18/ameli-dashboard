@@ -344,9 +344,19 @@ switch ($action) {
             $ports = $sw['ports'] ?? [];
             $upPorts = 0;
             $poePorts = 0;
+            $portsData = [];
             foreach ($ports as $p) {
-                if (($p['status'] ?? '') === 'up') $upPorts++;
+                $portStatus = $p['status'] ?? 'down';
+                if ($portStatus === 'up') $upPorts++;
                 if (($p['poe-status'] ?? '') === 'enable') $poePorts++;
+                $portsData[] = [
+                    'name' => $p['port-name'] ?? '',
+                    'status' => $portStatus,
+                    'speed' => $p['speed'] ?? 'auto',
+                    'poe' => $p['poe-status'] ?? 'disable',
+                    'vlan' => $p['vlan'] ?? '',
+                    'description' => $p['description'] ?? ''
+                ];
             }
             $isOnline = ($sw['dynamically-discovered'] ?? 0) === 1 || ($sw['fsw-wan1-peer'] ?? '') === 'fortilink' || ($sw['fsw-wan1-admin'] ?? '') === 'enable';
             $fwKey = $sw['firewall_key'] ?? '';
@@ -360,10 +370,11 @@ switch ($action) {
                 'ports' => count($ports),
                 'ports_up' => $upPorts,
                 'ports_poe' => $poePorts,
+                'ports_data' => $portsData,
                 'dynamically-discovered' => $sw['dynamically-discovered'] ?? 0,
                 'firewall' => $fwName,
                 'firewall_key' => $fwKey,
-                'serial' => $sw['serial'] ?? '',
+                'serial' => $sw['sn'] ?? $sw['serial'] ?? '',
                 'model' => $sw['type'] ?? ''
             ];
             

@@ -76,6 +76,11 @@
         .switch-card { background: rgba(0,0,0,0.3); border-radius: 15px; padding: 20px; border: 2px solid transparent; }
         .switch-card.online { border-color: #4BC0C0; }
         .switch-card.offline { border-color: #FF6384; }
+        .switch-detail-card { transition: all 0.3s; }
+        .switch-detail-card:hover { border-color: rgba(0,212,255,0.3) !important; }
+        .sw-metric { background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px; }
+        .sw-metric-label { font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 4px; }
+        .sw-metric-value { font-size: 0.9rem; color: #fff; font-weight: 600; word-break: break-all; }
         .switch-name { font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; }
         .switch-status { padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
         .switch-status.online { background: rgba(75,192,192,0.3); color: #4BC0C0; }
@@ -86,16 +91,18 @@
         .ports-toggle { background: rgba(0,212,255,0.2); border: 1px solid #00d4ff; color: #00d4ff; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; width: 100%; margin-top: 12px; transition: all 0.3s; }
         .ports-toggle:hover { background: rgba(0,212,255,0.3); }
         .ports-toggle.active { background: #00d4ff; color: #1a1a2e; }
-        .ports-table { display: none; margin-top: 10px; background: rgba(0,0,0,0.3); border-radius: 10px; overflow: hidden; }
+        .ports-table { display: none; margin-top: 15px; background: rgba(0,0,0,0.3); border-radius: 10px; overflow: hidden; }
         .ports-table.show { display: block; }
         .ports-table table { width: 100%; border-collapse: collapse; }
-        .ports-table th { background: rgba(0,212,255,0.2); padding: 8px 6px; text-align: left; font-size: 0.75rem; color: #00d4ff; }
-        .ports-table td { padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.8rem; }
+        .ports-table th { background: rgba(0,212,255,0.2); padding: 10px 8px; text-align: left; font-size: 0.75rem; color: #00d4ff; }
+        .ports-table td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.8rem; }
         .ports-table tr:last-child td { border-bottom: none; }
         .ports-table tr:hover { background: rgba(255,255,255,0.05); }
         .port-status { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
         .port-status.up { background: rgba(75,192,192,0.3); color: #4BC0C0; }
         .port-status.down { background: rgba(255,99,132,0.3); color: #FF6384; }
+        .port-speed { color: #888; font-size: 0.75rem; }
+        .port-poe { color: #FFCE56; font-size: 0.75rem; }
         .fw-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .fw-stat-card { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 20px; text-align: center; }
         .fw-stat-card.total { background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(123,44,191,0.2)); border: 2px solid rgba(0,212,255,0.3); }
@@ -2181,34 +2188,84 @@
                         html += '<span>✅ ' + (fwInfo ? fwInfo.online : 0) + ' online</span>';
                         html += '<span>❌ ' + (fwInfo ? fwInfo.offline : 0) + ' offline</span>';
                         html += '</div></div>';
-                        html += '<div style="padding:20px;"><div class="switches-grid">';
+                        html += '<div style="padding:20px;">';
                         items.forEach(function(sw) {
                             var status = sw.status === 'up';
                             var portsUp = sw['ports_up'] || 0;
                             var portsTotal = sw.ports || 0;
                             var poePorts = sw['ports_poe'] || 0;
                             var swId = sw['switch-id'];
+                            var swStatusColor = status ? '#4BC0C0' : '#FF6384';
+                            var swDisplayName = sw.name || sw.serial || sw['switch-id'] || 'Switch';
                             
-                            var swId = sw['switch-id'];
-                            var swColor = status ? '#4BC0C0' : '#FF6384';
-                            html += '<div class="switch-card ' + (status ? 'online' : 'offline') + '" style="border-color:' + swColor + '33;">';
-                            html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">';
-                            html += '<div class="switch-name">' + (sw.name || sw.serial || sw['switch-id'] || 'Switch') + '</div>';
-                            html += '<div class="switch-status ' + (status ? 'online' : 'offline') + '">' + (status ? '✓ Online' : '✗ Offline') + '</div>';
+                            // Layout tipo rack del switch
+                            html += '<div class="switch-detail-card" style="background:rgba(0,0,0,0.25);border-radius:12px;padding:20px;margin-bottom:15px;border:1px solid rgba(255,255,255,0.1);">';
+                            
+                            // Header del switch
+                            html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:15px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.1);">';
+                            html += '<div style="display:flex;align-items:center;gap:15px;">';
+                            html += '<div style="width:50px;height:50px;background:' + swStatusColor + '22;border:2px solid ' + swStatusColor + ';border-radius:10px;display:grid;place-items:center;font-size:1.5rem;">';
+                            html += status ? '🔌' : '❌';
                             html += '</div>';
-                            html += '<div class="switch-info" style="font-size:0.85rem;">';
-                            html += '<div><strong>Serial:</strong> ' + (sw.serial || '-') + '</div>';
-                            html += '<div><strong>IP:</strong> ' + (sw.ip || '-') + '</div>';
-                            html += '<div style="display:flex;gap:15px;margin-top:8px;">';
-                            html += '<span style="color:#4BC0C0;">🔌 ' + portsUp + '/' + portsTotal + ' up</span>';
-                            html += '<span style="color:#FFCE56;">⚡ ' + poePorts + ' PoE</span>';
+                            html += '<div>';
+                            html += '<div style="font-size:1.1rem;font-weight:bold;color:#fff;">' + swDisplayName + '</div>';
+                            html += '<div style="font-size:0.8rem;color:#888;">ID: ' + swId + '</div>';
+                            html += '</div></div>';
+                            html += '<div style="text-align:right;">';
+                            html += '<div class="switch-status ' + (status ? 'online' : 'offline') + '" style="display:inline-block;padding:6px 14px;">' + (status ? '✓ Online' : '✗ Offline') + '</div>';
+                            html += '<div style="font-size:0.75rem;color:#888;margin-top:5px;">FortiLink</div>';
+                            html += '</div></div>';
+                            
+                            // Info del switch
+                            html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:15px;">';
+                            html += '<div class="sw-metric"><div class="sw-metric-label">Serial</div><div class="sw-metric-value">' + (sw.serial || '-') + '</div></div>';
+                            html += '<div class="sw-metric"><div class="sw-metric-label">IP</div><div class="sw-metric-value">' + (sw.ip || '-') + '</div></div>';
+                            html += '<div class="sw-metric"><div class="sw-metric-label">Modelo</div><div class="sw-metric-value">' + (sw.model || 'FortiSwitch') + '</div></div>';
+                            html += '<div class="sw-metric"><div class="sw-metric-label">Tipo</div><div class="sw-metric-value">' + (sw.type || 'Physical') + '</div></div>';
+                            html += '</div>';
+                            
+                            // Stats de puertos
+                            html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:15px;">';
+                            var poeEnabled = portsTotal > 0 ? Math.round((poePorts / portsTotal) * 100) : 0;
+                            var upPct = portsTotal > 0 ? Math.round((portsUp / portsTotal) * 100) : 0;
+                            html += '<div style="background:rgba(75,192,192,0.15);padding:12px;border-radius:8px;text-align:center;">';
+                            html += '<div style="font-size:1.5rem;font-weight:bold;color:#4BC0C0;">' + portsUp + '/' + portsTotal + '</div>';
+                            html += '<div style="font-size:0.75rem;color:#888;">Puertos Up</div>';
+                            html += '<div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:8px;"><div style="height:100%;width:' + upPct + '%;background:#4BC0C0;border-radius:2px;"></div></div>';
+                            html += '</div>';
+                            html += '<div style="background:rgba(255,206,86,0.15);padding:12px;border-radius:8px;text-align:center;">';
+                            html += '<div style="font-size:1.5rem;font-weight:bold;color:#FFCE56;">' + poePorts + '</div>';
+                            html += '<div style="font-size:0.75rem;color:#888;">Puertos PoE</div>';
+                            html += '<div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:8px;"><div style="height:100%;width:' + poeEnabled + '%;background:#FFCE56;border-radius:2px;"></div></div>';
+                            html += '</div>';
+                            html += '<div style="background:rgba(54,162,235,0.15);padding:12px;border-radius:8px;text-align:center;">';
+                            html += '<div style="font-size:1.5rem;font-weight:bold;color:#36A2EB;">' + (portsTotal - portsUp) + '</div>';
+                            html += '<div style="font-size:0.75rem;color:#888;">Puertos Down</div>';
                             html += '</div>';
                             html += '</div>';
-                            html += '<button class="ports-toggle" id="btn-' + swId + '" onclick="toggleSwitchPorts(\'' + swId + '\')">Ver puertos (' + portsTotal + ')</button>';
+                            
+                            // Mini visualizacion de puertos (primeros 12)
+                            var portsToShow = Math.min(12, portsTotal);
+                            if (portsToShow > 0) {
+                                var swPorts = (sw.ports_data || []).slice(0, 12);
+                                html += '<div style="margin-bottom:15px;">';
+                                html += '<div style="font-size:0.8rem;color:#888;margin-bottom:8px;">Vista previa de puertos</div>';
+                                html += '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;">';
+                                for (var p = 0; p < portsToShow; p++) {
+                                    var portInfo = swPorts[p] || { status: 'down' };
+                                    var portUp = portInfo.status === 'up';
+                                    var portColor = portUp ? '#4BC0C0' : '#444';
+                                    html += '<div style="height:30px;background:' + portColor + '44;border:1px solid ' + portColor + ';border-radius:4px;display:grid;place-items:center;font-size:0.65rem;color:' + (portUp ? '#4BC0C0' : '#666') + ';">' + (p + 1) + '</div>';
+                                }
+                                html += '</div></div>';
+                            }
+                            
+                            // Boton para ver todos los puertos
+                            html += '<button class="ports-toggle" id="btn-' + swId + '" onclick="toggleSwitchPorts(\'' + swId + '\')">Ver todos los puertos (' + portsTotal + ')</button>';
                             html += '<div class="ports-table" id="ports-' + swId + '"></div>';
                             html += '</div>';
                         });
-                        html += '</div></div></div>';
+                        html += '</div>';
                     });
                     
                     // Si hay firewalls no ordenados, agregarlos al final
