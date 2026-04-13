@@ -138,14 +138,27 @@ switch ($action) {
     case 'switches':
         $switches = loadJson($baseDir . '/data/switches.json');
         $swData = $switches['data'] ?? [];
-        if (empty($swData)) {
-            $swData = [
-                ['name' => 'Switch-Oficina', 'ip' => '192.168.100.10', 'status' => 'up', 'ports' => 24, 'dynamically-discovered' => 1],
-                ['name' => 'Switch-Piso1', 'ip' => '192.168.100.11', 'status' => 'up', 'ports' => 48, 'dynamically-discovered' => 1],
-                ['name' => 'Switch-Piso2', 'ip' => '192.168.100.12', 'status' => 'down', 'ports' => 24, 'dynamically-discovered' => 0]
+        $formatted = [];
+        foreach ($swData as $sw) {
+            $ports = $sw['ports'] ?? [];
+            $upPorts = 0;
+            $poePorts = 0;
+            foreach ($ports as $p) {
+                if (($p['status'] ?? '') === 'up') $upPorts++;
+                if (($p['poe-status'] ?? '') === 'enable') $poePorts++;
+            }
+            $formatted[] = [
+                'name' => $sw['name'] ?: $sw['switch-id'] ?: 'Unknown',
+                'switch-id' => $sw['switch-id'] ?? '',
+                'ip' => $sw['ip'] ?? '',
+                'status' => ($sw['dynamically-discovered'] ?? 0) === 1 ? 'up' : 'down',
+                'ports' => count($ports),
+                'ports_up' => $upPorts,
+                'ports_poe' => $poePorts,
+                'dynamically-discovered' => $sw['dynamically-discovered'] ?? 0
             ];
         }
-        echo json_encode(['results' => $swData]);
+        echo json_encode(['results' => $formatted]);
         break;
 
     case 'sdwan':

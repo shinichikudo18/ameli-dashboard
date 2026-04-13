@@ -106,13 +106,13 @@ foreach ($sessionDetails as $s) {
 }
 saveJson($baseDir . '/data/sessions.json', ['timestamp' => $timestamp, 'total' => $totalSessions, 'blocked' => $blockedSessions, 'details' => $sessionDetails]);
 
-// Switches
-$switches = fgRequest('switch-controller/managed-switch');
+// Switches - usar cmdb en lugar de monitor
+$switches = fgRequestCmdb('switch-controller/managed-switch');
 $swData = $switches['results'] ?? [];
 $swTotal = count($swData);
 $swOnline = 0;
 foreach ($swData as $s) {
-    if (($s['state'] ?? '') === 'up') $swOnline++;
+    if (($s['dynamically-discovered'] ?? 0) === 1) $swOnline++;
 }
 saveJson($baseDir . '/data/switches.json', ['timestamp' => $timestamp, 'total' => $swTotal, 'online' => $swOnline, 'data' => $swData]);
 
