@@ -404,14 +404,19 @@
                 <div class="soc-title">🛡️ SOC - Security Operations Center</div>
                 <div class="soc-status"><span class="soc-status-dot"></span>Monitoreo Activo</div>
             </div>
-            
+
+            <div class="soc-subtabs">
+                <button class="soc-subtab-btn active" id="socSubtabBtnWazuh" onclick="switchSocSubTab('wazuh')">Wazuh SIEM</button>
+                <button class="soc-subtab-btn" id="socSubtabBtnFirewall" onclick="switchSocSubTab('firewall')">Red de Firewalls</button>
+            </div>
+             
             <!-- Resumen por Firewall -->
-            <div class="card" style="margin-bottom:20px;">
+            <div class="card soc-subtab-block soc-subtab-firewall" style="margin-bottom:20px;">
                 <div class="card-title">Estado de Firewalls</div>
                 <div id="socFirewallsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:15px;margin-top:15px;"></div>
             </div>
 
-            <div class="card" style="margin-bottom:20px;">
+            <div class="card soc-subtab-block soc-subtab-wazuh active" style="margin-bottom:20px;">
                 <div class="card-title">Wazuh SIEM</div>
                 <div class="soc-grid" style="margin-top:15px;">
                     <div class="soc-card">
@@ -544,7 +549,7 @@
             </div>
             
             <!-- Top Aplicaciones -->
-            <div class="dashboard-grid" style="margin-bottom:20px;">
+            <div class="dashboard-grid soc-subtab-grid soc-subtab-firewall" style="margin-bottom:20px;">
                 <div class="card">
                     <div class="card-title">Top 10 Aplicaciones</div>
                     <canvas id="socAppsChart" height="200"></canvas>
@@ -555,7 +560,7 @@
                 </div>
             </div>
             
-            <div class="soc-grid">
+            <div class="soc-grid soc-subtab-grid soc-subtab-firewall">
                 <div class="soc-card soc-threat-score">
                     <div class="soc-card-label">Threat Score</div>
                     <div class="soc-card-value" id="socThreatScore">--</div>
@@ -620,7 +625,7 @@
             </div>
             
             <!-- Tabla de Aplicaciones -->
-            <div class="card" style="margin-bottom:20px;">
+            <div class="card soc-subtab-block soc-subtab-firewall" style="margin-bottom:20px;">
                 <div class="card-title">Detalle de Aplicaciones</div>
                 <table class="soc-table">
                     <thead><tr><th>Aplicación</th><th>Categoría</th><th>Sesiones</th><th>%</th><th>Firewall</th></tr></thead>
@@ -628,7 +633,7 @@
                 </table>
             </div>
             
-            <div class="dashboard-grid" style="margin-bottom:20px;">
+            <div class="dashboard-grid soc-subtab-grid soc-subtab-firewall" style="margin-bottom:20px;">
                 <div class="card">
                     <div class="card-title">Estado de Controles de Seguridad</div>
                     <div class="soc-controls">
@@ -649,7 +654,7 @@
                 </div>
             </div>
             
-            <div class="card">
+            <div class="card soc-subtab-block soc-subtab-firewall">
                 <div class="card-title">Últimos Incidentes de Seguridad</div>
                 <table class="soc-table">
                     <thead><tr><th>ID</th><th>Fecha/Hora</th><th>Severidad</th><th>Tipo de Ataque</th><th>Fuente</th><th>Objetivo</th><th>Estado</th><th>Accion</th></tr></thead>
@@ -745,6 +750,13 @@
                 .soc-title { font-size:1.4rem; font-weight:700; color:#00d4ff; }
                 .soc-status { display:flex; align-items:center; gap:8px; color:#4BC0C0; font-weight:600; }
                 .soc-status-dot { width:10px; height:10px; background:#4BC0C0; border-radius:50%; animation:pulse 2s infinite; }
+                .soc-subtabs { display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap; }
+                .soc-subtab-btn { background:rgba(0,0,0,0.35); color:#aaa; border:1px solid rgba(255,255,255,0.08); padding:10px 14px; border-radius:999px; cursor:pointer; font-weight:700; transition:all 0.2s; }
+                .soc-subtab-btn:hover { border-color:rgba(0,212,255,0.35); color:#fff; }
+                .soc-subtab-btn.active { background:#00d4ff; color:#0f1720; border-color:#00d4ff; }
+                .soc-subtab-block, .soc-subtab-grid { display:none; }
+                .soc-subtab-block.active { display:block; }
+                .soc-subtab-grid.active { display:grid; }
                 @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
                 .soc-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:15px; margin-bottom:20px; }
                 .soc-card { background:rgba(0,0,0,0.4); border-radius:12px; padding:15px; text-align:center; border:1px solid rgba(255,255,255,0.08); transition:all 0.3s; }
@@ -936,6 +948,19 @@
         var apiBase = '/dashboard/proxy.php?action=';
         var haLightEntityId = null;
         var haLightIsOn = false;
+        var currentSocSubTab = 'wazuh';
+
+        function switchSocSubTab(tabId) {
+            currentSocSubTab = tabId;
+            document.getElementById('socSubtabBtnWazuh').classList.toggle('active', tabId === 'wazuh');
+            document.getElementById('socSubtabBtnFirewall').classList.toggle('active', tabId === 'firewall');
+            document.querySelectorAll('.soc-subtab-wazuh, .soc-subtab-firewall').forEach(function(el) {
+                var isWazuh = el.classList.contains('soc-subtab-wazuh');
+                var shouldShow = (tabId === 'wazuh' && isWazuh) || (tabId === 'firewall' && !isWazuh);
+                el.classList.toggle('active', shouldShow);
+            });
+        }
+        switchSocSubTab(currentSocSubTab);
         
         function refreshSOC() {
             fetch('/dashboard/proxy.php?action=soc_data').then(function(r){return r.json();}).then(function(data){
