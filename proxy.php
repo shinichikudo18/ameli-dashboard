@@ -1036,7 +1036,37 @@ switch ($action) {
         
         echo json_encode($socData);
         break;
-        
+
+    case 'redteam_data':
+        $report = loadJson($baseDir . '/data/redteam.json');
+        $summary = $report['summary'] ?? [];
+        $hosts = $report['hosts'] ?? [];
+        $dns = $report['dns'] ?? [];
+        $findings = $report['findings'] ?? [];
+        $services = $report['services'] ?? [];
+
+        echo json_encode([
+            'generated_at' => $report['generated_at'] ?? date('Y-m-d H:i:s'),
+            'summary' => [
+                'targets' => intval($summary['targets'] ?? 0),
+                'hosts_up' => intval($summary['hosts_up'] ?? 0),
+                'hosts_down' => intval($summary['hosts_down'] ?? 0),
+                'dns_queries' => intval($summary['dns_queries'] ?? 0),
+                'subdomains' => intval($summary['subdomains'] ?? 0),
+                'findings' => intval($summary['findings'] ?? count($findings)),
+                'critical' => intval($summary['critical'] ?? 0),
+                'high' => intval($summary['high'] ?? 0),
+                'medium' => intval($summary['medium'] ?? 0),
+                'low' => intval($summary['low'] ?? 0)
+            ],
+            'hosts' => array_slice($hosts, 0, 50),
+            'dns' => array_slice($dns, 0, 50),
+            'findings' => array_slice($findings, 0, 50),
+            'services' => array_slice($services, 0, 20),
+            'note' => $report['note'] ?? 'Carga un reporte JSON en /data/redteam.json para poblar esta vista.'
+        ]);
+        break;
+
     case 'soc_history':
         $hours = intval($_GET['hours'] ?? 24);
         $history = loadJson($baseDir . '/data/metrics_history.json');

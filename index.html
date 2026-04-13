@@ -151,6 +151,7 @@
             <button class="tab-btn" data-tab="vpn">VPN</button>
             <button class="tab-btn" data-tab="ems">FortiClient EMS</button>
             <button class="tab-btn" data-tab="soc">SOC</button>
+            <button class="tab-btn" data-tab="redteam">Red Team Lab</button>
             <button class="tab-btn" data-tab="fortivoice">FortiVoice</button>
             <button class="tab-btn" data-tab="freepbx">FreePBX</button>
         </div>
@@ -831,7 +832,69 @@
                 .soc-btn-isolate:hover { background:#FFCE56; color:#000; }
                 .soc-btn-close { background:rgba(255,255,255,0.1); border:1px solid #aaa; color:#aaa; }
                 .soc-btn-close:hover { background:#aaa; color:#000; }
+                .red-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:15px; margin-bottom:20px; }
+                .red-card { background:rgba(0,0,0,0.35); border-radius:12px; padding:18px; border:1px solid rgba(255,255,255,0.08); }
+                .red-card .label { color:#9aa3b2; font-size:0.75rem; text-transform:uppercase; margin-bottom:6px; }
+                .red-card .value { color:#fff; font-size:1.8rem; font-weight:800; }
+                .red-note { color:#00d4ff; font-size:0.9rem; }
             </style>
+        </div>
+
+        <div id="tab-redteam" class="tab-content">
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">Red Team Lab</div>
+                <div style="color:#9aa3b2;line-height:1.6;">
+                    Vista segura para reportes importados de actividades autorizadas. No ejecuta herramientas ni automatiza enumeración.
+                </div>
+                <div id="redTeamNote" style="margin-top:10px;color:#00d4ff;font-size:0.9rem;"></div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value" id="rtTargets">-</div><div class="stat-label">Targets</div></div>
+                <div class="stat-card"><div class="stat-value" id="rtHostsUp">-</div><div class="stat-label">Hosts Up</div></div>
+                <div class="stat-card"><div class="stat-value" id="rtDnsQueries">-</div><div class="stat-label">DNS Queries</div></div>
+                <div class="stat-card"><div class="stat-value" id="rtFindings">-</div><div class="stat-label">Findings</div></div>
+            </div>
+            <div class="dashboard-grid" style="margin-bottom:20px;">
+                <div class="card">
+                    <div class="card-title">Severidad</div>
+                    <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:0;">
+                        <div class="stat-card"><div class="stat-value" id="rtCritical">-</div><div class="stat-label">Critical</div></div>
+                        <div class="stat-card"><div class="stat-value" id="rtHigh">-</div><div class="stat-label">High</div></div>
+                        <div class="stat-card"><div class="stat-value" id="rtMedium">-</div><div class="stat-label">Medium</div></div>
+                        <div class="stat-card"><div class="stat-value" id="rtLow">-</div><div class="stat-label">Low</div></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Servicios detectados</div>
+                    <table class="soc-table">
+                        <thead><tr><th>Servicio</th><th>Puerto</th><th>Proto</th><th>Count</th></tr></thead>
+                        <tbody id="rtServicesTable"><tr><td colspan="4" style="text-align:center;color:#888;">Cargando...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="dashboard-grid" style="margin-bottom:20px;">
+                <div class="card">
+                    <div class="card-title">Hosts / Targets</div>
+                    <table class="soc-table">
+                        <thead><tr><th>Host</th><th>IP</th><th>Estado</th><th>Puertos</th><th>Servicios</th></tr></thead>
+                        <tbody id="rtHostsTable"><tr><td colspan="5" style="text-align:center;color:#888;">Cargando...</td></tr></tbody>
+                    </table>
+                </div>
+                <div class="card">
+                    <div class="card-title">DNS / Subdominios</div>
+                    <table class="soc-table">
+                        <thead><tr><th>Dominio</th><th>Resultado</th><th>Estado</th></tr></thead>
+                        <tbody id="rtDnsTable"><tr><td colspan="3" style="text-align:center;color:#888;">Cargando...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">Findings</div>
+                <table class="soc-table">
+                    <thead><tr><th>Severidad</th><th>Objetivo</th><th>Tipo</th><th>Descripción</th><th>Evidencia</th></tr></thead>
+                    <tbody id="rtFindingsTable"><tr><td colspan="5" style="text-align:center;color:#888;">Cargando...</td></tr></tbody>
+                </table>
+            </div>
         </div>
 
         <div id="tab-fortivoice" class="tab-content">
@@ -1317,6 +1380,48 @@
                 }
             }).catch(function(err){ console.error('SOC data error:', err); });
         }
+
+        function refreshRedTeam() {
+            fetch('/dashboard/proxy.php?action=redteam_data').then(function(r){return r.json();}).then(function(data){
+                document.getElementById('redTeamNote').textContent = data.note || 'Vista de reporte importado.';
+                document.getElementById('rtTargets').textContent = data.summary?.targets || 0;
+                document.getElementById('rtHostsUp').textContent = data.summary?.hosts_up || 0;
+                document.getElementById('rtDnsQueries').textContent = data.summary?.dns_queries || 0;
+                document.getElementById('rtFindings').textContent = data.summary?.findings || 0;
+                document.getElementById('rtCritical').textContent = data.summary?.critical || 0;
+                document.getElementById('rtHigh').textContent = data.summary?.high || 0;
+                document.getElementById('rtMedium').textContent = data.summary?.medium || 0;
+                document.getElementById('rtLow').textContent = data.summary?.low || 0;
+
+                var svcRows = (data.services || []).map(function(s) {
+                    return '<tr><td>' + (s.service || '-') + '</td><td>' + (s.port || '-') + '</td><td>' + (s.proto || '-') + '</td><td>' + (s.count || 0) + '</td></tr>';
+                }).join('');
+                document.getElementById('rtServicesTable').innerHTML = svcRows || '<tr><td colspan="4" style="text-align:center;color:#888;">Sin datos importados</td></tr>';
+
+                var hostRows = (data.hosts || []).map(function(h) {
+                    var state = h.status || 'unknown';
+                    var color = state === 'up' ? '#4BC0C0' : state === 'down' ? '#FF6384' : '#FFCE56';
+                    return '<tr><td>' + (h.host || h.name || '-') + '</td><td>' + (h.ip || '-') + '</td><td><span style="color:' + color + ';font-weight:bold;">' + state + '</span></td><td>' + (h.ports_open || 0) + '</td><td>' + (h.services || 0) + '</td></tr>';
+                }).join('');
+                document.getElementById('rtHostsTable').innerHTML = hostRows || '<tr><td colspan="5" style="text-align:center;color:#888;">Sin hosts importados</td></tr>';
+
+                var dnsRows = (data.dns || []).map(function(d) {
+                    var ok = (d.status || '').toLowerCase() === 'ok';
+                    var color = ok ? '#4BC0C0' : '#FF6384';
+                    return '<tr><td>' + (d.domain || '-') + '</td><td>' + (d.result || d.answers || '-') + '</td><td><span style="color:' + color + ';font-weight:bold;">' + (d.status || '-') + '</span></td></tr>';
+                }).join('');
+                document.getElementById('rtDnsTable').innerHTML = dnsRows || '<tr><td colspan="3" style="text-align:center;color:#888;">Sin consultas DNS</td></tr>';
+
+                var findingRows = (data.findings || []).map(function(f) {
+                    var sev = (f.severity || 'low').toLowerCase();
+                    var color = sev === 'critical' ? '#FF6384' : sev === 'high' ? '#FF9F40' : sev === 'medium' ? '#FFCE56' : '#4BC0C0';
+                    return '<tr><td><span style="color:' + color + ';font-weight:bold;">' + (f.severity || '-') + '</span></td><td>' + (f.target || '-') + '</td><td>' + (f.type || '-') + '</td><td>' + (f.description || '-') + '</td><td>' + (f.evidence || '-') + '</td></tr>';
+                }).join('');
+                document.getElementById('rtFindingsTable').innerHTML = findingRows || '<tr><td colspan="5" style="text-align:center;color:#888;">Sin findings importados</td></tr>';
+            }).catch(function(err) {
+                document.getElementById('redTeamNote').textContent = 'Error cargando datos: ' + err.message;
+            });
+        }
         
         function toggleLight() {
             if (!haLightEntityId) return;
@@ -1358,6 +1463,8 @@
                     refreshFreePBX();
                 } else if (tabId === 'soc') {
                     refreshSOC();
+                } else if (tabId === 'redteam') {
+                    refreshRedTeam();
                 }
             });
         });
