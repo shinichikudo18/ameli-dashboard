@@ -613,6 +613,7 @@ switch ($action) {
         $wazuhUserRiskPrivileged = 0;
         $wazuhUserRiskLocked = 0;
         $wazuhUserRiskItems = [];
+        $wazuhAgentUsers = [];
         $wazuhApiOk = false;
         $wazuhClusterRunning = false;
         $wazuhClusterName = '';
@@ -728,6 +729,32 @@ switch ($action) {
                         $wazuhUserRiskTotal++;
                         if ($privileged) $wazuhUserRiskPrivileged++;
                         if ($locked) $wazuhUserRiskLocked++;
+
+                        if (!isset($wazuhAgentUsers[$agentId])) {
+                            $wazuhAgentUsers[$agentId] = [];
+                        }
+                        $wazuhAgentUsers[$agentId][] = [
+                            'agent' => $agentName,
+                            'agent_id' => $agentId,
+                            'user' => $uname,
+                            'full_name' => $u['full_name'] ?? '',
+                            'uid' => $uid,
+                            'gid' => $u['group_id_signed'] ?? ($u['group_id'] ?? ''),
+                            'groups' => $u['groups'] ?? '',
+                            'home' => $u['home'] ?? '',
+                            'shell' => $u['shell'] ?? '',
+                            'status' => $locked ? 'locked' : 'active',
+                            'password_status' => $u['password_status'] ?? '',
+                            'password_last_change' => $u['password_last_change'] ?? '',
+                            'password_warning_days_before_expiration' => $u['password_warning_days_before_expiration'] ?? '',
+                            'password_max_days_between_changes' => $u['password_max_days_between_changes'] ?? '',
+                            'password_min_days_between_changes' => $u['password_min_days_between_changes'] ?? '',
+                            'password_inactive_days' => $u['password_inactive_days'] ?? '',
+                            'password_hash_algorithm' => $u['password_hash_algorithm'] ?? '',
+                            'auth_failed_count' => $u['auth_failed_count'] ?? '',
+                            'type' => $u['type'] ?? ''
+                        ];
+
                         if (count($wazuhUserRiskItems) < 15 && ($privileged || $locked)) {
                             $wazuhUserRiskItems[] = [
                                 'agent' => $agentName,
@@ -932,6 +959,7 @@ switch ($action) {
                 'locked' => $wazuhUserRiskLocked,
                 'items' => $wazuhUserRiskItems
             ],
+            'wazuh_agent_users' => $wazuhAgentUsers,
             'firewalls' => $firewallStats,
             'firewall' => [
                 'status' => 'unknown',

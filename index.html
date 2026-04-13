@@ -547,6 +547,7 @@
                     </div>
                 </div>
             </div>
+            <div id="socWazuhTooltip" class="wazuh-agent-tooltip"></div>
             
             <!-- Top Aplicaciones -->
             <div class="dashboard-grid soc-subtab-grid soc-subtab-firewall" style="margin-bottom:20px;">
@@ -794,6 +795,18 @@
                 .soc-btn-investigate { background:rgba(0,212,255,0.2); border:1px solid #00d4ff; color:#00d4ff; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:0.75rem; transition:all 0.2s; }
                 .soc-btn-investigate:hover { background:#00d4ff; color:#000; }
                 .soc-ioc-table td:first-child { font-weight:600; }
+                .wazuh-agent-tooltip { position:fixed; z-index:10000; display:none; min-width:320px; max-width:460px; background:rgba(10,14,24,0.98); border:1px solid rgba(0,212,255,0.35); border-radius:12px; padding:12px 14px; box-shadow:0 18px 50px rgba(0,0,0,0.45); color:#e8eef7; font-size:0.82rem; pointer-events:none; }
+                .wazuh-agent-tooltip .t-title { color:#00d4ff; font-weight:800; margin-bottom:8px; font-size:0.95rem; }
+                .wazuh-agent-tooltip .t-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:6px 12px; }
+                .wazuh-agent-tooltip .t-item { background:rgba(255,255,255,0.04); border-radius:8px; padding:6px 8px; }
+                .wazuh-agent-tooltip .t-k { color:#8899aa; font-size:0.7rem; text-transform:uppercase; }
+                .wazuh-agent-tooltip .t-v { color:#fff; font-size:0.8rem; word-break:break-word; }
+                .wazuh-agent-tooltip .t-users { margin-top:10px; max-height:220px; overflow:auto; }
+                .wazuh-agent-tooltip .t-user { padding:8px; border-radius:8px; background:rgba(255,255,255,0.04); margin-bottom:6px; }
+                .wazuh-agent-tooltip .t-user:last-child { margin-bottom:0; }
+                .wazuh-agent-tooltip .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:0.7rem; font-weight:700; }
+                .wazuh-agent-tooltip .badge.active { background:rgba(75,192,192,0.18); color:#4BC0C0; }
+                .wazuh-agent-tooltip .badge.locked { background:rgba(255,99,132,0.18); color:#FF6384; }
                 @media(max-width:1200px){.soc-grid{grid-template-columns:repeat(3,1fr);} .soc-controls{grid-template-columns:1fr;}}
                 @media(max-width:768px){.soc-grid{grid-template-columns:1fr 1fr;} .soc-header{flex-direction:column;gap:10px;}}
                 .soc-modal { display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; }
@@ -961,6 +974,72 @@
             });
         }
         switchSocSubTab(currentSocSubTab);
+
+        function escapeHtml(text) {
+            return String(text || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function showWazuhAgentTooltip(row, ev) {
+            var tooltip = document.getElementById('socWazuhTooltip');
+            if (!tooltip || !window.wazuhAgentUsers) return;
+            var agentId = row.dataset.agentId;
+            var users = window.wazuhAgentUsers[agentId] || [];
+            var agentName = row.dataset.agentName || '-';
+            var agentOs = row.dataset.agentOs || '-';
+            var agentStatus = row.dataset.agentStatus || '-';
+            var agentIp = row.dataset.agentIp || '-';
+            var agentKeepalive = row.dataset.agentKeepalive || '-';
+            var html = '<div class="t-title">' + escapeHtml(agentName) + ' <span style="color:#8899aa;font-weight:600;">(ID ' + escapeHtml(agentId) + ')</span></div>';
+            html += '<div class="t-grid">';
+            html += '<div class="t-item"><div class="t-k">Estado</div><div class="t-v">' + escapeHtml(agentStatus) + '</div></div>';
+            html += '<div class="t-item"><div class="t-k">IP</div><div class="t-v">' + escapeHtml(agentIp) + '</div></div>';
+            html += '<div class="t-item"><div class="t-k">SO</div><div class="t-v">' + escapeHtml(agentOs) + '</div></div>';
+            html += '<div class="t-item"><div class="t-k">Keepalive</div><div class="t-v">' + escapeHtml(agentKeepalive) + '</div></div>';
+            html += '</div>';
+            html += '<div class="t-users">';
+            html += '<div style="color:#00d4ff;font-weight:800;margin-bottom:6px;">Usuarios (' + users.length + ')</div>';
+            users.slice(0, 8).forEach(function(u) {
+                var badgeClass = u.status === 'locked' ? 'locked' : 'active';
+                html += '<div class="t-user">';
+                html += '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">';
+                html += '<div><b>' + escapeHtml(u.user) + '</b> <span style="color:#8899aa;">UID ' + escapeHtml(u.uid) + '</span></div>';
+                html += '<span class="badge ' + badgeClass + '">' + escapeHtml(u.status) + '</span>';
+                html += '</div>';
+                html += '<div style="margin-top:6px;color:#8899aa;">' + escapeHtml(u.full_name || u.groups || '') + '</div>';
+                html += '<div style="margin-top:4px;color:#cdd6e2;">Shell: ' + escapeHtml(u.shell || '-') + ' | Home: ' + escapeHtml(u.home || '-') + '</div>';
+                html += '<div style="margin-top:4px;color:#cdd6e2;">Pwd: ' + escapeHtml(u.password_status || '-') + ' | Hash: ' + escapeHtml(u.password_hash_algorithm || '-') + '</div>';
+                html += '</div>';
+            });
+            if (!users.length) {
+                html += '<div style="color:#8899aa;">Sin usuarios disponibles.</div>';
+            }
+            html += '</div>';
+            tooltip.innerHTML = html;
+            tooltip.style.display = 'block';
+            var x = ev && ev.clientX ? ev.clientX + 16 : 20;
+            var y = ev && ev.clientY ? ev.clientY + 16 : 20;
+            tooltip.style.left = Math.min(x, window.innerWidth - 500) + 'px';
+            tooltip.style.top = Math.min(y, window.innerHeight - 300) + 'px';
+        }
+
+        function moveWazuhAgentTooltip(ev) {
+            var tooltip = document.getElementById('socWazuhTooltip');
+            if (!tooltip || tooltip.style.display !== 'block') return;
+            var x = ev && ev.clientX ? ev.clientX + 16 : 20;
+            var y = ev && ev.clientY ? ev.clientY + 16 : 20;
+            tooltip.style.left = Math.min(x, window.innerWidth - 500) + 'px';
+            tooltip.style.top = Math.min(y, window.innerHeight - 300) + 'px';
+        }
+
+        function hideWazuhAgentTooltip() {
+            var tooltip = document.getElementById('socWazuhTooltip');
+            if (tooltip) tooltip.style.display = 'none';
+        }
         
         function refreshSOC() {
             fetch('/dashboard/proxy.php?action=soc_data').then(function(r){return r.json();}).then(function(data){
@@ -1014,17 +1093,19 @@
 
                 var wazuhAgentsTable = document.getElementById('socWazuhAgentsTable');
                 if (wazuhAgentsTable) {
+                    window.wazuhAgentUsers = data.wazuh_agent_users || {};
                     var wazuhAgents = data.wazuh_agents?.items || [];
                     wazuhAgentsTable.innerHTML = wazuhAgents.length ? wazuhAgents.map(function(a) {
                         var state = (a.status || '').toLowerCase();
                         var stateLabel = state === 'active' ? 'Activo' : state === 'disconnected' ? 'Desconectado' : 'Pendiente';
                         var stateColor = state === 'active' ? '#4BC0C0' : state === 'disconnected' ? '#FF6384' : '#FFCE56';
-                        return '<tr>' +
+                        var osLabel = a.os || '-';
+                        return '<tr class="wazuh-agent-row" data-agent-id="' + escapeHtml(a.id || '') + '" data-agent-name="' + escapeHtml(a.name || '') + '" data-agent-status="' + escapeHtml(stateLabel) + '" data-agent-ip="' + escapeHtml(a.ip || '-') + '" data-agent-os="' + escapeHtml(osLabel) + '" data-agent-keepalive="' + escapeHtml(a.last_keepalive || '-') + '" onmouseenter="showWazuhAgentTooltip(this, event)" onmousemove="moveWazuhAgentTooltip(event)" onmouseleave="hideWazuhAgentTooltip()">' +
                             '<td>' + (a.name || '-') + '</td>' +
                             '<td>' + (a.id || '-') + '</td>' +
                             '<td><span style="color:' + stateColor + ';font-weight:bold;">' + stateLabel + '</span></td>' +
                             '<td>' + (a.ip || '-') + '</td>' +
-                            '<td>' + (a.os || '-') + '</td>' +
+                            '<td>' + osLabel + '</td>' +
                             '<td>' + (a.last_keepalive || '-') + '</td>' +
                         '</tr>';
                     }).join('') : '<tr><td colspan="6" style="text-align:center;color:#888;">Sin agentes</td></tr>';
