@@ -92,7 +92,7 @@ $allWifiAps = [];
 $wifiByFirewall = [];
 foreach ($fortigates as $fgKey => $fg) {
     $fgClients = fgRequest($fgKey, 'wifi/client');
-    $fgAps = fgRequest($fgKey, 'wireless-controller/managed-ap');
+    $fgAps = fgRequest($fgKey, 'wifi/managed_ap');
     $clientList = $fgClients['results'] ?? [];
     $apList = $fgAps['results'] ?? [];
     foreach ($clientList as &$c) { $c['firewall'] = $fg['name']; $c['firewall_key'] = $fgKey; }
