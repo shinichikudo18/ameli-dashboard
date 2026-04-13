@@ -144,6 +144,44 @@ $blockedSessions = 0;
 foreach ($allSessions as $s) { if (in_array($s['action'] ?? '', ['drop', 'blocked'])) $blockedSessions++; }
 saveJson($baseDir . '/data/sessions.json', ['timestamp' => $timestamp, 'total' => $totalSessions, 'blocked' => $blockedSessions, 'details' => $allSessions, 'by_firewall' => $firewallStats]);
 
+// Extraer aplicaciones únicas de las sesiones
+$appDb = [];
+$appNameMap = [
+    34527 => ['name' => 'Instagram', 'category' => 'Social.Media', 'risk' => 'medium'],
+    47013 => ['name' => 'SSL/TLS', 'category' => 'Security', 'risk' => 'low'],
+    41469 => ['name' => 'Microsoft.Portal', 'category' => 'Collaboration', 'risk' => 'low'],
+    41468 => ['name' => 'Microsoft.Office365', 'category' => 'Collaboration', 'risk' => 'low'],
+    43541 => ['name' => 'Microsoft.Teams', 'category' => 'Collaboration', 'risk' => 'low'],
+    39999 => ['name' => 'SSL', 'category' => 'Security', 'risk' => 'low'],
+    52452 => ['name' => 'Windows.Notification', 'category' => 'Update', 'risk' => 'low'],
+    17405 => ['name' => 'Facebook', 'category' => 'Social.Media', 'risk' => 'medium'],
+    50216 => ['name' => 'MQTT', 'category' => 'IoT', 'risk' => 'medium'],
+    42533 => ['name' => 'Google', 'category' => 'Search.Engine', 'risk' => 'low'],
+    38098 => ['name' => 'Apple', 'category' => 'Update', 'risk' => 'low'],
+    28057 => ['name' => 'WhatsApp', 'category' => 'Messaging', 'risk' => 'medium'],
+    52618 => ['name' => 'Apple.iCloud', 'category' => 'Cloud', 'risk' => 'low'],
+    43540 => ['name' => 'Google.Assistant', 'category' => 'IoT', 'risk' => 'low'],
+    24466 => ['name' => 'HTTP', 'category' => 'Web', 'risk' => 'medium'],
+    31077 => ['name' => 'YouTube', 'category' => 'Media', 'risk' => 'medium'],
+    18155 => ['name' => 'Netflix', 'category' => 'Media', 'risk' => 'medium'],
+    16195 => ['name' => 'DNS', 'category' => 'Network', 'risk' => 'low'],
+    16270 => ['name' => 'NTP', 'category' => 'Network', 'risk' => 'low'],
+    40169 => ['name' => 'HTTP.Proxy', 'category' => 'Proxy', 'risk' => 'medium'],
+    41475 => ['name' => 'Microsoft.Authentication', 'category' => 'Authentication', 'risk' => 'low'],
+    15832 => ['name' => 'Facebook', 'category' => 'Social.Media', 'risk' => 'medium'],
+    99999 => ['name' => 'Unknown', 'category' => 'Uncategorized', 'risk' => 'high']
+];
+foreach ($allSessions as $s) {
+    if (!empty($s['apps'])) {
+        $app = $s['apps'][0];
+        $appId = $app['id'] ?? 0;
+        if ($appId > 0 && !isset($appDb[$appId])) {
+            $appDb[$appId] = $appNameMap[$appId] ?? ['name' => 'App-' . $appId, 'category' => 'Unknown', 'risk' => 'medium'];
+        }
+    }
+}
+saveJson($baseDir . '/data/apps.json', ['timestamp' => $timestamp, 'apps' => $appDb]);
+
 // Switches - usar cmdb en lugar de monitor
 $switches = fgRequestCmdb($fgMain, 'switch-controller/managed-switch');
 $swData = $switches['results'] ?? [];

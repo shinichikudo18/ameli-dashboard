@@ -136,11 +136,37 @@ switch ($action) {
             });
             $details = array_values($details);
         }
+        foreach ($details as &$s) {
+            if (!empty($s['apps'])) {
+                $app = $s['apps'][0];
+                $appId = $app['id'] ?? 0;
+                $appName = $app['name'] ?? '';
+                if ($appId > 0 && $appName === 'N/A') {
+                    $appDb = loadJson($baseDir . '/data/apps.json');
+                    $apps = $appDb['apps'] ?? [];
+                    if (isset($apps[$appId])) {
+                        $s['app_name'] = $apps[$appId]['name'];
+                        $s['app_category'] = $apps[$appId]['category'];
+                    } else {
+                        $s['app_name'] = 'App-' . $appId;
+                    }
+                } else {
+                    $s['app_name'] = $appName;
+                }
+            } else {
+                $s['app_name'] = $s['proto'] . '/' . ($s['dport'] ?? '-');
+            }
+        }
         echo json_encode([
             'results' => $details,
             'by_firewall' => $sessions['by_firewall'] ?? [],
             'total' => $sessions['total'] ?? 0
         ]);
+        break;
+        
+    case 'apps':
+        $apps = loadJson($baseDir . '/data/apps.json');
+        echo json_encode(['results' => $apps['apps'] ?? []]);
         break;
         
     case 'switches':
