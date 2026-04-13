@@ -19,13 +19,13 @@
         .stat-card { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; text-align: center; }
         .stat-value { font-size: 1.8rem; font-weight: bold; color: #00d4ff; }
         .stat-label { color: #aaa; font-size: 0.85rem; margin-top: 5px; }
-        .card { background: rgba(255,255,255,0.1); border-radius: 20px; padding: 25px; }
+        .card { background: rgba(255,255,255,0.1); border-radius: 20px; padding: 25px; margin-bottom: 20px; }
         .card-title { font-size: 1.2rem; margin-bottom: 15px; color: #00d4ff; }
         .switches-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         .switch-card { background: rgba(0,0,0,0.3); border-radius: 15px; padding: 20px; border: 2px solid transparent; }
         .switch-card.online { border-color: #4BC0C0; }
         .switch-card.offline { border-color: #FF6384; }
-        .switch-name { font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; }
+        .switch-name { font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .switch-status { padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
         .switch-status.online { background: rgba(75,192,192,0.3); color: #4BC0C0; }
         .switch-status.offline { background: rgba(255,99,132,0.3); color: #FF6384; }
@@ -34,13 +34,33 @@
         .error-msg { color: #FF6384; text-align: center; padding: 20px; }
         .status-bar { margin-top: 25px; text-align: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 10px; }
         #lastUpdate { color: #888; font-size: 0.85rem; }
+        
+        .ports-section { margin-top: 15px; }
+        .ports-toggle { background: rgba(0,212,255,0.2); border: 1px solid #00d4ff; color: #00d4ff; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; width: 100%; transition: all 0.3s; }
+        .ports-toggle:hover { background: rgba(0,212,255,0.3); }
+        .ports-toggle.active { background: #00d4ff; color: #1a1a2e; }
+        
+        .ports-table { display: none; margin-top: 15px; background: rgba(0,0,0,0.3); border-radius: 10px; overflow: hidden; }
+        .ports-table.show { display: block; }
+        .ports-table table { width: 100%; border-collapse: collapse; }
+        .ports-table th { background: rgba(0,212,255,0.2); padding: 10px; text-align: left; font-size: 0.85rem; color: #00d4ff; }
+        .ports-table td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem; }
+        .ports-table tr:last-child td { border-bottom: none; }
+        .ports-table tr:hover { background: rgba(255,255,255,0.05); }
+        .port-status { padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
+        .port-status.up { background: rgba(75,192,192,0.3); color: #4BC0C0; }
+        .port-status.down { background: rgba(255,99,132,0.3); color: #FF6384; }
+        .port-status.unknown { background: rgba(255,255,255,0.1); color: #aaa; }
+        .poe-badge { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
+        .poe-badge.enable { background: rgba(46,204,113,0.3); color: #2ecc71; }
+        .poe-badge.disable { background: rgba(255,255,255,0.1); color: #888; }
     </style>
 </head>
 <body>
     <div class="back-link"><a href="../">&larr; Volver al Dashboard</a></div>
     <div class="container">
         <header>
-            <h1>???? Switches</h1>
+            <h1>Switches</h1>
             <p class="subtitle">Estado de switches de red</p>
         </header>
         <div class="stats-grid">
@@ -50,13 +70,64 @@
             <div class="stat-card"><div class="stat-value" id="totalPorts">0</div><div class="stat-label">Total Puertos</div></div>
         </div>
         <div class="card">
-            <div class="card-title">???? Estado de Switches</div>
+            <div class="card-title">Estado de Switches</div>
             <div id="switchesGrid"><div class="loading">Cargando datos...</div></div>
         </div>
         <div class="status-bar" id="lastUpdate">-</div>
     </div>
+    
     <script>
         var apiBase = '';
+        var switchesData = [];
+        
+        function togglePorts(switchId) {
+            var section = document.getElementById('ports-' + switchId);
+            var btn = document.getElementById('btn-' + switchId);
+            
+            if (section.classList.contains('show')) {
+                section.classList.remove('show');
+                btn.classList.remove('active');
+                btn.textContent = 'Ver puertos';
+            } else {
+                if (section.innerHTML === '') {
+                    loadPorts(switchId);
+                }
+                section.classList.add('show');
+                btn.classList.add('active');
+                btn.textContent = 'Ocultar puertos';
+            }
+        }
+        
+        function loadPorts(switchId) {
+            fetch(apiBase + 'proxy.php?action=switch-ports&switch_id=' + switchId)
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    renderPorts(switchId, data.results || []);
+                })
+                .catch(function(err) {
+                    console.error(err);
+                });
+        }
+        
+        function renderPorts(switchId, ports) {
+            var section = document.getElementById('ports-' + switchId);
+            var html = '<table><thead><tr><th>Puerto</th><th>Estado</th><th>Velocidad</th><th>POE</th><th>Descripción</th></tr></thead><tbody>';
+            
+            ports.forEach(function(p) {
+                var statusClass = p.status === 'up' ? 'up' : (p.status === 'down' ? 'down' : 'unknown');
+                var poeClass = p.poe === 'enable' ? 'enable' : 'disable';
+                html += '<tr>';
+                html += '<td>' + p.port + '</td>';
+                html += '<td><span class="port-status ' + statusClass + '">' + p.status.toUpperCase() + '</span></td>';
+                html += '<td>' + p.speed + '</td>';
+                html += '<td><span class="poe-badge ' + poeClass + '">' + (p.poe === 'enable' ? 'PoE' : '-') + '</span></td>';
+                html += '<td>' + (p.description || '-') + '</td>';
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            section.innerHTML = html;
+        }
         
         function renderSwitches(switches) {
             var grid = document.getElementById('switchesGrid');
@@ -67,21 +138,31 @@
                 return;
             }
             
+            switchesData = switches;
             var html = '<div class="switches-grid">';
             switches.forEach(function(sw) {
                 total++;
-                var status = sw.status === 'online';
+                var status = sw.status === 'up';
                 if (status) online++; else offline++;
                 ports += sw.ports || 0;
+                var switchId = sw['switch-id'];
                 
                 html += '<div class="switch-card ' + (status ? 'online' : 'offline') + '">';
-                html += '<div class="switch-name">' + (sw.name || 'Unknown') + '</div>';
-                html += '<div class="switch-status ' + (status ? 'online' : 'offline') + '">' + (status ? 'Online' : 'Offline') + '</div>';
+                html += '<div class="switch-name">';
+                html += '<span>' + (sw.name || 'Unknown') + '</span>';
+                html += '<span class="switch-status ' + (status ? 'online' : 'offline') + '">' + (status ? 'Online' : 'Offline') + '</span>';
+                html += '</div>';
                 html += '<div class="switch-info">';
-                html += '<div>IP: ' + (sw.ip || '-') + '</div>';
-                html += '<div>Puertos: ' + (sw.ports || 0) + '</div>';
-                html += '<div>Modelo: ' + (sw.model || '-') + '</div>';
-                html += '</div></div>';
+                html += '<div>ID: ' + switchId + '</div>';
+                html += '<div>Puertos totales: ' + (sw.ports || 0) + '</div>';
+                html += '<div>Puertos activos: ' + (sw.ports_up || 0) + '</div>';
+                html += '<div>Puertos PoE: ' + (sw.ports_poe || 0) + '</div>';
+                html += '</div>';
+                html += '<div class="ports-section">';
+                html += '<button class="ports-toggle" id="btn-' + switchId + '" onclick="togglePorts(\'' + switchId + '\')">Ver puertos</button>';
+                html += '<div class="ports-table" id="ports-' + switchId + '"></div>';
+                html += '</div>';
+                html += '</div>';
             });
             html += '</div>';
             
@@ -96,10 +177,10 @@
             fetch(apiBase + 'proxy.php?action=switches')
                 .then(function(res) { return res.json(); })
                 .then(function(data) {
-                    renderSwitches(data);
-                    document.getElementById('lastUpdate').textContent = '??ltima actualizaci??n: ' + new Date().toLocaleTimeString();
+                    renderSwitches(data.results || []);
+                    document.getElementById('lastUpdate').textContent = 'Ultima actualizacion: ' + new Date().toLocaleTimeString();
                 })
-                .function(function(err) {
+                .catch(function(err) {
                     document.getElementById('switchesGrid').innerHTML = '<div class="error-msg">Error cargando datos</div>';
                     console.error(err);
                 });

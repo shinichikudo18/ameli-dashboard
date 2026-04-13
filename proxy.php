@@ -161,6 +161,29 @@ switch ($action) {
         echo json_encode(['results' => $formatted]);
         break;
 
+    case 'switch-ports':
+        $switchId = $_GET['switch_id'] ?? '';
+        $switches = loadJson($baseDir . '/data/switches.json');
+        foreach ($switches['data'] ?? [] as $sw) {
+            if (($sw['switch-id'] ?? '') === $switchId || $switchId === '') {
+                $ports = $sw['ports'] ?? [];
+                echo json_encode(['results' => array_map(function($p) {
+                    return [
+                        'port' => $p['port-name'] ?? '',
+                        'status' => $p['status'] ?? 'unknown',
+                        'speed' => $p['speed'] ?? 'auto',
+                        'poe' => $p['poe-status'] ?? 'unknown',
+                        'poe-power' => $p['poe-power'] ?? 0,
+                        'vlan' => $p['vlan'] ?? '',
+                        'description' => $p['description'] ?? ''
+                    ];
+                }, $ports)]);
+                exit;
+            }
+        }
+        echo json_encode(['results' => [], 'error' => 'Switch no encontrado']);
+        break;
+
     case 'sdwan':
         echo json_encode(['results' => [
             [
