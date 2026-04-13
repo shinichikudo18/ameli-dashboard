@@ -527,8 +527,90 @@ switch ($action) {
         $interfaces = loadJson($baseDir . '/data/interfaces.json');
         $voip = loadJson($baseDir . '/data/voip.json');
         $dhcp = loadJson($baseDir . '/data/dhcp.json');
+        $sessions = loadJson($baseDir . '/data/sessions.json');
+        $apps = loadJson($baseDir . '/data/apps.json');
         
         $registeredPhones = array_filter($voip['phones'] ?? [], fn($p) => $p['status'] === 'registered');
+        
+        // Procesar sesiones por firewall
+        $byFirewall = $sessions['by_firewall'] ?? [];
+        $firewallStats = [];
+        $totalSessions = 0;
+        $totalBlocked = 0;
+        foreach ($byFirewall as $key => $data) {
+            $totalSessions += $data['total'] ?? 0;
+            $totalBlocked += $data['blocked'] ?? 0;
+            $firewallStats[] = [
+                'name' => $data['name'] ?? $key,
+                'key' => $key,
+                'sessions' => $data['total'] ?? 0,
+                'blocked' => $data['blocked'] ?? 0
+            ];
+        }
+        
+        // Procesar aplicaciones desde sesiones
+        $sessionDetails = $sessions['details'] ?? [];
+        $appCounts = [];
+        $appFirewallCounts = [];
+        foreach ($sessionDetails as $s) {
+            $appId = $s['app_id'] ?? 0;
+            $fwName = $s['firewall'] ?? 'Unknown';
+            $proto = strtolower($s['protocol'] ?? 'tcp');
+            $sport = $s['srcport'] ?? 0;
+            $dport = $s['dstport'] ?? 0;
+            
+            $appName = 'Unknown';
+            if ($appId > 0 && isset($apps['apps'][$appId])) {
+                $appName = $apps['apps'][$appId]['name'];
+            } elseif ($dport === 443 || $sport === 443) {
+                $appName = 'HTTPS';
+            } elseif ($dport === 80 || $sport === 80) {
+                $appName = 'HTTP';
+            } elseif ($dport === 53 || $sport === 53) {
+                $appName = 'DNS';
+            } elseif ($dport === 22 || $sport === 22) {
+                $appName = 'SSH';
+            } elseif ($dport === 25 || $sport === 25) {
+                $appName = 'SMTP';
+            } elseif ($dport === 3389 || $sport === 3389) {
+                $appName = 'RDP';
+            } elseif ($dport === 445 || $sport === 445) {
+                $appName = 'SMB';
+            } else {
+                $appName = $proto . ':' . $dport;
+            }
+            
+            if (!isset($appCounts[$appName])) {
+                $appCounts[$appName] = 0;
+            }
+            $appCounts[$appName]++;
+            
+            if (!isset($appFirewallCounts[$appName])) {
+                $appFirewallCounts[$appName] = [];
+            }
+            if (!isset($appFirewallCounts[$appName][$fwName])) {
+                $appFirewallCounts[$appName][$fwName] = 0;
+            }
+            $appFirewallCounts[$appName][$fwName]++;
+        }
+        
+        // Ordenar aplicaciones por cantidad
+        arsort($appCounts);
+        $topApps = array_slice($appCounts, 0, 15, true);
+        
+        // Preparar datos de aplicaciones
+        $appsData = [];
+        foreach ($topApps as $appName => $count) {
+            $fwBreakdown = $appFirewallCounts[$appName] ?? [];
+            $mainFw = array_keys($fwBreakdown)[0] ?? 'N/A';
+            $appsData[] = [
+                'name' => $appName,
+                'count' => $count,
+                'percentage' => $totalSessions > 0 ? round(($count / $totalSessions) * 100, 1) : 0,
+                'firewall' => $mainFw,
+                'firewalls_detail' => $fwBreakdown
+            ];
+        }
         
         $socData = [
             'timestamp' => $metrics['timestamp'] ?? date('Y-m-d H:i:s'),
@@ -541,16 +623,18 @@ switch ($action) {
             ],
             'events_24h' => $metrics['events_24h'] ?? 0,
             'blocked_threats' => $metrics['blocked_threats'] ?? 0,
+            'firewalls' => $firewallStats,
             'firewall' => [
                 'status' => 'unknown',
-                'sessions' => $metrics['sessions'] ?? 0,
-                'blocked' => 0,
+                'sessions' => $totalSessions,
+                'blocked' => $totalBlocked,
                 'hostname' => '',
                 'model' => '',
                 'serial' => ''
             ],
+            'applications' => $appsData,
             'network' => [
-                'total_sessions' => $metrics['sessions'] ?? 0,
+                'total_sessions' => $totalSessions,
                 'blocked_ips' => [],
                 'top_attacks' => [],
                 'dhcp_devices' => array_slice(array_map(fn($d) => $d['hostname'] ?? '', $dhcp['data'] ?? []), 0, 10)
