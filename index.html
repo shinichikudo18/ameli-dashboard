@@ -283,6 +283,7 @@
                 <div class="stat-card"><div class="stat-value" id="onlineSwitches">-</div><div class="stat-label">Online</div></div>
                 <div class="stat-card"><div class="stat-value" id="offlineSwitches">-</div><div class="stat-label">Offline</div></div>
             </div>
+            <div id="switchesByFwStats"></div>
             <div class="card">
                 <div class="card-title">Estado de Switches</div>
                 <div id="switchesContent"><div class="loading">Cargando...</div></div>
@@ -2105,6 +2106,7 @@
                         return;
                     }
                     var switches = data.results || [];
+                    var byFirewall = data.by_firewall || {};
                     var total = switches.length || 0;
                     var online = switches.filter(function(s) {
                         return s['dynamically-discovered'] === 1 || s['fsw-wan1-peer'] === 'fortilink' || s['fsw-wan1-admin'] === 'enable';
@@ -2114,6 +2116,23 @@
                     document.getElementById('totalSwitches').textContent = total;
                     document.getElementById('onlineSwitches').textContent = online;
                     document.getElementById('offlineSwitches').textContent = offline;
+                    
+                    // Stats por firewall
+                    var fwStatsHtml = '<div class="fw-stats-grid">';
+                    if (Object.keys(byFirewall).length > 0) {
+                        var colors = ['#FF6384', '#36A2EB', '#4BC0C0'];
+                        var i = 0;
+                        Object.keys(byFirewall).forEach(function(fwKey) {
+                            var fw = byFirewall[fwKey];
+                            fwStatsHtml += '<div class="fw-stat-card" style="border-left: 4px solid ' + colors[i % colors.length] + ';">';
+                            fwStatsHtml += '<div class="fw-stat-label">' + fw.name + '</div>';
+                            fwStatsHtml += '<div class="fw-stat-value" style="color:' + colors[i % colors.length] + ';">' + fw.count + ' switches</div>';
+                            fwStatsHtml += '</div>';
+                            i++;
+                        });
+                    }
+                    fwStatsHtml += '</div>';
+                    document.getElementById('switchesByFwStats').innerHTML = fwStatsHtml;
 
                     if (switches.length === 0) {
                         document.getElementById('switchesContent').innerHTML = '<div class="loading">No hay switches</div>';
@@ -2131,7 +2150,7 @@
                     Object.keys(groups).sort().forEach(function(fw) {
                         var items = groups[fw];
                         html += '<div class="card" style="margin-bottom:20px;">';
-                        html += '<div class="card-title">' + fw + ' (' + items.length + ')</div>';
+                        html += '<div class="card-title">' + fw + ' (' + items.length + ' switches)</div>';
                         html += '<div class="switches-grid">';
                         items.forEach(function(sw) {
                             var status = (sw['dynamically-discovered'] === 1 || sw['fsw-wan1-peer'] === 'fortilink' || sw['fsw-wan1-admin'] === 'enable');

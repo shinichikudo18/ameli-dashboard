@@ -211,15 +211,25 @@ foreach ($allSessions as $s) {
 }
 saveJson($baseDir . '/data/apps.json', ['timestamp' => $timestamp, 'apps' => $appDb]);
 
-// Switches - usar cmdb en lugar de monitor
-$switches = fgRequestCmdb($fgMain, 'switch-controller/managed-switch');
-$swData = $switches['results'] ?? [];
-$swTotal = count($swData);
+// Switches - obtener de todos los firewalls
+$allSwitches = [];
+$switchesByFw = [];
+foreach ($fortigates as $fgKey => $fg) {
+    $switches = fgRequestCmdb($fgKey, 'switch-controller/managed-switch');
+    $swData = $switches['results'] ?? [];
+    foreach ($swData as &$s) {
+        $s['firewall'] = $fg['name'];
+        $s['firewall_key'] = $fgKey;
+    }
+    $allSwitches = array_merge($allSwitches, $swData);
+    $switchesByFw[$fgKey] = ['name' => $fg['name'], 'count' => count($swData)];
+}
+$swTotal = count($allSwitches);
 $swOnline = 0;
-foreach ($swData as $s) {
+foreach ($allSwitches as $s) {
     if (($s['dynamically-discovered'] ?? 0) === 1) $swOnline++;
 }
-saveJson($baseDir . '/data/switches.json', ['timestamp' => $timestamp, 'total' => $swTotal, 'online' => $swOnline, 'data' => $swData]);
+saveJson($baseDir . '/data/switches.json', ['timestamp' => $timestamp, 'total' => $swTotal, 'online' => $swOnline, 'data' => $allSwitches, 'by_firewall' => $switchesByFw]);
 
 // FortiVoice Phones - usar API correcta con login/cookie
 $fvUrl = 'http://192.168.100.2';

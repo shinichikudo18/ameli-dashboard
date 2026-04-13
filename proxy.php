@@ -353,10 +353,12 @@ switch ($action) {
                 'ports' => count($ports),
                 'ports_up' => $upPorts,
                 'ports_poe' => $poePorts,
-                'dynamically-discovered' => $sw['dynamically-discovered'] ?? 0
+                'dynamically-discovered' => $sw['dynamically-discovered'] ?? 0,
+                'firewall' => $sw['firewall'] ?? '',
+                'firewall_key' => $sw['firewall_key'] ?? ''
             ];
         }
-        echo json_encode(['results' => $formatted]);
+        echo json_encode(['results' => $formatted, 'by_firewall' => $switches['by_firewall'] ?? []]);
         break;
 
     case 'switch-ports':
