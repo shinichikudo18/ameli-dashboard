@@ -855,59 +855,11 @@
                     <button onclick="refreshRedTeamReports()" style="padding:12px 16px;border:none;border-radius:10px;background:rgba(0,212,255,0.18);color:#00d4ff;font-weight:800;cursor:pointer;">Actualizar lista</button>
                 </div>
             </div>
-            <div class="card" style="margin-bottom:20px;">
-                <div class="card-title">Nuevo Objetivo</div>
-                <div style="display:grid;grid-template-columns:1.2fr 0.7fr 0.7fr auto;gap:10px;align-items:end;">
-                    <div>
-                        <label style="display:block;color:#9aa3b2;font-size:0.75rem;margin-bottom:6px;">Objetivo</label>
-                        <input id="rtTargetInput" type="text" placeholder="192.168.1.0/24, 8.8.8.8, ejemplo.com" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.25);color:#fff;">
-                    </div>
-                    <div>
-                        <label style="display:block;color:#9aa3b2;font-size:0.75rem;margin-bottom:6px;">Tipo</label>
-                        <select id="rtTargetType" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.25);color:#fff;">
-                            <option value="subnet">Subred</option>
-                            <option value="ip">IP Pública</option>
-                            <option value="fqdn">FQDN</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="display:block;color:#9aa3b2;font-size:0.75rem;margin-bottom:6px;">Prioridad</label>
-                        <select id="rtTargetPriority" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.25);color:#fff;">
-                            <option value="high">High</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="low">Low</option>
-                        </select>
-                    </div>
-                    <div>
-                        <button onclick="addRedTeamTarget()" style="padding:12px 16px;border:none;border-radius:10px;background:#00d4ff;color:#071018;font-weight:800;cursor:pointer;width:100%;">Agregar</button>
-                    </div>
-                </div>
-                <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
-                    <button onclick="exportRedTeamJson()" style="padding:10px 14px;border:none;border-radius:10px;background:rgba(75,192,192,0.18);color:#4BC0C0;font-weight:700;cursor:pointer;">Exportar JSON</button>
-                    <button onclick="saveRedTeamTargets()" style="padding:10px 14px;border:none;border-radius:10px;background:rgba(0,212,255,0.18);color:#00d4ff;font-weight:700;cursor:pointer;">Guardar en Servidor</button>
-                    <button onclick="clearRedTeamTargets()" style="padding:10px 14px;border:none;border-radius:10px;background:rgba(255,99,132,0.18);color:#FF6384;font-weight:700;cursor:pointer;">Limpiar</button>
-                </div>
-                <div style="margin-top:14px;">
-                    <label style="display:block;color:#9aa3b2;font-size:0.75rem;margin-bottom:6px;">Importar reporte JSON</label>
-                    <textarea id="rtImportJson" placeholder='Pega aquí un redteam.json con hosts, dns, findings...' style="width:100%;min-height:120px;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.25);color:#fff;resize:vertical;"></textarea>
-                    <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
-                        <button onclick="importRedTeamJson()" style="padding:10px 14px;border:none;border-radius:10px;background:rgba(75,192,192,0.18);color:#4BC0C0;font-weight:700;cursor:pointer;">Importar reporte</button>
-                        <button onclick="downloadCurrentRedTeamJson()" style="padding:10px 14px;border:none;border-radius:10px;background:rgba(255,206,86,0.18);color:#FFCE56;font-weight:700;cursor:pointer;">Descargar reporte</button>
-                    </div>
-                </div>
-            </div>
             <div class="stats-grid">
                 <div class="stat-card"><div class="stat-value" id="rtTargets">-</div><div class="stat-label">Targets</div></div>
                 <div class="stat-card"><div class="stat-value" id="rtHostsUp">-</div><div class="stat-label">Hosts Up</div></div>
                 <div class="stat-card"><div class="stat-value" id="rtDnsQueries">-</div><div class="stat-label">DNS Queries</div></div>
                 <div class="stat-card"><div class="stat-value" id="rtFindings">-</div><div class="stat-label">Findings</div></div>
-            </div>
-            <div class="card" style="margin-bottom:20px;">
-                <div class="card-title">Targets Agregados</div>
-                <table class="soc-table">
-                    <thead><tr><th>Target</th><th>Tipo</th><th>Prioridad</th><th>Estado</th><th>Fecha</th></tr></thead>
-                    <tbody id="rtTargetsTable"><tr><td colspan="5" style="text-align:center;color:#888;">Sin targets</td></tr></tbody>
-                </table>
             </div>
             <div class="dashboard-grid" style="margin-bottom:20px;">
                 <div class="card">
@@ -1440,14 +1392,6 @@
             var url = '/dashboard/proxy.php?action=redteam_data';
             if (reportFile) url += '&report=' + encodeURIComponent(reportFile);
             fetch(url).then(function(r){return r.json();}).then(function(data){
-                var stored = JSON.parse(localStorage.getItem('redTeamTargets') || '[]');
-                var serverTargets = data.targets || [];
-                var mergedTargets = stored.slice();
-                serverTargets.forEach(function(t) {
-                    if (!mergedTargets.some(function(x) { return x.target === t.target && x.type === t.type && x.created_at === t.created_at; })) {
-                        mergedTargets.push(t);
-                    }
-                });
                 document.getElementById('redTeamNote').textContent = data.note || 'Vista de reporte importado.';
                 document.getElementById('rtTargets').textContent = data.summary?.targets || 0;
                 document.getElementById('rtHostsUp').textContent = data.summary?.hosts_up || 0;
@@ -1483,12 +1427,6 @@
                     return '<tr><td><span style="color:' + color + ';font-weight:bold;">' + (f.severity || '-') + '</span></td><td>' + (f.target || '-') + '</td><td>' + (f.type || '-') + '</td><td>' + (f.description || '-') + '</td><td>' + (f.evidence || '-') + '</td></tr>';
                 }).join('');
                 document.getElementById('rtFindingsTable').innerHTML = findingRows || '<tr><td colspan="5" style="text-align:center;color:#888;">Sin findings importados</td></tr>';
-
-                var targetsRows = mergedTargets.map(function(t) {
-                    var stateColor = t.status === 'done' ? '#4BC0C0' : '#FFCE56';
-                    return '<tr><td>' + escapeHtml(t.target) + '</td><td>' + escapeHtml(t.type) + '</td><td>' + escapeHtml(t.priority) + '</td><td><span style="color:' + stateColor + ';font-weight:bold;">' + escapeHtml(t.status || 'pending') + '</span></td><td>' + escapeHtml(t.created_at) + '</td></tr>';
-                }).join('');
-                document.getElementById('rtTargetsTable').innerHTML = targetsRows || '<tr><td colspan="5" style="text-align:center;color:#888;">Sin targets</td></tr>';
             }).catch(function(err) {
                 document.getElementById('redTeamNote').textContent = 'Error cargando datos: ' + err.message;
             });
@@ -1516,29 +1454,6 @@
             refreshRedTeam(sel.value || '');
         }
 
-        function addRedTeamTarget() {
-            var target = document.getElementById('rtTargetInput').value.trim();
-            var type = document.getElementById('rtTargetType').value;
-            var priority = document.getElementById('rtTargetPriority').value;
-            if (!target) return;
-            var items = JSON.parse(localStorage.getItem('redTeamTargets') || '[]');
-            items.unshift({
-                target: target,
-                type: type,
-                priority: priority,
-                status: 'pending',
-                created_at: new Date().toISOString().replace('T', ' ').slice(0, 19)
-            });
-            localStorage.setItem('redTeamTargets', JSON.stringify(items.slice(0, 100)));
-            document.getElementById('rtTargetInput').value = '';
-            refreshRedTeam();
-        }
-
-        function clearRedTeamTargets() {
-            localStorage.removeItem('redTeamTargets');
-            refreshRedTeam();
-        }
-
         function exportRedTeamJson() {
             var payload = buildRedTeamPayload();
             var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -1551,30 +1466,15 @@
         }
 
         function buildRedTeamPayload(extra) {
-            var targets = JSON.parse(localStorage.getItem('redTeamTargets') || '[]');
             var payload = {
                 generated_at: new Date().toISOString(),
-                targets: targets,
+                targets: [],
                 note: 'Report generated from dashboard targets.'
             };
             if (extra && typeof extra === 'object') {
                 Object.keys(extra).forEach(function(k) { payload[k] = extra[k]; });
             }
             return payload;
-        }
-
-        function saveRedTeamTargets() {
-            var payload = buildRedTeamPayload();
-            fetch('/dashboard/proxy.php?action=redteam_save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            }).then(function(r) { return r.json(); }).then(function(resp) {
-                if (resp.error) throw new Error(resp.error);
-                document.getElementById('redTeamNote').textContent = 'Objetivos guardados en servidor: ' + resp.path;
-            }).catch(function(err) {
-                document.getElementById('redTeamNote').textContent = 'Error guardando: ' + err.message;
-            });
         }
 
         function importRedTeamJson() {
@@ -1596,10 +1496,6 @@
             } catch (e) {
                 document.getElementById('redTeamNote').textContent = 'JSON inválido: ' + e.message;
             }
-        }
-
-        function downloadCurrentRedTeamJson() {
-            exportRedTeamJson();
         }
         
         function toggleLight() {
