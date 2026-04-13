@@ -132,7 +132,19 @@ switch ($action) {
         
     case 'sessions':
         $sessions = loadJson($baseDir . '/data/sessions.json');
-        echo json_encode(['results' => $sessions['details'] ?? []]);
+        $firewall = $_GET['firewall'] ?? '';
+        $details = $sessions['details'] ?? [];
+        if (!empty($firewall)) {
+            $details = array_filter($details, function($s) use ($firewall) {
+                return ($s['firewall_key'] ?? '') === $firewall;
+            });
+            $details = array_values($details);
+        }
+        echo json_encode([
+            'results' => $details,
+            'by_firewall' => $sessions['by_firewall'] ?? [],
+            'total' => $sessions['total'] ?? 0
+        ]);
         break;
         
     case 'switches':

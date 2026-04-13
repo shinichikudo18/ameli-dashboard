@@ -4,7 +4,6 @@ ini_set('display_errors', 0);
 
 $baseDir = __DIR__;
 
-// Helper para guardar JSON
 function saveJson($file, $data) {
     file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT));
 }
@@ -13,36 +12,40 @@ function loadJson($file) {
     return file_exists($file) ? json_decode(file_get_contents($file), true) ?? [] : [];
 }
 
-// Configuración FortiGate
-$fgIp = '1.2.3.4';
-$fgToken = 'q7N88NNwff4n0d0hs0769Gd03j9gcq';
+// Configuración de múltiples FortiGates
+$fortigates = [
+    'fg-oficina' => ['ip' => '192.168.100.1', 'token' => 'q7N88NNwff4n0d0hs0769Gd03j9gcq', 'name' => 'FG Oficina'],
+    'fg-data' => ['ip' => '1.2.3.5', 'token' => 'rzyhGgcHtsst87nr9jtQ3k0rtrcrfn', 'name' => 'FG Data']
+];
 
-function fgRequest($endpoint, $params = '') {
-    global $fgIp, $fgToken;
-    $url = "https://{$fgIp}/api/v2/monitor/{$endpoint}?vdom=root{$params}";
+function fgRequest($fgKey, $endpoint, $params = '') {
+    global $fortigates;
+    $fg = $fortigates[$fgKey];
+    $url = "https://{$fg['ip']}/api/v2/monitor/{$endpoint}?vdom=root{$params}";
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $fgToken]);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $fg['token']]);
     $resp = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
     return $code === 200 ? json_decode($resp, true) : null;
 }
 
-function fgRequestCmdb($path) {
-    global $fgIp, $fgToken;
-    $url = "https://{$fgIp}/api/v2/cmdb/{$path}?vdom=root";
+function fgRequestCmdb($fgKey, $path) {
+    global $fortigates;
+    $fg = $fortigates[$fgKey];
+    $url = "https://{$fg['ip']}/api/v2/cmdb/{$path}?vdom=root";
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $fgToken]);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $fg['token']]);
     $resp = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
@@ -51,8 +54,11 @@ function fgRequestCmdb($path) {
 
 $timestamp = date('Y-m-d H:i:s');
 
+// Usar fg-oficina como principal para datos básicos
+$fgMain = 'fg-oficina';
+
 // System Status
-$status = fgRequest('system/status');
+$status = fgRequest($fgMain, 'system/status');
 $hostname = $status['results'][0]['hostname'] ?? '';
 $model = $status['results'][0]['model'] ?? '';
 $serial = $status['results'][0]['serial'] ?? '';
@@ -60,64 +66,70 @@ $version = $status['results'][0]['version'] ?? '';
 $uptime = $status['results'][0]['uptime'] ?? '';
 
 // System Resource (CPU/Memory)
-$resource = fgRequest('system/resource');
+$resource = fgRequest($fgMain, 'system/resource');
 $cpu = $resource['results'][0]['cpu'] ?? 0;
 $memory = $resource['results'][0]['memory'] ?? 0;
 
 // Interfaces
-$intf = fgRequest('system/interface');
+$intf = fgRequest($fgMain, 'system/interface');
 $interfaces = $intf['results'] ?? [];
 saveJson($baseDir . '/data/interfaces.json', ['timestamp' => $timestamp, 'data' => $interfaces]);
 
 // DHCP
-$dhcp = fgRequest('system/dhcp');
+$dhcp = fgRequest($fgMain, 'system/dhcp');
 $dhcpData = $dhcp['results'] ?? [];
 saveJson($baseDir . '/data/dhcp.json', ['timestamp' => $timestamp, 'data' => $dhcpData]);
 
 // WiFi
-$wifiClients = fgRequest('wifi/client');
-$wifiAps = fgRequest('wireless-controller/managed-ap');
+$wifiClients = fgRequest($fgMain, 'wifi/client');
+$wifiAps = fgRequest($fgMain, 'wireless-controller/managed-ap');
 $clients = count($wifiClients['results'] ?? []);
 $aps = count($wifiAps['results'] ?? []);
 saveJson($baseDir . '/data/wifi.json', ['timestamp' => $timestamp, 'aps' => $aps, 'clients' => $clients]);
 
 // VPN - usar cmdb (monitor endpoint no disponible en este FortiGate)
-$vpnCmdb = fgRequestCmdb('vpn.ipsec/phase1-interface');
+$vpnCmdb = fgRequestCmdb($fgMain, 'vpn.ipsec/phase1-interface');
 $vpnData = $vpnCmdb['results'] ?? [];
-// Agregar status basico basado en configuración
 foreach ($vpnData as &$vpn) {
     $vpn['status'] = (($vpn['auto-negotiate'] ?? '') === 'enable') ? 'up' : 'down';
 }
 saveJson($baseDir . '/data/vpn.json', ['timestamp' => $timestamp, 'data' => $vpnData]);
 
 // Policies
-$policy = fgRequestCmdb('firewall/policy');
+$policy = fgRequestCmdb($fgMain, 'firewall/policy');
 $policyData = $policy['results'] ?? [];
 saveJson($baseDir . '/data/policies.json', ['timestamp' => $timestamp, 'data' => $policyData]);
 
 // Addresses
-$addr = fgRequestCmdb('firewall/address');
+$addr = fgRequestCmdb($fgMain, 'firewall/address');
 $addrData = $addr['results'] ?? [];
 saveJson($baseDir . '/data/addresses.json', ['timestamp' => $timestamp, 'data' => $addrData]);
 
-// Sessions - pedir en bloques de 1000 para obtener mas datos
-$sessionDetails = [];
-for ($start = 0; $start <= 5000; $start += 1000) {
-    $sessions = fgRequest('firewall/session', '&count=1000&start=' . $start);
-    $newSessions = $sessions['results']['details'] ?? [];
-    if (empty($newSessions)) break;
-    $sessionDetails = array_merge($sessionDetails, $newSessions);
-    if (count($newSessions) < 1000) break;
+// Sessions de AMBOS firewalls - pedir en bloques de 1000
+$allSessions = [];
+$firewallStats = [];
+foreach ($fortigates as $fgKey => $fg) {
+    $fgSessions = [];
+    for ($start = 0; $start <= 5000; $start += 1000) {
+        $sessions = fgRequest($fgKey, 'firewall/session', '&count=1000&start=' . $start);
+        $newSessions = $sessions['results']['details'] ?? [];
+        if (empty($newSessions)) break;
+        foreach ($newSessions as &$s) { $s['firewall'] = $fg['name']; $s['firewall_key'] = $fgKey; }
+        $fgSessions = array_merge($fgSessions, $newSessions);
+        if (count($newSessions) < 1000) break;
+    }
+    $blocked = 0;
+    foreach ($fgSessions as $s) { if (in_array($s['action'] ?? '', ['drop', 'blocked'])) $blocked++; }
+    $firewallStats[$fgKey] = ['name' => $fg['name'], 'total' => count($fgSessions), 'blocked' => $blocked];
+    $allSessions = array_merge($allSessions, $fgSessions);
 }
-$totalSessions = count($sessionDetails);
+$totalSessions = count($allSessions);
 $blockedSessions = 0;
-foreach ($sessionDetails as $s) {
-    if (in_array($s['action'] ?? '', ['drop', 'blocked'])) $blockedSessions++;
-}
-saveJson($baseDir . '/data/sessions.json', ['timestamp' => $timestamp, 'total' => $totalSessions, 'blocked' => $blockedSessions, 'details' => $sessionDetails]);
+foreach ($allSessions as $s) { if (in_array($s['action'] ?? '', ['drop', 'blocked'])) $blockedSessions++; }
+saveJson($baseDir . '/data/sessions.json', ['timestamp' => $timestamp, 'total' => $totalSessions, 'blocked' => $blockedSessions, 'details' => $allSessions, 'by_firewall' => $firewallStats]);
 
 // Switches - usar cmdb en lugar de monitor
-$switches = fgRequestCmdb('switch-controller/managed-switch');
+$switches = fgRequestCmdb($fgMain, 'switch-controller/managed-switch');
 $swData = $switches['results'] ?? [];
 $swTotal = count($swData);
 $swOnline = 0;
