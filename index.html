@@ -83,6 +83,19 @@
         .switch-info { margin-top: 10px; font-size: 0.9rem; color: #aaa; }
         .status-bar { margin-top: 25px; text-align: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 10px; }
         #lastUpdate { color: #888; font-size: 0.85rem; }
+        .ports-toggle { background: rgba(0,212,255,0.2); border: 1px solid #00d4ff; color: #00d4ff; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; width: 100%; margin-top: 12px; transition: all 0.3s; }
+        .ports-toggle:hover { background: rgba(0,212,255,0.3); }
+        .ports-toggle.active { background: #00d4ff; color: #1a1a2e; }
+        .ports-table { display: none; margin-top: 10px; background: rgba(0,0,0,0.3); border-radius: 10px; overflow: hidden; }
+        .ports-table.show { display: block; }
+        .ports-table table { width: 100%; border-collapse: collapse; }
+        .ports-table th { background: rgba(0,212,255,0.2); padding: 8px 6px; text-align: left; font-size: 0.75rem; color: #00d4ff; }
+        .ports-table td { padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.8rem; }
+        .ports-table tr:last-child td { border-bottom: none; }
+        .ports-table tr:hover { background: rgba(255,255,255,0.05); }
+        .port-status { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+        .port-status.up { background: rgba(75,192,192,0.3); color: #4BC0C0; }
+        .port-status.down { background: rgba(255,99,132,0.3); color: #FF6384; }
         @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } .clients-table { font-size: 0.8rem; } }
     </style>
 </head>
@@ -2096,49 +2109,21 @@
                         html += '<div class="switches-grid">';
                         items.forEach(function(sw) {
                             var status = (sw['dynamically-discovered'] === 1 || sw['fsw-wan1-peer'] === 'fortilink' || sw['fsw-wan1-admin'] === 'enable');
-                            var portsUp = 0;
-                            var portsTotal = 0;
-                            var uplinkPorts = [];
-                            var poePorts = 0;
-                            var vlanSet = {};
-                            if (sw.ports && sw.ports.length) {
-                                portsTotal = sw.ports.length;
-                                sw.ports.forEach(function(p) {
-                                    if (p.status === 'up') portsUp++;
-                                    if (p['poe-status'] === 'enable') poePorts++;
-                                    if (p.vlan) vlanSet[p.vlan] = true;
-                                    if (p['fgt-peer-device-name'] || p['fgt-peer-port-name']) {
-                                        uplinkPorts.push(p['port-name'] || '-');
-                                    }
-                                });
-                            }
+                            var portsUp = sw['ports_up'] || 0;
+                            var portsTotal = sw.ports || 0;
+                            var poePorts = sw['ports_poe'] || 0;
+                            var swId = sw['switch-id'];
+                            
                             html += '<div class="switch-card ' + (status ? 'online' : 'offline') + '">';
                             html += '<div class="switch-name">' + (sw.name || sw.serial || sw['switch-id'] || 'Switch') + '</div>';
                             html += '<div class="switch-status ' + (status ? 'online' : 'offline') + '">' + (status ? 'Conectado' : 'Desconectado') + '</div>';
                             html += '<div class="switch-info">';
-                            html += '<div>IP: ' + (sw.device_ip || sw.ip || '-') + '</div>';
-                            html += '<div>Serie: ' + (sw['switch-id'] || sw.serial || '-') + '</div>';
+                            html += '<div>ID: ' + (sw['switch-id'] || '-') + '</div>';
                             html += '<div>Puertos: ' + portsUp + '/' + portsTotal + '</div>';
                             html += '<div>PoE: ' + poePorts + ' puertos</div>';
-                            html += '<div>VLANs: ' + Object.keys(vlanSet).slice(0, 4).join(', ') + '</div>';
-                            html += '<div>Uplinks: ' + (uplinkPorts.length ? uplinkPorts.join(', ') : '-') + '</div>';
                             html += '</div>';
-                            if (sw.ports && sw.ports.length) {
-                                html += '<div style="margin-top:12px; max-height:420px; overflow:auto;">';
-                                html += '<table class="clients-table"><thead><tr><th>Puerto</th><th>Descripcion</th><th>Estado</th><th>Speed</th><th>VLAN</th><th>PoE</th><th>PoE Power</th></tr></thead><tbody>';
-                                sw.ports.forEach(function(p) {
-                                    html += '<tr>';
-                                    html += '<td>' + (p['port-name'] || '-') + '</td>';
-                                    html += '<td>' + (p.description || '-') + '</td>';
-                                    html += '<td>' + (p.status || '-') + '</td>';
-                                    html += '<td>' + (p.speed || '-') + '</td>';
-                                    html += '<td>' + (p.vlan || '-') + '</td>';
-                                    html += '<td>' + (p['poe-status'] || '-') + '</td>';
-                                    html += '<td>' + (p['poe-port-power'] || p['poe-max-power'] || '-') + '</td>';
-                                    html += '</tr>';
-                                });
-                                html += '</tbody></table></div>';
-                            }
+                            html += '<button class="ports-toggle" id="btn-' + swId + '" onclick="toggleSwitchPorts(\'' + swId + '\')">Ver puertos (' + portsTotal + ')</button>';
+                            html += '<div class="ports-table" id="ports-' + swId + '"></div>';
                             html += '</div>';
                         });
                         html += '</div></div>';
@@ -2147,6 +2132,52 @@
                 })
                 .catch(function(err) {
                     document.getElementById('switchesContent').innerHTML = '<div class="error-msg">Error: ' + err.message + '</div>';
+                });
+        }
+        
+        function toggleSwitchPorts(switchId) {
+            var section = document.getElementById('ports-' + switchId);
+            var btn = document.getElementById('btn-' + switchId);
+            
+            if (section.classList.contains('show')) {
+                section.classList.remove('show');
+                btn.classList.remove('active');
+                btn.textContent = 'Ver puertos';
+            } else {
+                if (section.innerHTML === '') {
+                    loadSwitchPorts(switchId);
+                }
+                section.classList.add('show');
+                btn.classList.add('active');
+                btn.textContent = 'Ocultar puertos';
+            }
+        }
+        
+        function loadSwitchPorts(switchId) {
+            fetch(apiBase + 'switch-ports&switch_id=' + switchId)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var ports = data.results || [];
+                    var section = document.getElementById('ports-' + switchId);
+                    var html = '<table><thead><tr><th>Puerto</th><th>Estado</th><th>Velocidad</th><th>POE</th><th>VLAN</th><th>Descripcion</th></tr></thead><tbody>';
+                    
+                    ports.forEach(function(p) {
+                        var statusClass = p.status === 'up' ? 'up' : 'down';
+                        html += '<tr>';
+                        html += '<td>' + p.port + '</td>';
+                        html += '<td><span class="port-status ' + statusClass + '">' + (p.status || '-').toUpperCase() + '</span></td>';
+                        html += '<td>' + (p.speed || '-') + '</td>';
+                        html += '<td>' + (p.poe === 'enable' ? 'Si' : 'No') + '</td>';
+                        html += '<td>' + (p.vlan || '-') + '</td>';
+                        html += '<td>' + (p.description || '-') + '</td>';
+                        html += '</tr>';
+                    });
+                    
+                    html += '</tbody></table>';
+                    section.innerHTML = html;
+                })
+                .catch(function(err) {
+                    console.error(err);
                 });
         }
 
