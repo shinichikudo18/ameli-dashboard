@@ -1507,74 +1507,96 @@
                         'LinkedIn': '&#128188;', 'Reddit': '&#128293;', 'GitHub': '&#128421;', 'GitLab': '&#128421;'
                     };
                     
-                    var sessHtml = '';
-                    if (sessions.length > 0) {
-                        sessHtml = '<table class="clients-table"><thead><tr><th>Origen</th><th>Destino</th><th>Proto/App</th><th>Pais</th><th>Usuario</th><th>Firewall</th></tr></thead><tbody>';
-                        var appNames = {
-                            'youtube': 'YouTube', 'netflix': 'Netflix', 'dns': 'DNS', 'http': 'HTTP', 
-                            'https': 'HTTPS', 'icmp': 'ICMP', 'facebook': 'Facebook', 'instagram': 'Instagram',
-                            'whatsapp': 'WhatsApp', 'telegram': 'Telegram', 'spotify': 'Spotify', 'twitter': 'Twitter',
-                            'dropbox': 'Dropbox', 'google': 'Google', 'amazon': 'Amazon', 'microsoft': 'Microsoft',
-                            'apple': 'Apple', 'cloudflare': 'Cloudflare', 'zoom': 'Zoom', 'teams': 'Teams',
-                            'slack': 'Slack', 'discord': 'Discord', 'twitch': 'Twitch', 'tiktok': 'TikTok',
-                            'linkedin': 'LinkedIn', 'reddit': 'Reddit', 'github': 'GitHub', 'gitlab': 'GitLab'
+                    // Guardar sesiones para filtros
+                    window.allSessions = sessions;
+                    window.sessFilters = {proto: '', firewall: '', usuario: '', app: ''};
+                    
+                    // Extraer valores únicos para filtros
+                    var uniqueApps = {};
+                    var uniqueFw = {};
+                    var uniqueUsers = {};
+                    sessions.forEach(function(s) {
+                        if (s.app_name) uniqueApps[s.app_name] = true;
+                        if (s.firewall) uniqueFw[s.firewall] = true;
+                        if (s.username) uniqueUsers[s.username] = true;
+                    });
+                    
+                    var filterHtml = '<div style="margin-bottom:15px;padding:15px;background:rgba(0,0,0,0.2);border-radius:10px;">';
+                    filterHtml += '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">';
+                    filterHtml += '<span style="color:#00d4ff;font-weight:bold;">Filtros:</span>';
+                    
+                    filterHtml += '<select id="filtroProto" onchange="applySessFilters()" style="padding:8px 12px;border-radius:6px;background:#1a1a2e;color:#fff;border:1px solid #444;min-width:120px;">';
+                    filterHtml += '<option value="">Proto/App (Todos)</option>';
+                    Object.keys(uniqueApps).sort().forEach(function(a) { filterHtml += '<option value="'+a+'">'+a+'</option>'; });
+                    filterHtml += '</select>';
+                    
+                    filterHtml += '<select id="filtroFirewall" onchange="applySessFilters()" style="padding:8px 12px;border-radius:6px;background:#1a1a2e;color:#fff;border:1px solid #444;min-width:120px;">';
+                    filterHtml += '<option value="">Firewall (Todos)</option>';
+                    Object.keys(uniqueFw).sort().forEach(function(f) { filterHtml += '<option value="'+f+'">'+f+'</option>'; });
+                    filterHtml += '</select>';
+                    
+                    filterHtml += '<select id="filtroUsuario" onchange="applySessFilters()" style="padding:8px 12px;border-radius:6px;background:#1a1a2e;color:#fff;border:1px solid #444;min-width:120px;">';
+                    filterHtml += '<option value="">Usuario (Todos)</option>';
+                    Object.keys(uniqueUsers).sort().forEach(function(u) { filterHtml += '<option value="'+u+'">'+u+'</option>'; });
+                    filterHtml += '</select>';
+                    
+                    filterHtml += '<button onclick="clearSessFilters()" style="padding:8px 16px;background:#FF6384;color:#fff;border:none;border-radius:6px;cursor:pointer;">Limpiar</button>';
+                    filterHtml += '</div>';
+                    filterHtml += '<div id="filterCount" style="margin-top:10px;color:#aaa;font-size:0.85rem;"></div>';
+                    filterHtml += '</div>';
+                    
+                    document.getElementById('sessionsContent').innerHTML = filterHtml + '<div id="sessionsTable"></div>';
+                    
+                    // Función para aplicar filtros
+                    window.applySessFilters = function() {
+                        window.sessFilters = {
+                            proto: document.getElementById('filtroProto').value,
+                            firewall: document.getElementById('filtroFirewall').value,
+                            usuario: document.getElementById('filtroUsuario').value
                         };
-                        sessions.slice(0, 50).forEach(function(sess) {
-                            var pd=getPortIcon(sess.dport,sess.proto);
-                            var appId = 0;
-                            if (sess.apps && sess.apps.length > 0) {
-                                appId = sess.apps[0].id || 0;
-                            }
-                            var appIdMap = {
-                                52452: 'Windows.Push.Notification',
-                                41475: 'Microsoft.Authentication',
-                                47013: 'SSL.TLSv1.3',
-                                16195: 'DNS',
-                                16270: 'NTP',
-                                40169: 'HTTP.Proxy',
-                                24466: 'HTTP',
-                                43541: 'Microsoft.Teams',
-                                28057: 'WhatsApp',
-                                31077: 'YouTube',
-                                18155: 'Netflix',
-                                15832: 'Facebook',
-                                34527: 'Instagram',
-                                41468: 'Microsoft.Office365',
-                                41469: 'Microsoft.Portal',
-                                39999: 'SSL',
-                                0: null
-                            };
-                            var appName = '';
-                            if (appId > 0 && appIdMap[appId]) {
-                                appName = appIdMap[appId];
-                                proto = appName;
-                            } else if (sess.dport) {
-                                if (sess.dport === 53) proto = '&#128270; DNS';
-                                else if (sess.dport === 80) proto = '&#127760; HTTP';
-                                else if (sess.dport === 443) proto = '&#128274; HTTPS';
-                                else proto = sess.proto + '/' + sess.dport;
-                            } else if (sess.proto === 'icmp') {
-                                proto = '&#128225; ICMP';
-                            }
+                        renderSessionsTable();
+                    };
+                    
+                    window.clearSessFilters = function() {
+                        document.getElementById('filtroProto').value = '';
+                        document.getElementById('filtroFirewall').value = '';
+                        document.getElementById('filtroUsuario').value = '';
+                        window.sessFilters = {proto: '', firewall: '', usuario: '', app: ''};
+                        renderSessionsTable();
+                    };
+                    
+                    window.renderSessionsTable = function() {
+                        var filtered = window.allSessions.filter(function(s) {
+                            if (window.sessFilters.proto && s.app_name !== window.sessFilters.proto && (s.proto + '/' + s.dport) !== window.sessFilters.proto) return false;
+                            if (window.sessFilters.firewall && s.firewall !== window.sessFilters.firewall) return false;
+                            if (window.sessFilters.usuario && s.username !== window.sessFilters.usuario) return false;
+                            return true;
+                        });
+                        
+                        document.getElementById('filterCount').textContent = 'Mostrando ' + filtered.length + ' de ' + window.allSessions.length + ' sesiones';
+                        
+                        var html = '<table class="clients-table"><thead><tr><th>Origen</th><th>Destino</th><th>Proto/App</th><th>Pais</th><th>Usuario</th><th>Firewall</th></tr></thead><tbody>';
+                        filtered.slice(0, 100).forEach(function(sess) {
+                            var appDisplay = sess.app_name || (sess.proto + '/' + (sess.dport || '-'));
                             var flag = getFlag(sess.country_id);
                             var hostname = ipToHostname[sess.saddr] || '-';
                             var origenHtml = (hostname !== '-') ? (sess.saddr + '<br><span style="color:#888;font-size:0.8em;">' + hostname + '</span>') : (sess.saddr || '-');
-                            var fw = sess.firewall || (sess.device_ip === '1.2.3.4' ? 'Oficina' : 'Data');
-                            sessHtml += '<tr>';
-                            sessHtml += '<td>' + origenHtml + '</td>';
-                            sessHtml += '<td>' + (sess.daddr || '-') + '</td>';
-                            sessHtml += '<td>' + pd + '</td>';
-                            sessHtml += '<td>' + flag + '</td>';
-                            sessHtml += '<td>' + (sess.username || '-') + '</td>';
-                            sessHtml += '<td>' + fw + '</td>';
-                            sessHtml += '</tr>';
+                            var fw = sess.firewall || '-';
+                            html += '<tr>';
+                            html += '<td>' + origenHtml + '</td>';
+                            html += '<td>' + (sess.daddr || '-') + '</td>';
+                            html += '<td>' + appDisplay + '</td>';
+                            html += '<td>' + flag + '</td>';
+                            html += '<td>' + (sess.username || '-') + '</td>';
+                            html += '<td>' + fw + '</td>';
+                            html += '</tr>';
                         });
-                        sessHtml += '</tbody></table>';
-                        if (sessions.length > 50) sessHtml += '<div style="color:#888;margin-top:10px;">Mostrando 50 de ' + sessions.length + '</div>';
-                    } else {
-                        sessHtml = '<div class="loading">No hay sesiones</div>';
-                    }
-                    document.getElementById('sessionsContent').innerHTML = sessHtml;
+                        html += '</tbody></table>';
+                        if (filtered.length > 100) html += '<div style="color:#888;margin-top:10px;">Mostrando 100 de ' + filtered.length + '</div>';
+                        document.getElementById('sessionsTable').innerHTML = html;
+                    };
+                    
+                    renderSessionsTable();
                 })
                 .catch(function(err) {
                     document.getElementById('dhcpContent').innerHTML = '<div class="error-msg">Error: ' + err.message + '</div>';
