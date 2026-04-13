@@ -3,6 +3,7 @@ error_reporting(0);
 ini_set('display_errors', 0);
 
 $baseDir = __DIR__;
+$historyDir = $baseDir . '/data/history';
 
 function saveJson($file, $data) {
     file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT));
@@ -10,6 +11,56 @@ function saveJson($file, $data) {
 
 function loadJson($file) {
     return file_exists($file) ? json_decode(file_get_contents($file), true) ?? [] : [];
+}
+
+function saveHistory($dataType, $data, $timestamp) {
+    global $historyDir, $baseDir;
+    
+    if (!is_dir($historyDir)) {
+        mkdir($historyDir, 0755, true);
+    }
+    
+    $date = date('Y-m-d', strtotime($timestamp));
+    $file = $historyDir . '/' . $dataType . '_' . $date . '.json';
+    $hour = date('H', strtotime($timestamp));
+    
+    $existing = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
+    $existing[$hour] = $data;
+    
+    file_put_contents($file, json_encode($existing, JSON_PRETTY_PRINT));
+}
+
+function cleanupHistory($daysToKeep = 30) {
+    global $historyDir;
+    
+    if (!is_dir($historyDir)) return;
+    
+    $cutoff = strtotime('-' . $daysToKeep . ' days');
+    $files = glob($historyDir . '/*.json');
+    
+    foreach ($files as $file) {
+        if (filemtime($file) < $cutoff) {
+            unlink($file);
+        }
+    }
+}
+
+function getHistory($dataType, $days = 7) {
+    global $historyDir;
+    $history = [];
+    
+    for ($i = 0; $i < $days; $i++) {
+        $date = date('Y-m-d', strtotime('-' . $i . ' days'));
+        $file = $historyDir . '/' . $dataType . '_' . $date . '.json';
+        if (file_exists($file)) {
+            $data = json_decode(file_get_contents($file), true);
+            foreach ($data as $hour => $item) {
+                $history[$date . ' ' . $hour . ':00'] = $item;
+            }
+        }
+    }
+    
+    return $history;
 }
 
 // Configuración de múltiples FortiGates
@@ -332,13 +383,23 @@ $metrics = [
 ];
 saveJson($baseDir . '/data/metrics_current.json', $metrics);
 
-// Guardar en historial
+// Guardar en historial (mantener 30 días)
 $historyFile = $baseDir . '/data/metrics_history.json';
 $history = loadJson($historyFile);
 $history[] = $metrics;
-// Mantener solo últimos 7 días (144 entradas si es cada hora)
-$history = array_slice($history, -1008);
+$history = array_slice($history, -4320);
 saveJson($historyFile, $history);
+
+// Guardar historial por día para cada tipo de dato
+saveHistory('metrics', $metrics, $timestamp);
+saveHistory('sessions', ['total' => $totalSessions, 'blocked' => $blockedSessions, 'by_firewall' => $firewallStats], $timestamp);
+saveHistory('wifi', ['clients' => $clients, 'aps' => $aps, 'by_firewall' => $wifiByFirewall], $timestamp);
+saveHistory('switches', ['total' => $swTotal, 'online' => $swOnline, 'by_firewall' => $switchesByFw], $timestamp);
+saveHistory('dhcp', ['count' => count($dhcpData)], $timestamp);
+saveHistory('voip', ['devices' => count($phonesData), 'registered' => $voipRegistered], $timestamp);
+
+// Limpiar archivos antiguos (máximo 30 días)
+cleanupHistory(30);
 
 echo json_encode([
     'status' => 'ok',
@@ -353,5 +414,6 @@ echo json_encode([
     'addresses' => count($addrData),
     'cpu' => $cpu,
     'memory' => $memory,
-    'threat_score' => min(100, $score)
+    'threat_score' => min(100, $score),
+    'history_days' => 30
 ]);
