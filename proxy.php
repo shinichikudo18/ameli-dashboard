@@ -136,26 +136,132 @@ switch ($action) {
             });
             $details = array_values($details);
         }
+        
+        // Cargar base de datos de aplicaciones
+        $appDb = loadJson($baseDir . '/data/apps.json');
+        $appsLocal = $appDb['apps'] ?? [];
+        
+        // Mapas para identificar aplicaciones por puerto
+        $portAppMap = [
+            53 => ['name' => 'DNS', 'category' => 'Network', 'icon' => '🔍'],
+            80 => ['name' => 'HTTP', 'category' => 'Web', 'icon' => '🌐'],
+            443 => ['name' => 'HTTPS', 'category' => 'Web', 'icon' => '🔒'],
+            22 => ['name' => 'SSH', 'category' => 'Remote', 'icon' => '💻'],
+            21 => ['name' => 'FTP', 'category' => 'File', 'icon' => '📁'],
+            25 => ['name' => 'SMTP', 'category' => 'Email', 'icon' => '📧'],
+            110 => ['name' => 'POP3', 'category' => 'Email', 'icon' => '📧'],
+            143 => ['name' => 'IMAP', 'category' => 'Email', 'icon' => '📧'],
+            993 => ['name' => 'IMAPS', 'category' => 'Email', 'icon' => '📧'],
+            995 => ['name' => 'POP3S', 'category' => 'Email', 'icon' => '📧'],
+            587 => ['name' => 'SMTP-TLS', 'category' => 'Email', 'icon' => '📧'],
+            123 => ['name' => 'NTP', 'category' => 'Network', 'icon' => '⏰'],
+            161 => ['name' => 'SNMP', 'category' => 'Network', 'icon' => '📊'],
+            3389 => ['name' => 'RDP', 'category' => 'Remote', 'icon' => '🖥️'],
+            3306 => ['name' => 'MySQL', 'category' => 'Database', 'icon' => '🗄️'],
+            5432 => ['name' => 'PostgreSQL', 'category' => 'Database', 'icon' => '🗄️'],
+            1433 => ['name' => 'MSSQL', 'category' => 'Database', 'icon' => '🗄️'],
+            27017 => ['name' => 'MongoDB', 'category' => 'Database', 'icon' => '🗄️'],
+            445 => ['name' => 'SMB', 'category' => 'File', 'icon' => '📂'],
+            137 => ['name' => 'NetBIOS', 'category' => 'Network', 'icon' => '🌐'],
+            138 => ['name' => 'NetBIOS', 'category' => 'Network', 'icon' => '🌐'],
+            139 => ['name' => 'NetBIOS', 'category' => 'Network', 'icon' => '🌐'],
+            5060 => ['name' => 'SIP', 'category' => 'VoIP', 'icon' => '📞'],
+            5061 => ['name' => 'SIPS', 'category' => 'VoIP', 'icon' => '📞'],
+            3478 => ['name' => 'STUN', 'category' => 'VoIP', 'icon' => '📞'],
+            5000 => ['name' => 'UPnP', 'category' => 'Network', 'icon' => '🔌'],
+            1900 => ['name' => 'SSDP', 'category' => 'Network', 'icon' => '🔌'],
+            5353 => ['name' => 'mDNS', 'category' => 'Network', 'icon' => '🔌'],
+            8080 => ['name' => 'HTTP-Alt', 'category' => 'Proxy', 'icon' => '🌐'],
+            3128 => ['name' => 'HTTP-Proxy', 'category' => 'Proxy', 'icon' => '🌐'],
+            8888 => ['name' => 'HTTP-Alt', 'category' => 'Proxy', 'icon' => '🌐'],
+            5222 => ['name' => 'XMPP', 'category' => 'Messaging', 'icon' => '💬'],
+            5223 => ['name' => 'XMPP-SSL', 'category' => 'Messaging', 'icon' => '💬'],
+            5190 => ['name' => 'AOL', 'category' => 'Messaging', 'icon' => '💬'],
+            1863 => ['name' => 'MSN', 'category' => 'Messaging', 'icon' => '💬'],
+            5228 => ['name' => 'Google.Play', 'category' => 'Store', 'icon' => '📱'],
+            3478 => ['name' => 'FaceTime', 'category' => 'Video', 'icon' => '📹'],
+            8008 => ['name' => 'HTTP-Alt', 'category' => 'Web', 'icon' => '🌐'],
+            8443 => ['name' => 'HTTPS-Alt', 'category' => 'Web', 'icon' => '🔒'],
+            465 => ['name' => 'SMTPS', 'category' => 'Email', 'icon' => '📧'],
+            1883 => ['name' => 'MQTT', 'category' => 'IoT', 'icon' => '📡'],
+            8123 => ['name' => 'HomeAssistant', 'category' => 'IoT', 'icon' => '🏠'],
+            3260 => ['name' => 'iSCSI', 'category' => 'Storage', 'icon' => '💾'],
+            389 => ['name' => 'LDAP', 'category' => 'Directory', 'icon' => '📋'],
+            636 => ['name' => 'LDAPS', 'category' => 'Directory', 'icon' => '📋'],
+            8006 => ['name' => 'Proxmox', 'category' => 'Virtualization', 'icon' => '🖧'],
+            8009 => ['name' => 'AJP', 'category' => 'Web', 'icon' => '🌐'],
+            5433 => ['name' => 'PostgreSQL-Alt', 'category' => 'Database', 'icon' => '🗄️'],
+            5900 => ['name' => 'VNC', 'category' => 'Remote', 'icon' => '🖥️'],
+            853 => ['name' => 'DNS-over-TLS', 'category' => 'Network', 'icon' => '🔒'],
+            2082 => ['name' => 'cPanel', 'category' => 'Management', 'icon' => '🖧'],
+            2083 => ['name' => 'cPanel-SSL', 'category' => 'Management', 'icon' => '🖧'],
+            3000 => ['name' => 'Dev-Server', 'category' => 'Development', 'icon' => '💻'],
+            3001 => ['name' => 'Dev-Server', 'category' => 'Development', 'icon' => '💻'],
+            8883 => ['name' => 'MQTT-SSL', 'category' => 'IoT', 'icon' => '📡'],
+            9090 => ['name' => 'Prometheus', 'category' => 'Monitoring', 'icon' => '📊'],
+            9100 => ['name' => 'Printer', 'category' => 'Hardware', 'icon' => '🖨️'],
+            631 => ['name' => 'IPP', 'category' => 'Printing', 'icon' => '🖨️'],
+            1194 => ['name' => 'OpenVPN', 'category' => 'VPN', 'icon' => '🔐'],
+            1723 => ['name' => 'PPTP', 'category' => 'VPN', 'icon' => '🔐'],
+            500 => ['name' => 'ISAKMP', 'category' => 'VPN', 'icon' => '🔐'],
+            4500 => ['name' => 'IPSec-NAT', 'category' => 'VPN', 'icon' => '🔐'],
+            1701 => ['name' => 'L2TP', 'category' => 'VPN', 'icon' => '🔐'],
+            9993 => ['name' => 'WireGuard', 'category' => 'VPN', 'icon' => '🔐'],
+            51820 => ['name' => 'WireGuard', 'category' => 'VPN', 'icon' => '🔐'],
+            8443 => ['name' => 'HTTPS-Alt', 'category' => 'Web', 'icon' => '🔒'],
+            10000 => ['name' => 'Webmin', 'category' => 'Management', 'icon' => '🖧'],
+            27018 => ['name' => 'MongoDB', 'category' => 'Database', 'icon' => '🗄️'],
+            28017 => ['name' => 'MongoDB', 'category' => 'Database', 'icon' => '🗄️'],
+            7474 => ['name' => 'Neo4j', 'category' => 'Database', 'icon' => '🗄️'],
+            7687 => ['name' => 'Bolt', 'category' => 'Database', 'icon' => '🗄️'],
+            9200 => ['name' => 'Elasticsearch', 'category' => 'Search', 'icon' => '🔍'],
+            5601 => ['name' => 'Kibana', 'category' => 'Visualization', 'icon' => '📊'],
+            9000 => ['name' => 'SonarQube', 'category' => 'DevOps', 'icon' => '🔍'],
+            8086 => ['name' => 'InfluxDB', 'category' => 'Metrics', 'icon' => '📊'],
+            8126 => ['name' => 'StatsD', 'category' => 'Metrics', 'icon' => '📊'],
+            15672 => ['name' => 'RabbitMQ', 'category' => 'Messaging', 'icon' => '🐰'],
+            5672 => ['name' => 'AMQP', 'category' => 'Messaging', 'icon' => '🐰'],
+            6379 => ['name' => 'Redis', 'category' => 'Cache', 'icon' => '⚡'],
+            11211 => ['name' => 'Memcached', 'category' => 'Cache', 'icon' => '💾'],
+        ];
+        
         foreach ($details as &$s) {
+            $appId = 0;
+            $appName = '';
+            $appCategory = '';
+            $dport = $s['dport'] ?? 0;
+            $proto = $s['proto'] ?? '';
+            $destIp = $s['daddr'] ?? '';
+            
+            // Primero buscar por app_id si existe
             if (!empty($s['apps'])) {
                 $app = $s['apps'][0];
                 $appId = $app['id'] ?? 0;
                 $appName = $app['name'] ?? '';
-                if ($appId > 0 && $appName === 'N/A') {
-                    $appDb = loadJson($baseDir . '/data/apps.json');
-                    $apps = $appDb['apps'] ?? [];
-                    if (isset($apps[$appId])) {
-                        $s['app_name'] = $apps[$appId]['name'];
-                        $s['app_category'] = $apps[$appId]['category'];
-                    } else {
-                        $s['app_name'] = 'App-' . $appId;
-                    }
+            }
+            
+            if ($appId > 0) {
+                // Usar app_id de la base de datos local
+                if (isset($appsLocal[$appId])) {
+                    $appName = $appsLocal[$appId]['name'];
+                    $appCategory = $appsLocal[$appId]['category'];
                 } else {
-                    $s['app_name'] = $appName;
+                    $appName = 'App-' . $appId;
+                    $appCategory = 'Unknown';
                 }
             } else {
-                $s['app_name'] = $s['proto'] . '/' . ($s['dport'] ?? '-');
+                // Usar puerto para identificar
+                if ($dport > 0 && isset($portAppMap[$dport])) {
+                    $appName = $portAppMap[$dport]['name'];
+                    $appCategory = $portAppMap[$dport]['category'];
+                } else {
+                    $appName = strtoupper($proto) . '/' . $dport;
+                    $appCategory = 'Network';
+                }
             }
+            
+            $s['app_name'] = $appName;
+            $s['app_category'] = $appCategory;
         }
         echo json_encode([
             'results' => $details,
