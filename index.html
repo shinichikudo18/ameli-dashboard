@@ -1332,7 +1332,7 @@
                     var appLabels = sortedApps;
                     var appData = sortedApps.map(function(a) { return appCount[a]; });
                     
-                    if (window.appSessionsChart) window.appSessionsChart.destroy();
+                    if (window.appSessionsChart && typeof window.appSessionsChart.destroy === 'function') window.appSessionsChart.destroy();
                     var ctx = document.getElementById('appSessionsChart').getContext('2d');
                     var colors = ['#FF6384', '#36A2EB', '#4BC0C0', '#FFCE56', '#9966FF', '#FF9F40', '#7b2cbf', '#00d4ff', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#a29bfe'];
                     window.appSessionsChart = new Chart(ctx, {
