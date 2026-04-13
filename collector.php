@@ -81,8 +81,8 @@ $clients = count($wifiClients['results'] ?? []);
 $aps = count($wifiAps['results'] ?? []);
 saveJson($baseDir . '/data/wifi.json', ['timestamp' => $timestamp, 'aps' => $aps, 'clients' => $clients]);
 
-// VPN
-$vpn = fgRequest('vpn/ipsec/phase1-interface');
+// VPN - usar cmdb en lugar de monitor
+$vpn = fgRequestCmdb('vpn.ipsec/phase1-interface');
 $vpnData = $vpn['results'] ?? [];
 saveJson($baseDir . '/data/vpn.json', ['timestamp' => $timestamp, 'data' => $vpnData]);
 
