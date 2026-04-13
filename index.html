@@ -2108,27 +2108,42 @@
                     var switches = data.results || [];
                     var byFirewall = data.by_firewall || {};
                     var total = switches.length || 0;
-                    var online = switches.filter(function(s) {
-                        return s['dynamically-discovered'] === 1 || s['fsw-wan1-peer'] === 'fortilink' || s['fsw-wan1-admin'] === 'enable';
-                    }).length;
-                    var offline = total - online;
+                    var online = 0, offline = 0;
+                    switches.forEach(function(s) {
+                        if (s.status === 'up') online++;
+                        else offline++;
+                    });
 
                     document.getElementById('totalSwitches').textContent = total;
                     document.getElementById('onlineSwitches').textContent = online;
                     document.getElementById('offlineSwitches').textContent = offline;
                     
-                    // Stats por firewall
+                    // Stats por firewall mejorados
                     var fwStatsHtml = '<div class="fw-stats-grid">';
                     if (Object.keys(byFirewall).length > 0) {
-                        var colors = ['#FF6384', '#36A2EB', '#4BC0C0'];
-                        var i = 0;
-                        Object.keys(byFirewall).forEach(function(fwKey) {
+                        var colors = {
+                            'fg-oficina': { primary: '#FF6384', secondary: '#FF8A65' },
+                            'fg-data': { primary: '#36A2EB', secondary: '#4ECDC4' },
+                            'fg-gtd': { primary: '#4BC0C0', secondary: '#96CEB4' }
+                        };
+                        var fwOrder = ['fg-oficina', 'fg-data', 'fg-gtd'];
+                        fwOrder.forEach(function(fwKey) {
+                            if (!byFirewall[fwKey]) return;
                             var fw = byFirewall[fwKey];
-                            fwStatsHtml += '<div class="fw-stat-card" style="border-left: 4px solid ' + colors[i % colors.length] + ';">';
-                            fwStatsHtml += '<div class="fw-stat-label">' + fw.name + '</div>';
-                            fwStatsHtml += '<div class="fw-stat-value" style="color:' + colors[i % colors.length] + ';">' + fw.count + ' switches</div>';
+                            var c = colors[fwKey] || { primary: '#FFCE56', secondary: '#FFE082' };
+                            var onlinePct = fw.count > 0 ? Math.round((fw.online / fw.count) * 100) : 0;
+                            fwStatsHtml += '<div class="fw-stat-card" style="border-left: 4px solid ' + c.primary + '; background: linear-gradient(135deg, rgba(0,0,0,0.3), rgba(30,30,50,0.3));">';
+                            fwStatsHtml += '<div class="fw-stat-label" style="color:' + c.primary + ';">' + fw.name + '</div>';
+                            fwStatsHtml += '<div class="fw-stat-value" style="color:' + c.primary + '; font-size:1.6rem;">' + fw.count + ' <span style="font-size:0.9rem;opacity:0.7;">switches</span></div>';
+                            fwStatsHtml += '<div style="display:flex;gap:12px;margin-top:8px;font-size:0.85rem;">';
+                            fwStatsHtml += '<span style="color:#4BC0C0;">● ' + fw.online + ' online</span>';
+                            fwStatsHtml += '<span style="color:#FF6384;">● ' + fw.offline + ' offline</span>';
                             fwStatsHtml += '</div>';
-                            i++;
+                            fwStatsHtml += '<div style="font-size:0.75rem;color:#888;margin-top:6px;">';
+                            fwStatsHtml += 'Puertos: ' + fw.ports_up + '/' + fw.total_ports + ' | PoE: ' + fw.ports_poe;
+                            fwStatsHtml += '</div>';
+                            fwStatsHtml += '<div class="fw-progress"><div class="fw-progress-bar" style="width:' + onlinePct + '%;background:' + c.primary + ';"></div></div>';
+                            fwStatsHtml += '</div>';
                         });
                     }
                     fwStatsHtml += '</div>';
@@ -2140,32 +2155,84 @@
                     }
 
                     var groups = {};
+                    var fwColors = {
+                        'FG Oficina': '#FF6384',
+                        'FG Data': '#36A2EB',
+                        'FG-GTD': '#4BC0C0'
+                    };
                     switches.forEach(function(sw) {
-                        var fw = sw.firewall || sw.device_short || sw.device_id || 'Firewall';
+                        var fw = sw.firewall || 'Unknown';
                         if (!groups[fw]) groups[fw] = [];
                         groups[fw].push(sw);
                     });
 
                     var html = '';
-                    Object.keys(groups).sort().forEach(function(fw) {
+                    var fwOrder = ['FG Oficina', 'FG Data', 'FG-GTD'];
+                    fwOrder.forEach(function(fw) {
+                        if (!groups[fw]) return;
                         var items = groups[fw];
-                        html += '<div class="card" style="margin-bottom:20px;">';
-                        html += '<div class="card-title">' + fw + ' (' + items.length + ' switches)</div>';
-                        html += '<div class="switches-grid">';
+                        var fwColor = fwColors[fw] || '#FFCE56';
+                        var fwInfo = byFirewall[Object.keys(byFirewall).find(function(k) { return byFirewall[k].name === fw; })];
+                        html += '<div class="card" style="margin-bottom:20px; border: 2px solid ' + fwColor + '; border-radius: 15px; overflow: hidden;">';
+                        html += '<div style="background:' + fwColor + ';padding:12px 20px;display:flex;justify-content:space-between;align-items:center;">';
+                        html += '<div class="card-title" style="margin:0;color:#fff;font-size:1.1rem;">' + fw + '</div>';
+                        html += '<div style="display:flex;gap:15px;font-size:0.85rem;color:#fff;">';
+                        html += '<span>🔌 ' + items.length + ' switches</span>';
+                        html += '<span>✅ ' + (fwInfo ? fwInfo.online : 0) + ' online</span>';
+                        html += '<span>❌ ' + (fwInfo ? fwInfo.offline : 0) + ' offline</span>';
+                        html += '</div></div>';
+                        html += '<div style="padding:20px;"><div class="switches-grid">';
                         items.forEach(function(sw) {
-                            var status = (sw['dynamically-discovered'] === 1 || sw['fsw-wan1-peer'] === 'fortilink' || sw['fsw-wan1-admin'] === 'enable');
+                            var status = sw.status === 'up';
                             var portsUp = sw['ports_up'] || 0;
                             var portsTotal = sw.ports || 0;
                             var poePorts = sw['ports_poe'] || 0;
                             var swId = sw['switch-id'];
                             
+                            var swId = sw['switch-id'];
+                            var swColor = status ? '#4BC0C0' : '#FF6384';
+                            html += '<div class="switch-card ' + (status ? 'online' : 'offline') + '" style="border-color:' + swColor + '33;">';
+                            html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">';
+                            html += '<div class="switch-name">' + (sw.name || sw.serial || sw['switch-id'] || 'Switch') + '</div>';
+                            html += '<div class="switch-status ' + (status ? 'online' : 'offline') + '">' + (status ? '✓ Online' : '✗ Offline') + '</div>';
+                            html += '</div>';
+                            html += '<div class="switch-info" style="font-size:0.85rem;">';
+                            html += '<div><strong>Serial:</strong> ' + (sw.serial || '-') + '</div>';
+                            html += '<div><strong>IP:</strong> ' + (sw.ip || '-') + '</div>';
+                            html += '<div style="display:flex;gap:15px;margin-top:8px;">';
+                            html += '<span style="color:#4BC0C0;">🔌 ' + portsUp + '/' + portsTotal + ' up</span>';
+                            html += '<span style="color:#FFCE56;">⚡ ' + poePorts + ' PoE</span>';
+                            html += '</div>';
+                            html += '</div>';
+                            html += '<button class="ports-toggle" id="btn-' + swId + '" onclick="toggleSwitchPorts(\'' + swId + '\')">Ver puertos (' + portsTotal + ')</button>';
+                            html += '<div class="ports-table" id="ports-' + swId + '"></div>';
+                            html += '</div>';
+                        });
+                        html += '</div></div></div>';
+                    });
+                    
+                    // Si hay firewalls no ordenados, agregarlos al final
+                    Object.keys(groups).sort().forEach(function(fw) {
+                        if (fwOrder.indexOf(fw) >= 0) return;
+                        var items = groups[fw];
+                        var fwColor = '#FFCE56';
+                        html += '<div class="card" style="margin-bottom:20px;">';
+                        html += '<div class="card-title">' + fw + ' (' + items.length + ' switches)</div>';
+                        html += '<div class="switches-grid">';
+                        items.forEach(function(sw) {
+                            var status = sw.status === 'up';
+                            var portsUp = sw['ports_up'] || 0;
+                            var portsTotal = sw.ports || 0;
+                            var poePorts = sw['ports_poe'] || 0;
+                            var swId = sw['switch-id'];
                             html += '<div class="switch-card ' + (status ? 'online' : 'offline') + '">';
                             html += '<div class="switch-name">' + (sw.name || sw.serial || sw['switch-id'] || 'Switch') + '</div>';
-                            html += '<div class="switch-status ' + (status ? 'online' : 'offline') + '">' + (status ? 'Conectado' : 'Desconectado') + '</div>';
+                            html += '<div class="switch-status ' + (status ? 'online' : 'offline') + '">' + (status ? '✓ Online' : '✗ Offline') + '</div>';
                             html += '<div class="switch-info">';
-                            html += '<div>ID: ' + (sw['switch-id'] || '-') + '</div>';
-                            html += '<div>Puertos: ' + portsUp + '/' + portsTotal + '</div>';
-                            html += '<div>PoE: ' + poePorts + ' puertos</div>';
+                            html += '<div><strong>Serial:</strong> ' + (sw.serial || '-') + '</div>';
+                            html += '<div><strong>IP:</strong> ' + (sw.ip || '-') + '</div>';
+                            html += '<div><strong>Puertos:</strong> ' + portsUp + '/' + portsTotal + '</div>';
+                            html += '<div><strong>PoE:</strong> ' + poePorts + ' puertos</div>';
                             html += '</div>';
                             html += '<button class="ports-toggle" id="btn-' + swId + '" onclick="toggleSwitchPorts(\'' + swId + '\')">Ver puertos (' + portsTotal + ')</button>';
                             html += '<div class="ports-table" id="ports-' + swId + '"></div>';
@@ -2173,6 +2240,7 @@
                         });
                         html += '</div></div>';
                     });
+                    
                     document.getElementById('switchesContent').innerHTML = html;
                 })
                 .catch(function(err) {

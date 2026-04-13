@@ -336,7 +336,10 @@ switch ($action) {
     case 'switches':
         $switches = loadJson($baseDir . '/data/switches.json');
         $swData = $switches['data'] ?? [];
+        $byFirewallRaw = $switches['by_firewall'] ?? [];
         $formatted = [];
+        $byFirewallDetailed = [];
+        
         foreach ($swData as $sw) {
             $ports = $sw['ports'] ?? [];
             $upPorts = 0;
@@ -345,20 +348,46 @@ switch ($action) {
                 if (($p['status'] ?? '') === 'up') $upPorts++;
                 if (($p['poe-status'] ?? '') === 'enable') $poePorts++;
             }
+            $isOnline = ($sw['dynamically-discovered'] ?? 0) === 1 || ($sw['fsw-wan1-peer'] ?? '') === 'fortilink' || ($sw['fsw-wan1-admin'] ?? '') === 'enable';
+            $fwKey = $sw['firewall_key'] ?? '';
+            $fwName = $sw['firewall'] ?? 'Unknown';
+            
             $formatted[] = [
                 'name' => $sw['name'] ?: $sw['switch-id'] ?: 'Unknown',
                 'switch-id' => $sw['switch-id'] ?? '',
                 'ip' => $sw['ip'] ?? '',
-                'status' => ($sw['dynamically-discovered'] ?? 0) === 1 ? 'up' : 'down',
+                'status' => $isOnline ? 'up' : 'down',
                 'ports' => count($ports),
                 'ports_up' => $upPorts,
                 'ports_poe' => $poePorts,
                 'dynamically-discovered' => $sw['dynamically-discovered'] ?? 0,
-                'firewall' => $sw['firewall'] ?? '',
-                'firewall_key' => $sw['firewall_key'] ?? ''
+                'firewall' => $fwName,
+                'firewall_key' => $fwKey,
+                'serial' => $sw['serial'] ?? '',
+                'model' => $sw['type'] ?? ''
             ];
+            
+            if (!isset($byFirewallDetailed[$fwKey])) {
+                $byFirewallDetailed[$fwKey] = [
+                    'name' => $fwName,
+                    'key' => $fwKey,
+                    'count' => 0,
+                    'online' => 0,
+                    'offline' => 0,
+                    'total_ports' => 0,
+                    'ports_up' => 0,
+                    'ports_poe' => 0
+                ];
+            }
+            $byFirewallDetailed[$fwKey]['count']++;
+            if ($isOnline) $byFirewallDetailed[$fwKey]['online']++;
+            else $byFirewallDetailed[$fwKey]['offline']++;
+            $byFirewallDetailed[$fwKey]['total_ports'] += count($ports);
+            $byFirewallDetailed[$fwKey]['ports_up'] += $upPorts;
+            $byFirewallDetailed[$fwKey]['ports_poe'] += $poePorts;
         }
-        echo json_encode(['results' => $formatted, 'by_firewall' => $switches['by_firewall'] ?? []]);
+        
+        echo json_encode(['results' => $formatted, 'by_firewall' => $byFirewallDetailed]);
         break;
 
     case 'switch-ports':
