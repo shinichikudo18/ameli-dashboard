@@ -98,21 +98,25 @@ foreach ($fortigates as $fgKey => $fg) {
     $fgAps = fgRequest($fgKey, 'wifi/managed_ap');
     $clientList = $fgClients['results'] ?? [];
     $apList = $fgAps['results'] ?? [];
-    foreach ($clientList as &$c) { $c['firewall'] = $fg['name']; $c['firewall_key'] = $fgKey; }
-    foreach ($apList as &$a) { $a['firewall'] = $fg['name']; $a['firewall_key'] = $fgKey; }
-    $allWifiClients = array_merge($allWifiClients, $clientList);
-    $allWifiAps = array_merge($allWifiAps, $apList);
-    $wifiByFirewall[$fgKey] = ['name' => $fg['name'], 'clients' => count($clientList), 'aps' => count($apList)];
+    $fwClients = [];
+    foreach ($clientList as $c) { $c['firewall'] = $fg['name']; $c['firewall_key'] = $fgKey; $fwClients[] = $c; }
+    $fwAps = [];
+    foreach ($apList as $a) { $a['firewall'] = $fg['name']; $a['firewall_key'] = $fgKey; $fwAps[] = $a; }
+    $allWifiClients = array_merge($allWifiClients, $fwClients);
+    $allWifiAps = array_merge($allWifiAps, $fwAps);
+    $wifiByFirewall[$fgKey] = ['name' => $fg['name'], 'clients' => count($fwClients), 'aps' => count($fwAps)];
 }
 saveJson($baseDir . '/data/wifi.json', ['timestamp' => $timestamp, 'clients' => $allWifiClients, 'aps' => $allWifiAps, 'by_firewall' => $wifiByFirewall]);
 
 // VPN - usar cmdb (monitor endpoint no disponible en este FortiGate)
 $vpnCmdb = fgRequestCmdb($fgMain, 'vpn.ipsec/phase1-interface');
 $vpnData = $vpnCmdb['results'] ?? [];
-foreach ($vpnData as &$vpn) {
+$vpnList = [];
+foreach ($vpnData as $vpn) {
     $vpn['status'] = (($vpn['auto-negotiate'] ?? '') === 'enable') ? 'up' : 'down';
+    $vpnList[] = $vpn;
 }
-saveJson($baseDir . '/data/vpn.json', ['timestamp' => $timestamp, 'data' => $vpnData]);
+saveJson($baseDir . '/data/vpn.json', ['timestamp' => $timestamp, 'data' => $vpnList]);
 
 // Policies
 $policy = fgRequestCmdb($fgMain, 'firewall/policy');
@@ -133,8 +137,9 @@ foreach ($fortigates as $fgKey => $fg) {
         $sessions = fgRequest($fgKey, 'firewall/session', '&count=1000&start=' . $start);
         $newSessions = $sessions['results']['details'] ?? [];
         if (empty($newSessions)) break;
-        foreach ($newSessions as &$s) { $s['firewall'] = $fg['name']; $s['firewall_key'] = $fgKey; }
-        $fgSessions = array_merge($fgSessions, $newSessions);
+        $batchSessions = [];
+        foreach ($newSessions as $s) { $s['firewall'] = $fg['name']; $s['firewall_key'] = $fgKey; $batchSessions[] = $s; }
+        $fgSessions = array_merge($fgSessions, $batchSessions);
         if (count($newSessions) < 1000) break;
     }
     $blocked = 0;
@@ -217,12 +222,14 @@ $switchesByFw = [];
 foreach ($fortigates as $fgKey => $fg) {
     $switches = fgRequestCmdb($fgKey, 'switch-controller/managed-switch');
     $swData = $switches['results'] ?? [];
-    foreach ($swData as &$s) {
+    $fwSwitches = [];
+    foreach ($swData as $s) {
         $s['firewall'] = $fg['name'];
         $s['firewall_key'] = $fgKey;
+        $fwSwitches[] = $s;
     }
-    $allSwitches = array_merge($allSwitches, $swData);
-    $switchesByFw[$fgKey] = ['name' => $fg['name'], 'count' => count($swData)];
+    $allSwitches = array_merge($allSwitches, $fwSwitches);
+    $switchesByFw[$fgKey] = ['name' => $fg['name'], 'count' => count($fwSwitches)];
 }
 $swTotal = count($allSwitches);
 $swOnline = 0;
