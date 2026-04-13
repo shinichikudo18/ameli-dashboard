@@ -13,7 +13,7 @@ $fortigates = [
     'fg-oficina' => [
         'name' => 'FortiGate Oficina',
         'short_name' => 'Oficina',
-        'ip' => '1.2.3.4',
+        'ip' => '192.168.100.1',
         'token' => 'q7N88NNwff4n0d0hs0769Gd03j9gcq'
     ],
     'fg-data' => [

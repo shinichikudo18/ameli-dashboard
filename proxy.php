@@ -204,14 +204,15 @@ switch ($action) {
         $vpnData = $vpn['data'] ?? [];
         if (empty($vpnData)) {
             $vpnData = [
-                ['name' => 'VPN-SSL', 'status' => 'up', 'remote-gateway' => '0.0.0.0', 'type' => 'ssl'],
-                ['name' => 'VPN-IPSec-Office', 'status' => 'up', 'remote-gateway' => '192.168.100.1', 'type' => 'ipsec']
+                ['name' => 'Agnov', 'status' => 'up', 'remote-gateway' => '0.0.0.0', 'type' => 'ipsec'],
+                ['name' => 'SD_Agnov_02', 'status' => 'up', 'remote-gateway' => '0.0.0.0', 'type' => 'ipsec'],
+                ['name' => 'fext-ipsec-wlaI', 'status' => 'up', 'remote-gateway' => '0.0.0.0', 'type' => 'ipsec']
             ];
         }
         echo json_encode(['results' => [[
-            'summary' => ['ipsec_tunnels' => count(array_filter($vpnData, fn($v) => ($v['type'] ?? '') === 'ipsec')), 'ssl_portals' => 1, 'ssl_pools' => 1, 'health_checks' => 0],
+            'summary' => ['ipsec_tunnels' => count(array_filter($vpnData, fn($v) => ($v['type'] ?? '') === 'ipsec')), 'ssl_portals' => 0, 'ssl_pools' => 0, 'health_checks' => 0],
             'phase1' => $vpnData,
-            'ssl_settings' => ['port' => 443, 'login' => 'enabled']
+            'ssl_settings' => ['port' => 0, 'login' => 'disabled']
         ]]]);
         break;
 

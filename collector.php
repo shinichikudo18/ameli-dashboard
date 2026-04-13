@@ -116,38 +116,56 @@ foreach ($swData as $s) {
 }
 saveJson($baseDir . '/data/switches.json', ['timestamp' => $timestamp, 'total' => $swTotal, 'online' => $swOnline, 'data' => $swData]);
 
-// FortiVoice Phones
+// FortiVoice Phones - usar API correcta con login/cookie
 $fvUrl = 'http://192.168.100.2';
 $fvUser = 'admin';
 $fvPass = 'AdmFVOice!2025';
-$ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, $fvUrl . '/api/v2/phone/device');
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_USERPWD, $fvUser . ':' . $fvPass);
-curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-$fvResp = curl_exec($ch);
-curl_close($ch);
 
 $phonesData = [];
-if ($fvResp) {
-    $fvData = json_decode($fvResp, true);
-    if (isset($fvData['results'])) {
-        foreach ($fvData['results'] as $phone) {
-            $accounts = json_decode($phone['accounts'] ?? '[]', true);
-            $regStatus = 0;
-            $number = '';
-            $name = '';
-            foreach ($accounts as $acc) {
-                if (($acc['registration_status'] ?? 0) === 1) {
-                    $regStatus = 1;
-                    $number = $acc['associated_number'] ?? '';
-                    $name = base64_decode($acc['associated_display_name'] ?? '');
-                }
+$cookieFile = tempnam(sys_get_temp_dir(), 'fv');
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $fvUrl . '/api/v1/VoiceadminLogin/');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['name' => $fvUser, 'password' => $fvPass]));
+curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+curl_setopt($ch, CURLOPT_COOKIEJAR, $cookieFile);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+$loginResp = curl_exec($ch);
+$loginCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+if ($loginCode === 200) {
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $fvUrl . '/api/v1/DeviceSip_phone?reqAction=1&startIndex=0&pageSize=50');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_COOKIEFILE, $cookieFile);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    $fvResp = curl_exec($ch);
+    curl_close($ch);
+    
+    if ($fvResp) {
+        $fvData = json_decode($fvResp, true);
+        if (isset($fvData['data'])) {
+            foreach ($fvData['data'] as $phone) {
+                $regStatus = ($phone['registration_status'] ?? 0) === 1 ? 'registered' : 'unregistered';
+                $phonesData[] = [
+                    'name' => $phone['name'] ?? '',
+                    'number' => $phone['phone_number'] ?? $phone['associated_number'] ?? '',
+                    'mac' => $phone['mkey'] ?? '',
+                    'status' => $regStatus,
+                    'phone_type' => $phone['phone_type'] ?? ''
+                ];
             }
-            $phonesData[] = ['name' => $name, 'number' => $number, 'mac' => $phone['mkey'] ?? '', 'status' => $regStatus ? 'registered' : 'unregistered'];
         }
     }
 }
+@unlink($cookieFile);
 $voipRegistered = count(array_filter($phonesData, fn($p) => $p['status'] === 'registered'));
 saveJson($baseDir . '/data/voip.json', ['timestamp' => $timestamp, 'devices' => count($phonesData), 'registered' => $voipRegistered, 'phones' => $phonesData]);
 
