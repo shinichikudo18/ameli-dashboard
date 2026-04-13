@@ -303,19 +303,15 @@
             </div>
             <div class="dashboard-grid" style="margin-bottom:20px;">
                 <div class="card"><div class="card-title">Health Checks por Estado</div><div class="chart-container"><canvas id="sdwanHealthChart"></canvas></div></div>
-                <div class="card"><div class="card-title">Health Check Realtime</div><div id="sdwanRealtime"><div class="loading">Cargando...</div></div></div>
-            </div>
-            <div class="card" style="margin-bottom:20px;">
-                <div class="card-title">Servicios</div>
-                <div id="sdwanServicesContent"><div class="loading">Cargando...</div></div>
-            </div>
-            <div class="card">
-                <div class="card-title">Top Aplicaciones</div>
-                <div class="chart-container" style="height:250px;"><canvas id="sdwanAppChart"></canvas></div>
+                <div class="card"><div class="card-title">Top Aplicaciones</div><div class="chart-container"><canvas id="sdwanAppChart"></canvas></div></div>
             </div>
             <div class="card" style="margin-bottom:20px;">
                 <div class="card-title">Health Checks</div>
                 <div id="sdwanHealthContent"><div class="loading">Cargando...</div></div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-title">Miembros</div>
+                <div id="sdwanMembersContent"><div class="loading">Cargando...</div></div>
             </div>
             <div class="card">
                 <div class="card-title">Servicios</div>
@@ -1497,12 +1493,16 @@
         
         function refreshSDWAN() {
             document.getElementById('sdwanSummary').innerHTML = '<div class="loading">Cargando SD-WAN...</div>';
-            if (window.sdwanMembersChart && typeof window.sdwanMembersChart.destroy === 'function') window.sdwanMembersChart.destroy();
-            if (window.sdwanHealthChart && typeof window.sdwanHealthChart.destroy === 'function') window.sdwanHealthChart.destroy();
-            if (window.sdwanAppChart && typeof window.sdwanAppChart.destroy === 'function') window.sdwanAppChart.destroy();
-            window.sdwanMembersChart = null;
-            window.sdwanHealthChart = null;
-            window.sdwanAppChart = null;
+            
+            try {
+                if (window.sdwanMembersChart) { window.sdwanMembersChart.destroy(); window.sdwanMembersChart = null; }
+            } catch(e) {}
+            try {
+                if (window.sdwanHealthChart) { window.sdwanHealthChart.destroy(); window.sdwanHealthChart = null; }
+            } catch(e) {}
+            try {
+                if (window.sdwanAppChart) { window.sdwanAppChart.destroy(); window.sdwanAppChart = null; }
+            } catch(e) {}
             
             Promise.all([
                 fetch(apiBase + 'sdwan').then(function(r) { return r.json(); }),
@@ -1564,7 +1564,9 @@
                     });
 
                     var membersCanvas = document.getElementById('sdwanMembersChart');
-                    if (membersCanvas && membersCanvas.getContext) {
+                    if (membersCanvas) {
+                        membersCanvas.getContext('2d').clearRect(0, 0, membersCanvas.width, membersCanvas.height);
+                        if (window.sdwanMembersChart) { try { window.sdwanMembersChart.destroy(); } catch(e) {} }
                         window.sdwanMembersChart = new Chart(membersCanvas.getContext('2d'), {
                             type: 'bar',
                             data: { labels: Object.keys(zoneCounts), datasets: [{ label: 'Miembros', data: Object.values(zoneCounts), backgroundColor: '#36A2EB' }] },
@@ -1573,7 +1575,9 @@
                     }
 
                     var healthCanvas = document.getElementById('sdwanHealthChart');
-                    if (healthCanvas && healthCanvas.getContext) {
+                    if (healthCanvas) {
+                        healthCanvas.getContext('2d').clearRect(0, 0, healthCanvas.width, healthCanvas.height);
+                        if (window.sdwanHealthChart) { try { window.sdwanHealthChart.destroy(); } catch(e) {} }
                         window.sdwanHealthChart = new Chart(healthCanvas.getContext('2d'), {
                             type: 'bar',
                             data: { labels: ['Activo', 'Inactivo', 'Otro'], datasets: [{ label: 'Health Checks', data: [healthStatusCounts.enable, healthStatusCounts.disable, healthStatusCounts.other], backgroundColor: ['#4BC0C0', '#FF6384', '#FFCE56'] }] },
@@ -1650,7 +1654,9 @@
                     var appData = sortedApps.map(function(a) { return appCount[a]; });
                     
                     var appCanvas = document.getElementById('sdwanAppChart');
-                    if (appCanvas && appCanvas.getContext) {
+                    if (appCanvas) {
+                        appCanvas.getContext('2d').clearRect(0, 0, appCanvas.width, appCanvas.height);
+                        if (window.sdwanAppChart) { try { window.sdwanAppChart.destroy(); } catch(e) {} }
                         var colors = ['#FF6384', '#36A2EB', '#4BC0C0', '#FFCE56', '#9966FF', '#FF9F40', '#7b2cbf', '#00d4ff', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4'];
                         window.sdwanAppChart = new Chart(appCanvas.getContext('2d'), {
                             type: 'bar',
