@@ -14,14 +14,16 @@ function loadJson($file) {
 
 // Configuración de múltiples FortiGates
 $fortigates = [
-    'fg-oficina' => ['ip' => '1.2.3.4', 'token' => 'q7N88NNwff4n0d0hs0769Gd03j9gcq', 'name' => 'FG Oficina'],
-    'fg-data' => ['ip' => '1.2.3.5', 'token' => 'rzyhGgcHtsst87nr9jtQ3k0rtrcrfn', 'name' => 'FG Data']
+    'fg-oficina' => ['ip' => '1.2.3.4', 'port' => 443, 'token' => 'q7N88NNwff4n0d0hs0769Gd03j9gcq', 'name' => 'FG Oficina'],
+    'fg-data' => ['ip' => '1.2.3.5', 'port' => 443, 'token' => 'rzyhGgcHtsst87nr9jtQ3k0rtrcrfn', 'name' => 'FG Data'],
+    'fg-gtd' => ['ip' => '1.2.3.6', 'port' => 10443, 'token' => 'r8845G3tkp1gznGp7761HxhtphxN9p', 'name' => 'FG-GTD']
 ];
 
 function fgRequest($fgKey, $endpoint, $params = '') {
     global $fortigates;
     $fg = $fortigates[$fgKey];
-    $url = "https://{$fg['ip']}/api/v2/monitor/{$endpoint}?vdom=root{$params}";
+    $port = $fg['port'] ?? 443;
+    $url = "https://{$fg['ip']}:{$port}/api/v2/monitor/{$endpoint}?vdom=root{$params}";
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -38,7 +40,8 @@ function fgRequest($fgKey, $endpoint, $params = '') {
 function fgRequestCmdb($fgKey, $path) {
     global $fortigates;
     $fg = $fortigates[$fgKey];
-    $url = "https://{$fg['ip']}/api/v2/cmdb/{$path}?vdom=root";
+    $port = $fg['port'] ?? 443;
+    $url = "https://{$fg['ip']}:{$port}/api/v2/cmdb/{$path}?vdom=root";
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

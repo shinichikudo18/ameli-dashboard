@@ -14,13 +14,22 @@ $fortigates = [
         'name' => 'FortiGate Oficina',
         'short_name' => 'Oficina',
         'ip' => '1.2.3.4',
+        'port' => 443,
         'token' => 'q7N88NNwff4n0d0hs0769Gd03j9gcq'
     ],
     'fg-data' => [
         'name' => 'FortiGate Data',
         'short_name' => 'Data',
         'ip' => '1.2.3.5',
+        'port' => 443,
         'token' => 'rzyhGgcHtsst87nr9jtQ3k0rtrcrfn'
+    ],
+    'fg-gtd' => [
+        'name' => 'FortiGate GTD',
+        'short_name' => 'GTD',
+        'ip' => '1.2.3.6',
+        'port' => 10443,
+        'token' => 'r8845G3tkp1gznGp7761HxhtphxN9p'
     ]
 ];
 
