@@ -251,12 +251,6 @@
                 <div class="stat-card"><div class="stat-value" id="fgOficinaCount">-</div><div class="stat-label">FG Oficina</div></div>
                 <div class="stat-card"><div class="stat-value" id="fgDataCount">-</div><div class="stat-label">FG Data</div></div>
             </div>
-            <div class="dashboard-grid">
-                <div class="card">
-                    <div class="card-title">Sesiones por Firewall</div>
-                    <div id="fwStatsContent"><div class="loading">Cargando...</div></div>
-                </div>
-            </div>
             <div class="tabs" style="margin-bottom:15px;">
                 <button class="tab-btn active" onclick="switchNetworkTab('dhcp')" id="tab-btn-dhcp" data-tab="dhcp">DHCP</button>
                 <button class="tab-btn" onclick="switchNetworkTab('sessions')" id="tab-btn-sessions" data-tab="sessions">Sesiones</button>
@@ -268,14 +262,9 @@
                 </div>
             </div>
             <div id="network-sessions" class="network-subtab" style="display:none;">
-                <div class="stats-grid">
-                    <div class="stat-card"><div class="stat-value" id="tcpCount">-</div><div class="stat-label">TCP</div></div>
-                    <div class="stat-card"><div class="stat-value" id="udpCount">-</div><div class="stat-label">UDP</div></div>
-                </div>
-                <div class="dashboard-grid" style="margin-bottom:20px;">
-                    <div class="card"><div class="card-title">Sesiones por Firewall</div><div class="chart-container"><canvas id="firewallChart"></canvas></div></div>
-                    <div class="card"><div class="card-title">Protocolos</div><div class="chart-container"><canvas id="protoChart"></canvas></div></div>
-                    <div class="card"><div class="card-title">Aplicaciones</div><div class="chart-container"><canvas id="appChart"></canvas></div></div>
+                <div class="card">
+                    <div class="card-title">Sesiones por Firewall</div>
+                    <div id="fwStatsContent"><div class="loading">Cargando...</div></div>
                 </div>
                 <div class="card">
                     <div class="card-title">Lista de Sesiones</div>
@@ -1291,75 +1280,22 @@
                     var dhcpData = results[0];
                     var sessionData = results[1];
                     
-                    var leases = dhcpData.results;
-                    if (typeof leases === 'object' && !Array.isArray(leases)) leases = [];
-                    leases = leases || [];
+                    var leases = dhcpData.results || [];
                     document.getElementById('dhcpCount').textContent = leases.length;
                     
                     var sessions = sessionData.results || [];
                     var totalSessions = sessions.length;
                     
-                    var fgOficina = 0, fgData = 0, tcpCount = 0, udpCount = 0;
-                    var fwStats = { 'FG Oficina': 0, 'FG Data': 0 };
-                    var appStats = {};
-                    var appIdMap = {
-                        52452: 'Windows.Push.Notification',
-                        41475: 'Microsoft.Authentication',
-                        47013: 'SSL.TLSv1.3',
-                        16195: 'DNS',
-                        16270: 'NTP',
-                        40169: 'HTTP.Proxy',
-                        24466: 'HTTP',
-                        43541: 'Microsoft.Teams',
-                        28057: 'WhatsApp',
-                        31077: 'YouTube',
-                        18155: 'Netflix',
-                        15832: 'Facebook',
-                        34527: 'Instagram',
-                        41468: 'Microsoft.Office365',
-                        41469: 'Microsoft.Portal',
-                        39999: 'SSL'
-                    };
-
-                    function getAppLabel(sess) {
-                        var appId = 0;
-                        var appName = '';
-                        if (sess.apps && sess.apps.length > 0) {
-                            appId = sess.apps[0].id || 0;
-                            appName = sess.apps[0].name || '';
-                        }
-                        if (appId > 0 && appIdMap[appId]) return appIdMap[appId];
-                        if (appName && !appName.match(/^[a-z]+\/[0-9]+$/)) return appName.split('/')[0];
-                        if (sess.dport === 53) return 'DNS';
-                        if (sess.dport === 80) return 'HTTP';
-                        if (sess.dport === 443) return 'HTTPS';
-                        if (sess.proto === 'icmp') return 'ICMP';
-                        return null;
-                    }
-                    
+                    var fgOficina = 0, fgData = 0;
                     sessions.forEach(function(sess) {
-                        var fw = sess.firewall || sess.device_ip || 'Unknown';
-                        if (fw === '1.2.3.4' || fw === 'Oficina') {
-                            fgOficina++;
-                            fwStats['FG Oficina']++;
-                        } else {
-                            fgData++;
-                            fwStats['FG Data']++;
-                        }
-                        if (sess.proto === 'tcp') tcpCount++;
-                        else if (sess.proto === 'udp') udpCount++;
-
-                        var appLabel = getAppLabel(sess);
-                        if (appLabel) {
-                            appStats[appLabel] = (appStats[appLabel] || 0) + 1;
-                        }
+                        var fw = sess.firewall || '';
+                        if (fw.indexOf('Oficina') >= 0 || fw.indexOf('fg-oficina') >= 0) fgOficina++;
+                        else fgData++;
                     });
                     
                     document.getElementById('sessionCount').textContent = totalSessions;
                     document.getElementById('fgOficinaCount').textContent = fgOficina;
                     document.getElementById('fgDataCount').textContent = fgData;
-                    document.getElementById('tcpCount').textContent = tcpCount;
-                    document.getElementById('udpCount').textContent = udpCount;
                     
                     // Estadisticas por Firewall
                     var fwStatsHtml = '<div class="fw-stats-grid">';
@@ -1385,7 +1321,7 @@
                     // DHCP Content
                     var dhcpHtml = '';
                     if (leases.length > 0) {
-                        dhcpHtml = '<table class="clients-table"><thead><tr><th>IP</th><th>MAC</th><th>Hostname</th><th>Estado</th><th>Expira</th><th>Firewall</th></tr></thead><tbody>';
+                        dhcpHtml = '<table class="clients-table"><thead><tr><th>IP</th><th>MAC</th><th>Hostname</th><th>Estado</th><th>Expira</th></tr></thead><tbody>';
                         var now = Math.floor(Date.now() / 1000);
                         leases.slice(0, 30).forEach(function(lease) {
                             var expira = '-';
@@ -1401,8 +1337,7 @@
                             } else if (lease.status === 'static') {
                                 expira = 'Permanente';
                             }
-                            var dhcpFw = lease.firewall || (lease.device_ip === '1.2.3.4' ? 'Oficina' : 'Data');
-                            dhcpHtml += '<tr><td>' + lease.ip + '</td><td>' + lease.mac + '</td><td>' + (lease.hostname || '-') + '</td><td>' + lease.status + '</td><td>' + expira + '</td><td>' + dhcpFw + '</td></tr>';
+                            dhcpHtml += '<tr><td>' + lease.ip + '</td><td>' + lease.mac + '</td><td>' + (lease.hostname || '-') + '</td><td>' + lease.status + '</td><td>' + expira + '</td></tr>';
                         });
                         dhcpHtml += '</tbody></table>';
                         if (leases.length > 30) dhcpHtml += '<div style="color:#888;margin-top:10px;">Mostrando 30 de ' + leases.length + '</div>';
@@ -1411,125 +1346,16 @@
                     }
                     document.getElementById('dhcpContent').innerHTML = dhcpHtml;
                     
-                    // Charts
-                    if (window.networkChart1) window.networkChart1.destroy();
-                    if (window.networkChart2) window.networkChart2.destroy();
-                    if (window.networkChart3) window.networkChart3.destroy();
-                    
-                    var fwCtx = document.getElementById('firewallChart').getContext('2d');
-                    window.networkChart1 = new Chart(fwCtx, {
-                        type: 'bar',
-                        data: { labels: Object.keys(fwStats), datasets: [{ data: Object.values(fwStats), backgroundColor: ['#FF6384', '#36A2EB'] }] },
-                        options: { responsive: true, plugins: { legend: { display: false } } }
-                    });
-                    
-                    var protoCtx = document.getElementById('protoChart').getContext('2d');
-                    window.networkChart2 = new Chart(protoCtx, {
-                        type: 'doughnut',
-                        data: { labels: ['TCP', 'UDP'], datasets: [{ data: [tcpCount, udpCount], backgroundColor: ['#4BC0C0', '#FFCE56'] }] },
-                        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#fff' } } } }
-                    });
-
-                    var appEntries = Object.keys(appStats).map(function(k) { return [k, appStats[k]]; }).sort(function(a, b) { return b[1] - a[1]; });
-                    var appLabels = appEntries.map(function(item) { return item[0]; });
-                    var appValues = appEntries.map(function(item) { return item[1]; });
-                    var appCtx = document.getElementById('appChart').getContext('2d');
-                    window.networkChart3 = new Chart(appCtx, {
-                        type: 'bar',
-                        data: { labels: appLabels, datasets: [{ data: appValues, backgroundColor: '#7b2cbf' }] },
-                        options: {
-                            responsive: true,
-                            indexAxis: 'y',
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } },
-                                y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } }
-                            }
-                        }
-                    });
-                    
-                    // Sessions Content - build IP to hostname map from DHCP
+                    // Sessions con filtros
                     var ipToHostname = {};
                     leases.forEach(function(lease) {
-                        if (lease.ip && lease.hostname) {
-                            ipToHostname[lease.ip] = lease.hostname;
-                        }
+                        if (lease.ip && lease.hostname) ipToHostname[lease.ip] = lease.hostname;
                     });
                     
-                    function getFlag(countryId) {
-                        var countryMap = {};
-                        countryMap[19523] = String.fromCharCode(99,108);
-                        countryMap[21333] = String.fromCharCode(117,115);
-                        countryMap[23130] = String.fromCharCode(114,115);
-                        countryMap[16967] = String.fromCharCode(103,98);
-                        countryMap[19519] = String.fromCharCode(97,114);
-                        countryMap[19524] = String.fromCharCode(98,114);
-                        countryMap[19977] = String.fromCharCode(106,112);
-                        countryMap[20013] = String.fromCharCode(99,110);
-                        countryMap[20113] = String.fromCharCode(100,101);
-                        countryMap[20107] = String.fromCharCode(101,115);
-                        countryMap[20297] = String.fromCharCode(109,120);
-                        countryMap[20302] = String.fromCharCode(99,111);
-                        countryMap[21825] = String.fromCharCode(97,117);
-                        countryMap[16707] = String.fromCharCode(99,97);
-                        countryMap[16730] = String.fromCharCode(105,110);
-                        countryMap[17730] = String.fromCharCode(107,114);
-                        countryMap[17732] = String.fromCharCode(110,122);
-                        countryMap[17737] = String.fromCharCode(115,103);
-                        countryMap[17747] = String.fromCharCode(116,104);
-                        countryMap[18242] = String.fromCharCode(105,100);
-                        countryMap[18259] = String.fromCharCode(109,121);
-                        countryMap[19268] = String.fromCharCode(112,104);
-                        countryMap[19534] = String.fromCharCode(112,101);
-                        countryMap[20035] = String.fromCharCode(118,101);
-                        countryMap[20306] = String.fromCharCode(101,99);
-                        countryMap[21057] = String.fromCharCode(114,117);
-                        countryMap[21058] = String.fromCharCode(117,97);
-                        countryMap[21062] = String.fromCharCode(112,108);
-                        countryMap[21067] = String.fromCharCode(110,108);
-                        countryMap[21076] = String.fromCharCode(115,101);
-                        countryMap[21317] = String.fromCharCode(102,114);
-                        countryMap[21836] = String.fromCharCode(105,116);
-                        countryMap[21842] = String.fromCharCode(112,116);
-                        countryMap[22605] = String.fromCharCode(99,104);
-                        countryMap[19272] = String.fromCharCode(104,107);
-                        countryMap[20345] = String.fromCharCode(112,97);
-                        countryMap[17741] = String.fromCharCode(116,119);
-                        countryMap[20009] = String.fromCharCode(99,111);
-                        countryMap[20119] = String.fromCharCode(103,114);
-                        countryMap[21065] = String.fromCharCode(110,111);
-                        countryMap[21074] = String.fromCharCode(100,107);
-                        countryMap[16723] = String.fromCharCode(98,101);
-                        countryMap[21823] = String.fromCharCode(97,116);
-                        countryMap[21827] = String.fromCharCode(104,117);
-                        countryMap[21831] = String.fromCharCode(105,101);
-                        countryMap[21087] = String.fromCharCode(102,105);
-                        var code = countryMap[countryId] || String.fromCharCode(120,120);
-                        return String.fromCharCode(60,115,112,97,110,32,99,108,97,115,115,61,34,102,105,32,102,105,45) + code + String.fromCharCode(34,62,60,47,115,112,97,110,62,32) + code.toUpperCase();
-                    }
-
-                    function getPortIcon(dport, proto) {
-                        var icons = {53:"DNS",80:"HTTP",443:"HTTPS",22:"SSH",21:"FTP",25:"SMTP",123:"NTP",161:"SNMP",5060:"SIP",5061:"SIPS"};
-                        return icons[dport] || (proto.toUpperCase() + "/" + dport);
-                    }
-                    var appIcons = {
-                        'YouTube': '&#9658;', 'Netflix': '&#127909;', 'DNS': '&#128270;', 'HTTP': '&#127760;', 
-                        'HTTPS': '&#128274;', 'ICMP': '&#128225;', 'Facebook': '&#128100;', 'Instagram': '&#128247;',
-                        'WhatsApp': '&#128222;', 'Telegram': '&#128172;', 'Spotify': '&#127925;', 'Twitter': '&#128038;',
-                        'Dropbox': '&#128193;', 'Google': '&#128269;', 'Amazon': '&#128230;', 'Microsoft': '&#128187;',
-                        'Apple': '&#127822;', 'Cloudflare': '&#9729;', 'Zoom': '&#128249;', 'Teams': '&#128101;',
-                        'Slack': '&#128172;', 'Discord': '&#128172;', 'Twitch': '&#127918;', 'TikTok': '&#127926;',
-                        'LinkedIn': '&#128188;', 'Reddit': '&#128293;', 'GitHub': '&#128421;', 'GitLab': '&#128421;'
-                    };
-                    
-                    // Guardar sesiones para filtros
                     window.allSessions = sessions;
-                    window.sessFilters = {proto: '', firewall: '', usuario: '', app: ''};
+                    window.sessFilters = {proto: '', firewall: '', usuario: ''};
                     
-                    // Extraer valores únicos para filtros
-                    var uniqueApps = {};
-                    var uniqueFw = {};
-                    var uniqueUsers = {};
+                    var uniqueApps = {}, uniqueFw = {}, uniqueUsers = {};
                     sessions.forEach(function(s) {
                         if (s.app_name) uniqueApps[s.app_name] = true;
                         if (s.firewall) uniqueFw[s.firewall] = true;
@@ -1562,27 +1388,26 @@
                     
                     document.getElementById('sessionsContent').innerHTML = filterHtml + '<div id="sessionsTable"></div>';
                     
-                    // Función para aplicar filtros
                     window.applySessFilters = function() {
                         window.sessFilters = {
                             proto: document.getElementById('filtroProto').value,
                             firewall: document.getElementById('filtroFirewall').value,
                             usuario: document.getElementById('filtroUsuario').value
                         };
-                        renderSessionsTable();
+                        renderSessTable(ipToHostname);
                     };
                     
                     window.clearSessFilters = function() {
                         document.getElementById('filtroProto').value = '';
                         document.getElementById('filtroFirewall').value = '';
                         document.getElementById('filtroUsuario').value = '';
-                        window.sessFilters = {proto: '', firewall: '', usuario: '', app: ''};
-                        renderSessionsTable();
+                        window.sessFilters = {proto: '', firewall: '', usuario: ''};
+                        renderSessTable(ipToHostname);
                     };
                     
-                    window.renderSessionsTable = function() {
+                    window.renderSessTable = function(ipMap) {
                         var filtered = window.allSessions.filter(function(s) {
-                            if (window.sessFilters.proto && s.app_name !== window.sessFilters.proto && (s.proto + '/' + s.dport) !== window.sessFilters.proto) return false;
+                            if (window.sessFilters.proto && s.app_name !== window.sessFilters.proto) return false;
                             if (window.sessFilters.firewall && s.firewall !== window.sessFilters.firewall) return false;
                             if (window.sessFilters.usuario && s.username !== window.sessFilters.usuario) return false;
                             return true;
@@ -1590,67 +1415,41 @@
                         
                         document.getElementById('filterCount').textContent = 'Mostrando ' + filtered.length + ' de ' + window.allSessions.length + ' sesiones';
                         
-                        var html = '<table class="clients-table"><thead><tr><th>Origen</th><th>Destino</th><th>Proto/App</th><th>Pais</th><th>Usuario</th><th>Firewall</th></tr></thead><tbody>';
+                        var countryFlags = {
+                            21333: '🇺🇸', 23130: '🇷🇸', 16967: '🇬🇧', 19519: '🇦🇷', 19523: '🇨🇱', 
+                            19524: '🇧🇷', 19977: '🇯🇵', 20013: '🇨🇳', 20113: '🇩🇪', 20107: '🇪🇸',
+                            21825: '🇦🇺', 16707: '🇨🇦', 16730: '🇮🇳', 17730: '🇰🇷'
+                        };
+                        var appIcons = {
+                            'DNS':'🌐','HTTP':'🌐','HTTPS':'🔒','SSH':'💻','FTP':'📁','SMTP':'📧','IMAP':'📧',
+                            'NTP':'⏰','SNMP':'📊','RDP':'🖥️','MySQL':'🗄️','PostgreSQL':'🗄️','MongoDB':'🗄️',
+                            'SIP':'📞','LDAP':'📋','MQTT':'📡','HomeAssistant':'🏠','VNC':'🖥️',
+                            'Zoom':'📹','Telegram':'✈️','WhatsApp':'📱','Instagram':'📷','Facebook':'👤',
+                            'YouTube':'▶️','Netflix':'📺','Spotify':'🎵','Dropbox':'☁️','Google':'🔍',
+                            'Microsoft':'🪟','Apple':'🍎','GitHub':'🐙','SSL':'🔐','FaceTime':'📹'
+                        };
+                        
+                        var html = '<table class="clients-table"><thead><tr><th>Origen</th><th>Destino</th><th>Aplicacion</th><th>Pais</th><th>Usuario</th><th>Firewall</th></tr></thead><tbody>';
                         filtered.slice(0, 100).forEach(function(sess) {
                             var appName = sess.app_name || (sess.proto + '/' + (sess.dport || '-'));
-                            var appIcon = getAppIconHtml(appName, sess.app_category || '');
-                            var appDisplay = '<span class="app-name">' + appIcon + appName + '</span>';
-                            var flag = getFlag(sess.country_id);
-                            var hostname = ipToHostname[sess.saddr] || '-';
-                            var origenHtml = (hostname !== '-') ? (sess.saddr + '<br><span style="color:#888;font-size:0.8em;">' + hostname + '</span>') : (sess.saddr || '-');
-                            var fw = sess.firewall || '-';
-                            html += '<tr>';
-                            html += '<td>' + origenHtml + '</td>';
-                            html += '<td>' + (sess.daddr || '-') + '</td>';
-                            html += '<td>' + appDisplay + '</td>';
-                            html += '<td>' + flag + '</td>';
-                            html += '<td>' + (sess.username || '-') + '</td>';
-                            html += '<td>' + fw + '</td>';
-                            html += '</tr>';
+                            var icon = appIcons[appName] || '📡';
+                            var flag = countryFlags[sess.country_id] || '🌐';
+                            var hostname = ipMap[sess.saddr] || '-';
+                            var origen = (hostname !== '-') ? (sess.saddr + '<br><small style="color:#888">'+hostname+'</small>') : (sess.saddr || '-');
+                            html += '<tr><td>' + origen + '</td><td>' + (sess.daddr || '-') + '</td>';
+                            html += '<td><span class="app-name"><span class="app-icon default">' + icon + '</span>' + appName + '</span></td>';
+                            html += '<td>' + flag + '</td><td>' + (sess.username || '-') + '</td><td>' + (sess.firewall || '-') + '</td></tr>';
                         });
                         html += '</tbody></table>';
                         if (filtered.length > 100) html += '<div style="color:#888;margin-top:10px;">Mostrando 100 de ' + filtered.length + '</div>';
                         document.getElementById('sessionsTable').innerHTML = html;
                     };
                     
-                    window.getAppIconHtml = function(appName, category) {
-                        var icons = {
-                            'DNS': '🌐', 'HTTP': '🌐', 'HTTPS': '🔒', 'SSH': '💻', 'FTP': '📁',
-                            'SMTP': '📧', 'IMAP': '📧', 'NTP': '⏰', 'SNMP': '📊', 'RDP': '🖥️',
-                            'MySQL': '🗄️', 'PostgreSQL': '🗄️', 'MongoDB': '🗄️', 'SMB': '📂',
-                            'SIP': '📞', 'SIPS': '📞', 'LDAP': '📋', 'MQTT': '📡',
-                            'HomeAssistant': '🏠', 'VNC': '🖥️', 'OpenVPN': '🔐', 'WireGuard': '🔐',
-                            'Redis': '⚡', 'Elasticsearch': '🔍', 'Gmail': '📧',
-                            'Slack': '💬', 'Teams': '👥', 'Microsoft.Teams': '👥',
-                            'Zoom': '📹', 'Telegram': '✈️', 'WhatsApp': '📱',
-                            'Instagram': '📷', 'Facebook': '👤', 'Twitter': '🐦',
-                            'YouTube': '▶️', 'Netflix': '📺', 'Spotify': '🎵',
-                            'Dropbox': '☁️', 'Google': '🔍', 'Google.Drive': '💾', 'Google.Play': '▶️',
-                            'Apple': '🍎', 'Apple.iCloud': '☁️', 'Microsoft': '🪟',
-                            'Microsoft.Office365': '📄', 'Microsoft.Portal': '🌐',
-                            'Windows.Notification': '🔔', 'GitHub': '🐙', 'SSL': '🔐',
-                            'SSL.TLS': '🔐', 'FaceTime': '📹', 'XMPP': '💬',
-                            'HTTP.Proxy': '🌐', 'NTP': '⏰', 'ICMP': '📶',
-                            'Google.Drive': '💾', 'Google': '🔍', 'Google.Play': '▶️'
-                        };
-                        var icon = icons[appName] || '📡';
-                        
-                        var categoryIcons = {
-                            'Web': '🌐', 'Email': '📧', 'Social.Media': '📷', 'Video': '📹',
-                            'Messaging': '💬', 'Network': '🌐', 'Database': '🗄️',
-                            'Remote': '🖥️', 'Security': '🔐', 'IoT': '📡',
-                            'File': '📁', 'VoIP': '📞', 'Cloud': '☁️',
-                            'Collaboration': '👥', 'Media': '▶️'
-                        };
-                        var catIcon = categoryIcons[category] || '📡';
-                        
-                        return '<span class="app-icon" title="' + (category || 'Network') + '">' + icon + '</span>';
-                    };
-                    
-                    renderSessionsTable();
+                    renderSessTable(ipToHostname);
                 })
                 .catch(function(err) {
-                    document.getElementById('dhcpContent').innerHTML = '<div class="error-msg">Error: ' + err.message + '</div>';
+                    document.getElementById('dhcpContent').innerHTML = '<div class="error-msg">Error cargando datos: ' + err.message + '</div>';
+                    document.getElementById('sessionsContent').innerHTML = '<div class="error-msg">Error: ' + err.message + '</div>';
                 });
         }
         
