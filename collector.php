@@ -65,7 +65,7 @@ function getHistory($dataType, $days = 7) {
 
 // Configuración de múltiples FortiGates
 $fortigates = [
-    'fg-oficina' => ['ip' => '1.2.3.4', 'port' => 443, 'token' => 'q7N88NNwff4n0d0hs0769Gd03j9gcq', 'name' => 'FG Oficina'],
+    'fg-oficina' => ['ip' => '1.2.3.4', 'port' => 443, 'token' => 'gn73prsykchcqGH3Qjz4Gp0x3rrsqb', 'name' => 'FG Oficina'],
     'fg-data' => ['ip' => '1.2.3.5', 'port' => 443, 'token' => 'rzyhGgcHtsst87nr9jtQ3k0rtrcrfn', 'name' => 'FG Data'],
     'fg-gtd' => ['ip' => '1.2.3.6', 'port' => 10443, 'token' => 'r8845G3tkp1gznGp7761HxhtphxN9p', 'name' => 'FG-GTD']
 ];
